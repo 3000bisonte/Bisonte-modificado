@@ -1,0 +1,10 @@
+{
+  "/remitente/edit/[id]/page": "app/remitente/edit/[id]/page.js",
+  "/cotizador/page": "app/cotizador/page.js",
+  "/resumen/page": "app/resumen/page.js",
+  "/destinatario/page": "app/destinatario/page.js",
+  "/page": "app/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/auth/register/page": "app/auth/register/page.js"
+}

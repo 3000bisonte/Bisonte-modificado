@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL") // Asegúrate de definir DATABASE_URL en tu archivo .env
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+// Modelo para la tabla de ciudades
+model Ciudad {
+  id            Int     @id @default(autoincrement())
+  nombre        String  @db.VarChar(100)
+  codigo_postal String  @db.VarChar(10)
+  enviosOrigen  Envio[] @relation("CiudadOrigen")
+  enviosDestino Envio[] @relation("CiudadDestino")
+}
+
+// Modelo para la tabla de remitentes
+model Remitente {
+  id                 Int     @id @default(autoincrement())
+  nombre             String  @db.VarChar(100)
+  tipo_documento     String  @db.VarChar(10)
+  numero_documento   String  @unique @db.VarChar(20)
+  celular            String  @db.VarChar(15)
+  correo             String  @db.VarChar(100) // <--- Añade esta línea
+  direccion_recogida String  @db.VarChar(255)
+  detalle_direccion  String? @db.VarChar(255) // Apartamento/Torre/Conjunto, es opcional
+  recomendaciones    String? @db.Text
+  envios             Envio[]
+}
+
+// Modelo para la tabla de destinatarios
+model Destinatario {
+  id                Int     @id @default(autoincrement())
+  nombre            String  @db.VarChar(100)
+  tipo_documento    String  @db.VarChar(10)
+  numero_documento  String  @db.VarChar(20)
+  correo            String  @db.VarChar(100)
+  celular           String  @db.VarChar(15)
+  direccion_entrega String  @db.VarChar(255)
+  detalleDireccion  String? // Campo opcional, puede ser null
+  envios            Envio[]
+  noProhibidos      Boolean @default(true) // Campo booleano
+}
+
+// Modelo para la tabla de tipos de producto
+model TipoProducto {
+  id          Int                 @id @default(autoincrement())
+  descripcion String              @db.VarChar(100)
+  envios      EnvioTipoProducto[]
+}
+
+// Modelo para la tabla de envíos
+model Envio {
+  id                Int      @id @default(autoincrement())
+  remitente_id      Int
+  destinatario_id   Int
+  ciudad_origen_id  Int
+  ciudad_destino_id Int
+  tipo_envio        String   @db.VarChar(50)
+  alto              Decimal  @db.Decimal(5, 2)
+  ancho             Decimal  @db.Decimal(5, 2)
+  largo             Decimal  @db.Decimal(5, 2)
+  peso              Decimal  @db.Decimal(5, 2)
+  valor_declarado   Decimal  @db.Decimal(10, 2)
+  costo_total       Decimal  @db.Decimal(10, 2)
+  recomendaciones   String?  @db.Text
+  fecha_envio       DateTime @default(now())
+
+  remitente     Remitente           @relation(fields: [remitente_id], references: [id])
+  destinatario  Destinatario        @relation(fields: [destinatario_id], references: [id])
+  ciudadOrigen  Ciudad              @relation("CiudadOrigen", fields: [ciudad_origen_id], references: [id])
+  ciudadDestino Ciudad              @relation("CiudadDestino", fields: [ciudad_destino_id], references: [id])
+  productos     EnvioTipoProducto[]
+}
+
+// Relación entre envíos y tipos de producto
+model EnvioTipoProducto {
+  envio_id         Int
+  tipo_producto_id Int
+
+  envio         Envio        @relation(fields: [envio_id], references: [id])
+  tipo_producto TipoProducto @relation(fields: [tipo_producto_id], references: [id])
+
+  @@id([envio_id, tipo_producto_id])
+}
+
+model Perfil {
+  id                 Int              @id @default(autoincrement())
+  nombre             String?          @db.VarChar(100)
+  nickname           String?          @db.VarChar(100)
+  correo             String?          @unique @db.VarChar(100)
+  tipo_documento     String?          @db.VarChar(10)
+  numero_documento   String?          @db.VarChar(20)
+  celular            String?          @db.VarChar(15)
+  direccion_recogida String?          @db.VarChar(255)
+  detalle_direccion  String?          @db.VarChar(255) // Apartamento/Torre/Conjunto, es opcional
+  recomendaciones    String?          @db.Text
+  esAdministrador    Boolean          @default(false)
+  esRecolector       Boolean          @default(false)
+  historialEnvios    HistorialEnvio[] // Relación uno a muchos con HistorialEnvio
+}
+
+model HistorialEnvio {
+  id             Int       @id @default(autoincrement())
+  NumeroGuia     String?   @db.VarChar(255)
+  paymentId      String
+  Origen         String?   @db.VarChar(255)
+  Destino        String?   @db.VarChar(255)
+  DestinatarioId Int?
+  Destinatario   String?   @db.VarChar(255)
+  Estado         String?
+  FechaSolicitud DateTime? @db.DateTime
+  PerfilId       Int? // Cambiamos UsuarioId a PerfilId
+
+  // Relación con el modelo Perfil
+  perfil Perfil? @relation(fields: [PerfilId], references: [id]) // Relacionamos con Perfil
+
+  @@index([PerfilId], name: "PerfilId") // Cambiamos el índice a PerfilId
+}
