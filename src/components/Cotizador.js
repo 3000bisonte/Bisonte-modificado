@@ -320,12 +320,9 @@ export default function Cotizador() {
 
             if (userProfile?.id) {
                 router.push(`/remitente/edit/${userProfile.id}`);
-                // No necesitas setIsLoadingAction(false) aquí si la navegación es inmediata
             } else {
-                console.warn("Perfil de usuario no encontrado para redirigir. Redirigiendo a creación/dashboard...");
-                // Redirigir a una página general de remitente o a crear uno nuevo
-                router.push("/remitente"); // O '/remitente/crear' si existe esa ruta
-                setIsLoadingAction(false); // Detener loader si la redirección no ocurre o falla
+                router.push("/remitente/edit/9"); // Cambia aquí la ruta según lo que necesites
+                setIsLoadingAction(false);
             }
 
         } catch (error) {

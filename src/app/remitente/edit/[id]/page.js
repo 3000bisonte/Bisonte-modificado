@@ -1,8 +1,6 @@
 import FormularioRemitente from "@/components/FormularioRemitente";
 
-const Remitente = ({ params }) => {
+export default function Remitente({ params }) {
   const { id } = params;
   return <FormularioRemitente id={id} />;
-};
-
-export default Remitente;
+}
