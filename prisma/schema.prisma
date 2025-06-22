@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider          = "mysql"
-  url               = env("DATABASE_URL") // Asegúrate de definir DATABASE_URL en tu archivo .env
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // Modelo para la tabla de ciudades
@@ -112,7 +111,7 @@ model HistorialEnvio {
   DestinatarioId Int?
   Destinatario   String?   @db.VarChar(255)
   Estado         String?
-  FechaSolicitud DateTime? @db.DateTime
+  FechaSolicitud DateTime?
   PerfilId       Int? // Cambiamos UsuarioId a PerfilId
 
   // Relación con el modelo Perfil
