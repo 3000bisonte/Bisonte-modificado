@@ -36,6 +36,27 @@ export default function Resumen() {
     setDestinatario(JSON.parse(localStorage.getItem("formDestinatario")));
   }, []);
 
+  // Escucha el mensaje de recompensa desde Android
+  useEffect(() => {
+    function handleRewardedAdMessage(event) {
+      // Para pruebas web, puedes enviar manualmente este mensaje desde la consola:
+      // window.postMessage('rewardEarned')
+      if (event.data === "rewardEarned") {
+        const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
+        if (cotizadorData && typeof cotizadorData.costoTotal === "number") {
+          const descuento = 10000;
+          const nuevoCosto = Math.max(0, cotizadorData.costoTotal - descuento);
+          cotizadorData.costoTotal = nuevoCosto;
+          localStorage.setItem("formCotizador", JSON.stringify(cotizadorData));
+          alert(`¡Descuento aplicado! Nuevo costo: $${nuevoCosto.toLocaleString("es-CO")}`);
+          setCotizador({ ...cotizadorData });
+        }
+      }
+    }
+    window.addEventListener("message", handleRewardedAdMessage);
+    return () => window.removeEventListener("message", handleRewardedAdMessage);
+  }, []);
+
   if (!cotizador || !remitente || !destinatario) {
     return (
       <div className="p-4 text-center text-red-600">
@@ -65,10 +86,23 @@ export default function Resumen() {
   };
 
   const handleVerAnuncios = () => {
+    // Si estás en Android, llama al anuncio recompensado
     if (window.AndroidInterface && window.AndroidInterface.showRewardedAd) {
       window.AndroidInterface.showRewardedAd();
+      return;
+    }
+
+    // Lógica para web: simular reducción de costo
+    const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
+    if (cotizadorData && typeof cotizadorData.costoTotal === "number") {
+      const descuento = 10000; // Monto a descontar
+      const nuevoCosto = Math.max(0, cotizadorData.costoTotal - descuento);
+      cotizadorData.costoTotal = nuevoCosto;
+      localStorage.setItem("formCotizador", JSON.stringify(cotizadorData));
+      alert(`¡Descuento aplicado! Nuevo costo: $${nuevoCosto.toLocaleString("es-CO")}`);
+      setCotizador({ ...cotizadorData }); // Actualiza el estado para refrescar la vista
     } else {
-      alert("Esta función solo está disponible en la app móvil.");
+      alert("No se encontró la cotización para aplicar el descuento.");
     }
   };
 
@@ -79,7 +113,7 @@ export default function Resumen() {
           Realizar una cotización
         </div>
         <div className="p-4">
-             <div className="text-white text-center font-semibold mb-2">
+          <div className="text-white text-center font-semibold mb-2">
             Lista de envíos a cotizar
           </div>
           {/* Accordion Remitente */}
@@ -145,7 +179,6 @@ export default function Resumen() {
           </div>
 
           {/* Elementos a enviar */}
-         
           <div className="bg-blue-400 text-white rounded-t-md px-4 py-2 flex items-center justify-between">
             <span className="font-semibold">Elementos a enviar</span>
             <span className="text-xl"></span>
