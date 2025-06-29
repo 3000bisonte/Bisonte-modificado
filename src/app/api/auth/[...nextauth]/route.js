@@ -1,20 +1,26 @@
-import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+import { Resend } from 'resend';
 
-const authOptions = {
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
-  ],
-  pages: {
-    signIn: "/", // Custom sign-in page
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-};
+export async function POST(req) {
+  const { remitente, destinatario, cotizador, fecha } = await req.json();
 
-export { authOptions }; 
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+  try {
+    await resend.emails.send({
+      from: 'Bisonte <notificaciones@bisonte.com>', // Puedes usar un dominio verificado o el default de Resend
+      to: 'yesicacausado71@gmail.com',
+      subject: 'Nuevo envío realizado',
+      text: `
+        Se ha realizado un nuevo envío:
+        Remitente: ${remitente?.nombre}
+        Destinatario: ${destinatario?.nombre}
+        Ciudad destino: ${cotizador?.ciudadDestino}
+        Fecha: ${fecha}
+        Total: $${cotizador?.costoTotal}
+      `,
+    });
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  } catch (error) {
+    return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
+  }
+}
