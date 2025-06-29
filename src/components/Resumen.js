@@ -15,8 +15,6 @@ export default function Resumen() {
   const [remitente, setRemitente] = useState(null);
   const [destinatario, setDestinatario] = useState(null);
   const [fecha, setFecha] = useState(formatDate(new Date()));
-
-  // Estado para desplegables
   const [showRemitente, setShowRemitente] = useState(false);
   const [showDestinatario, setShowDestinatario] = useState(false);
 
@@ -39,8 +37,6 @@ export default function Resumen() {
   // Escucha el mensaje de recompensa desde Android
   useEffect(() => {
     function handleRewardedAdMessage(event) {
-      // Para pruebas web, puedes enviar manualmente este mensaje desde la consola:
-      // window.postMessage('rewardEarned')
       if (event.data === "rewardEarned") {
         const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
         if (cotizadorData && typeof cotizadorData.costoTotal === "number") {
@@ -59,13 +55,21 @@ export default function Resumen() {
 
   if (!cotizador || !remitente || !destinatario) {
     return (
-      <div className="p-4 text-center text-red-600">
-        Faltan datos para mostrar el resumen. Por favor completa todos los formularios.
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center max-w-md">
+          <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">Información incompleta</h3>
+          <p className="text-slate-600">Por favor completa todos los formularios para ver el resumen de tu envío.</p>
+        </div>
       </div>
     );
   }
 
-  // Utilidades para mostrar nombres de ciudades si tienes un catálogo
+  // Utilidades para mostrar nombres de ciudades
   const ciudades = {
     "11001": "Bogotá D.C.",
     "25001": "Funza",
@@ -78,190 +82,280 @@ export default function Resumen() {
     "25785": "Tabio",
     "25740": "Soacha",
     "25743": "Sibaté",
-    // ...agrega más si es necesario
   };
 
-  const handlePagar = () => {
+  // Función para enviar notificación por correo
+  const notificarEnvioPorCorreo = async () => {
+    try {
+      await fetch("/api/notificar-envio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          remitente,
+          destinatario,
+          cotizador,
+          fecha,
+        }),
+      });
+    } catch (error) {
+      // Puedes mostrar un toast o alert si falla, pero no es obligatorio
+      console.error("Error enviando notificación de envío:", error);
+    }
+  };
+
+  const handlePagar = async () => {
+    // Aquí puedes poner tu lógica de pago (MercadoPago, etc)
     router.push("/mercadopago");
+    // Después de pago exitoso, notifica por correo
+    await notificarEnvioPorCorreo();
   };
 
   const handleVerAnuncios = () => {
-    // Si estás en Android, llama al anuncio recompensado
     if (window.AndroidInterface && window.AndroidInterface.showRewardedAd) {
       window.AndroidInterface.showRewardedAd();
       return;
     }
 
-    // Lógica para web: simular reducción de costo
     const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
     if (cotizadorData && typeof cotizadorData.costoTotal === "number") {
-      const descuento = 10000; // Monto a descontar
+      const descuento = 10000;
       const nuevoCosto = Math.max(0, cotizadorData.costoTotal - descuento);
       cotizadorData.costoTotal = nuevoCosto;
       localStorage.setItem("formCotizador", JSON.stringify(cotizadorData));
       alert(`¡Descuento aplicado! Nuevo costo: $${nuevoCosto.toLocaleString("es-CO")}`);
-      setCotizador({ ...cotizadorData }); // Actualiza el estado para refrescar la vista
+      setCotizador({ ...cotizadorData });
     } else {
       alert("No se encontró la cotización para aplicar el descuento.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-200 flex flex-col items-center py-4">
-      <div className="w-full max-w-md bg-black rounded-lg shadow-lg p-0">
-        <div className="bg-teal-400 text-white text-center py-3 rounded-t-lg font-semibold text-lg">
-          Realizar una cotización
+    <div className="min-h-screen bg-gradient-to-br from-[#e3dfde] via-[#f8fafc] to-[#41e0b3]/10 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-3xl font-extrabold text-[#18191A] mb-2 drop-shadow">Resumen del envío</h1>
+          <p className="text-[#41e0b3] font-medium">Revisa los detalles antes de proceder al pago</p>
         </div>
-        <div className="p-4">
-          <div className="text-white text-center font-semibold mb-2">
-            Lista de envíos a cotizar
-          </div>
-          {/* Accordion Remitente */}
-          <div className="mb-2">
-            <button
-              className="w-full flex justify-between items-center bg-white px-4 py-2 rounded-t-md border border-gray-200 font-semibold focus:outline-none"
-              onClick={() => setShowRemitente((v) => !v)}
-              aria-expanded={showRemitente}
-              aria-controls="remitente-content"
-            >
-              <span>Datos del Remitente</span>
-              <span className="text-xl">{showRemitente ? "▲" : "▼"}</span>
-            </button>
-            {showRemitente && (
-              <div
-                id="remitente-content"
-                className="bg-white border-x border-b border-gray-200 rounded-b-md px-4 py-2"
-              >
-                <div><span className="font-semibold">Nombre:</span> {remitente.nombre}</div>
-                <div><span className="font-semibold">Documento:</span> {remitente.tipoDocumento} {remitente.numeroDocumento}</div>
-                <div><span className="font-semibold">Celular:</span> {remitente.celular}</div>
-                <div><span className="font-semibold">Correo:</span> {remitente.correo}</div>
-                <div><span className="font-semibold">Dirección:</span> {remitente.direccionRecogida}</div>
-                {remitente.detalleDireccion && (
-                  <div><span className="font-semibold">Detalle dirección:</span> {remitente.detalleDireccion}</div>
-                )}
-                {remitente.recomendaciones && (
-                  <div><span className="font-semibold">Recomendaciones:</span> {remitente.recomendaciones}</div>
-                )}
-              </div>
-            )}
-          </div>
 
-          {/* Accordion Destinatario */}
-          <div className="mb-4">
-            <button
-              className="w-full flex justify-between items-center bg-white px-4 py-2 rounded-t-md border border-gray-200 font-semibold focus:outline-none"
-              onClick={() => setShowDestinatario((v) => !v)}
-              aria-expanded={showDestinatario}
-              aria-controls="destinatario-content"
-            >
-              <span>Datos del Destinatario</span>
-              <span className="text-xl">{showDestinatario ? "▲" : "▼"}</span>
-            </button>
-            {showDestinatario && (
-              <div
-                id="destinatario-content"
-                className="bg-white border-x border-b border-gray-200 rounded-b-md px-4 py-2"
-              >
-                <div><span className="font-semibold">Nombre:</span> {destinatario.nombre}</div>
-                <div><span className="font-semibold">Documento:</span> {destinatario.tipoDocumento} {destinatario.numeroDocumento}</div>
-                <div><span className="font-semibold">Celular:</span> {destinatario.celular}</div>
-                <div><span className="font-semibold">Correo:</span> {destinatario.correo}</div>
-                <div><span className="font-semibold">Dirección:</span> {destinatario.direccionEntrega}</div>
-                {destinatario.detalleDireccion && (
-                  <div><span className="font-semibold">Detalle dirección:</span> {destinatario.detalleDireccion}</div>
-                )}
-                {destinatario.recomendaciones && (
-                  <div><span className="font-semibold">Recomendaciones:</span> {destinatario.recomendaciones}</div>
-                )}
+        {/* Ruta del envío */}
+        <div className="bg-[#18191A]/90 rounded-3xl shadow-xl border-2 border-[#41e0b3]/30 p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <div className="text-center">
+                <div className="w-4 h-4 bg-[#41e0b3] rounded-full mb-2 animate-pulse"></div>
+                <p className="text-sm font-bold text-white">Bogotá</p>
+                <p className="text-xs text-[#41e0b3]">Origen</p>
               </div>
-            )}
-          </div>
-
-          {/* Elementos a enviar */}
-          <div className="bg-blue-400 text-white rounded-t-md px-4 py-2 flex items-center justify-between">
-            <span className="font-semibold">Elementos a enviar</span>
-            <span className="text-xl"></span>
-          </div>
-          <div className="bg-white rounded-b-md p-4 mb-4 border border-gray-200">
-            <div className="mb-2">
-              <span className="font-semibold">Destino:</span>{" "}
-              <span className="font-bold">
-                Bogotá - {ciudades[cotizador.ciudadDestino] || cotizador.ciudadDestino}
-              </span>
-            </div>
-            <div className="flex items-center mb-2">
-              <span className="mr-2">🚚</span>
-              <span>
-                Peso: <span className="font-bold">{cotizador.peso} KG</span>
-                <br />
-                Valor declarado: <span className="font-bold">${Number(cotizador.valorDeclarado).toLocaleString("es-CO")}</span>
-              </span>
-            </div>
-            <div className="flex items-center">
-              <span className="mr-2">📦</span>
-              <span>
-                Largo: <span className="font-bold">{cotizador.largo} cm</span>
-                <br />
-                Ancho: <span className="font-bold">{cotizador.ancho} cm</span>
-                <br />
-                Alto: <span className="font-bold">{cotizador.alto} cm</span>
-              </span>
-            </div>
-            <div className="mt-2">
-              <span className="font-semibold">Contenido:</span>{" "}
-              <span>{cotizador.recomendaciones}</span>
-            </div>
-          </div>
-
-          {/* Resumen de envío */}
-          <div className="bg-white rounded-md p-4 mb-4 border border-gray-200">
-            <div className="text-center font-semibold mb-2">Resumen de tu envío</div>
-            <div className="flex justify-between mb-2">
-              <span>Tipo de envío</span>
-              <span className="font-bold">{cotizador.tipoEnvio || "Paquetes"}</span>
-            </div>
-            <div className="flex justify-between mb-2">
-              <span>Fecha de envío</span>
-              <span className="font-bold">{fecha}</span>
-            </div>
-            <div className="flex justify-between mb-2">
-              <span>Despacho</span>
-              <span className="font-bold">Se recoge en ubicación</span>
-            </div>
-            <hr className="my-2" />
-            <div className="flex flex-col items-start">
-              <div className="flex items-center mb-2">
-                <span className="h-4 w-4 rounded-full bg-green-400 inline-block mr-2"></span>
-                <span>
-                  <span className="font-semibold">Origen:</span> Bogotá
-                </span>
-              </div>
-              <div className="flex items-center">
-                <span className="h-4 w-4 rounded-full bg-blue-400 inline-block mr-2"></span>
-                <span>
-                  <span className="font-semibold">Destino:</span>{" "}
+              <div className="flex-1 h-px bg-[#41e0b3]/30 mx-4"></div>
+              <div className="text-center">
+                <div className="w-4 h-4 bg-[#41e0b3] rounded-full mb-2 animate-pulse"></div>
+                <p className="text-sm font-bold text-white">
                   {ciudades[cotizador.ciudadDestino] || cotizador.ciudadDestino}
+                </p>
+                <p className="text-xs text-[#41e0b3]">Destino</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-[#41e0b3] drop-shadow">
+                ${Number(cotizador.costoTotal).toLocaleString("es-CO")}
+              </p>
+              <p className="text-sm text-white">Costo total</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Columna izquierda - Datos de contacto */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Remitente */}
+            <div className="bg-[#23272b]/90 rounded-2xl shadow-lg border border-[#41e0b3]/20 p-6 mb-2 transition-all duration-300">
+              <button
+                onClick={() => setShowRemitente((v) => !v)}
+                className="flex items-center w-full justify-between text-left text-[#41e0b3] font-bold text-lg focus:outline-none transition-all duration-200"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke="#41e0b3" strokeWidth="2" fill="none" />
+                    <path d="M12 8v4l2 2" stroke="#41e0b3" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  Remitente
                 </span>
+                <svg
+                  className={`w-5 h-5 transform transition-transform duration-300 ${showRemitente ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="#41e0b3"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-500 ${showRemitente ? "max-h-96 opacity-100 mt-4" : "max-h-0 opacity-0"}`}
+              >
+                <div className="space-y-3 text-sm text-white">
+                  <div>
+                    <p className="font-semibold">{remitente.nombre}</p>
+                    <p className="text-[#41e0b3]">{remitente.tipoDocumento} {remitente.numeroDocumento}</p>
+                  </div>
+                  <div>
+                    <p>{remitente.celular}</p>
+                    <p>{remitente.correo}</p>
+                  </div>
+                  <div>
+                    <p>{remitente.direccionRecogida}</p>
+                    {remitente.detalleDireccion && (
+                      <p className="text-xs text-[#41e0b3] mt-1">{remitente.detalleDireccion}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Destinatario */}
+            <div className="bg-[#23272b]/90 rounded-2xl shadow-lg border border-[#41e0b3]/20 p-6 mb-2 transition-all duration-300">
+              <button
+                onClick={() => setShowDestinatario((v) => !v)}
+                className="flex items-center w-full justify-between text-left text-[#41e0b3] font-bold text-lg focus:outline-none transition-all duration-200"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke="#41e0b3" strokeWidth="2" fill="none" />
+                    <path d="M12 8v4l2 2" stroke="#41e0b3" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  Destinatario
+                </span>
+                <svg
+                  className={`w-5 h-5 transform transition-transform duration-300 ${showDestinatario ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="#41e0b3"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-500 ${showDestinatario ? "max-h-96 opacity-100 mt-4" : "max-h-0 opacity-0"}`}
+              >
+                <div className="space-y-3 text-sm text-white">
+                  <div>
+                    <p className="font-semibold">{destinatario.nombre}</p>
+                    <p className="text-[#41e0b3]">{destinatario.tipoDocumento} {destinatario.numeroDocumento}</p>
+                  </div>
+                  <div>
+                    <p>{destinatario.celular}</p>
+                    <p>{destinatario.correo}</p>
+                  </div>
+                  <div>
+                    <p>{destinatario.direccionEntrega}</p>
+                    {destinatario.detalleDireccion && (
+                      <p className="text-xs text-[#41e0b3] mt-1">{destinatario.detalleDireccion}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Detalles del paquete */}
+            <div className="bg-[#18191A]/90 rounded-2xl shadow-lg border border-[#41e0b3]/20 p-6">
+              <h3 className="font-bold text-[#41e0b3] mb-6">Detalles del paquete</h3>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-2 border-b border-[#41e0b3]/10">
+                    <span className="text-[#41e0b3]">Peso</span>
+                    <span className="font-semibold text-white">{cotizador.peso} kg</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-[#41e0b3]/10">
+                    <span className="text-[#41e0b3]">Valor declarado</span>
+                    <span className="font-semibold text-white">
+                      ${Number(cotizador.valorDeclarado).toLocaleString("es-CO")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-[#41e0b3]">Contenido</span>
+                    <span className="font-semibold text-white text-right max-w-32 truncate">
+                      {cotizador.recomendaciones}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-2 border-b border-[#41e0b3]/10">
+                    <span className="text-[#41e0b3]">Largo</span>
+                    <span className="font-semibold text-white">{cotizador.largo} cm</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-[#41e0b3]/10">
+                    <span className="text-[#41e0b3]">Ancho</span>
+                    <span className="font-semibold text-white">{cotizador.ancho} cm</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-[#41e0b3]">Alto</span>
+                    <span className="font-semibold text-white">{cotizador.alto} cm</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              className="flex-1 py-2 rounded-lg bg-teal-500 text-white font-semibold hover:bg-teal-600"
-              onClick={handlePagar}
-              type="button"
-            >
-              Pagar
-            </button>
-            <button
-              className="flex-1 py-2 rounded-lg bg-blue-200 text-blue-700 font-semibold hover:bg-blue-300"
-              onClick={handleVerAnuncios}
-              type="button"
-            >
-              Reducir costo viendo anuncios
-            </button>
+          {/* Columna derecha - Resumen y acciones */}
+          <div className="space-y-6">
+            {/* Resumen del pedido */}
+            <div className="bg-[#18191A]/95 rounded-3xl shadow-2xl border-2 border-[#41e0b3]/30 p-6 sticky top-8 animate-fade-in-up">
+              <h3 className="font-bold text-[#41e0b3] mb-6">Resumen</h3>
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#41e0b3]">Tipo de envío</span>
+                  <span className="text-white">{cotizador.tipoEnvio || "Paquetes"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#41e0b3]">Fecha</span>
+                  <span className="text-white">{fecha}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#41e0b3]">Modalidad</span>
+                  <span className="text-white">Recogida en ubicación</span>
+                </div>
+                {cotizador.numeroGuia && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#41e0b3]">N° Guía</span>
+                    <span className="text-white font-mono">#{cotizador.numeroGuia}</span>
+                  </div>
+                )}
+              </div>
+              <div className="border-t border-[#41e0b3]/20 pt-4 mb-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold text-[#41e0b3]">Total</span>
+                  <span className="text-2xl font-extrabold text-white drop-shadow">
+                    ${Number(cotizador.costoTotal).toLocaleString("es-CO")}
+                  </span>
+                </div>
+              </div>
+              {/* Botones de acción */}
+              <div className="space-y-3">
+                <button
+                  onClick={handlePagar}
+                  className="w-full bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] hover:from-[#2bbd8c] hover:to-[#41e0b3] text-white font-bold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 animate-bounce"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span>Proceder al pago</span>
+                </button>
+                <button
+                  onClick={handleVerAnuncios}
+                  className="w-full bg-[#23272b] hover:bg-[#41e0b3]/20 text-[#41e0b3] font-bold py-3 px-6 rounded-2xl shadow transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 7.165 6 9.388 6 12v2.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  <span>Reducir costo</span>
+                </button>
+              </div>
+              <p className="text-xs text-[#41e0b3] text-center mt-4">
+                Ve anuncios para obtener descuentos en tu envío
+              </p>
+            </div>
           </div>
         </div>
       </div>

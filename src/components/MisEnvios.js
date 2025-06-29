@@ -1,9 +1,13 @@
 "use client";
-
-import TanstackReactTable from "@/components/ReactTables";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import dayjs from "dayjs";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { signIn, useSession, signOut } from "next-auth/react";
+
+// Colores y estilos
+const ELECTRIC_BLUE = "#0099ff";
+const BG_DARK = "#18191A";
+const BG_CARD = "#23272b";
+const ACCENT = "#41e0b3";
 
 const STATUS_STYLES = {
   RECOLECCION_PENDIENTE: {
@@ -30,315 +34,164 @@ const STATUS_STYLES = {
     label: "Reprogramar",
     color: "bg-red-100 text-red-800",
   },
+  PENDIENTE: {
+    label: "Pendiente",
+    color: "bg-yellow-100 text-yellow-800",
+  },
 };
-const getStatusDisplay = (statusKey) => {
-  //console.log("Estado recibido:", statusKey);
-  const status = STATUS_STYLES[statusKey];
 
+const getStatusDisplay = (statusKey) => {
+  const status = STATUS_STYLES[statusKey] || {
+    label: statusKey,
+    color: "bg-gray-200 text-gray-700",
+  };
   return (
     <span
-      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${status.color}`}
+      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${status.color}`}
     >
       {status.label}
     </span>
   );
 };
 
-const ShippingHistoryForm = () => {
+export default function MisEnvios() {
   const { data: session } = useSession();
-  const [dataCoti, setDataCoti] = useState([]);
-  const [dataPerfilId, setDataPerfilId] = useState(null);
-  const perfilIdRef = useRef(null);
-  const [userRole, setUserRole] = useState(null);
-  const perfilLoaded = useRef(false);
+  const [envios, setEnvios] = useState([]);
+  const [search, setSearch] = useState("");
   const userEmail = session?.user?.email;
 
-  // Estado para el modal de actualización de estado
-  const [isUpdateStatusModalOpen, setIsUpdateStatusModalOpen] = useState(false);
-  const [selectedShipmentForUpdate, setSelectedShipmentForUpdate] =
-    useState(null);
-  const [currentUpdatingStatus, setCurrentUpdatingStatus] = useState(""); // Para el select del modal
-  const [isUpdating, setIsUpdating] = useState(false); // Para feedback de carga en el modal
-
-  // useEffect(() => {
-  //   const loadPerfilYEnvios = async () => {
-  //     try {
-  //       const response = await fetch("/api/perfil", {
-  //         method: "GET",
-  //         headers: { "Content-Type": "application/json" },
-  //       });
-
-  //       if (!response.ok) throw new Error("Error al obtener el perfil");
-
-  //       const data = await response.json();
-  //       const perfil = data.find((perf) => perf.correo === userEmail);
-
-  //       if (perfil) {
-  //         perfilIdRef.current = perfil.id;
-  //         console.log("perfil-dentroif--->", perfilIdRef.current);
-
-  //         // Construir la URL y obtener los envíos
-  //         const url = `/api/obtenerenvios/${perfil.id}`;
-  //         console.log("Construyendo URL con idPerfilUsuario:", url);
-
-  //         const enviosResponse = await fetch(url);
-  //         if (!enviosResponse.ok) throw new Error("Error al obtener envíos");
-
-  //         const enviosData = await enviosResponse.json();
-  //         setDataCoti(enviosData); // Actualiza la tabla
-  //       }
-  //     } catch (error) {
-  //       console.error("Error al cargar perfil/envíos:", error);
-  //     }
-  //   };
-
-  //   if (userEmail) {
-  //     loadPerfilYEnvios();
-  //   }
-  // }, [userEmail]);
-
-  // Usamos useCallback para memoizar la función de carga
-  const loadEnvios = useCallback(async (perfilId) => {
-    if (!perfilId) return;
-    try {
-      const url = `/api/obtenerenvios/${perfilId}`;
-      console.log("Construyendo URL con idPerfilUsuario:", url);
-      const enviosResponse = await fetch(url);
-      if (!enviosResponse.ok) throw new Error("Error al obtener envíos");
-      const enviosData = await enviosResponse.json();
-      setDataCoti(enviosData);
-    } catch (error) {
-      console.error("Error al cargar envíos:", error);
-      // Aquí podrías mostrar un mensaje de error al usuario
-    }
-  }, []); // No tiene dependencias externas que cambien frecuentemente
-
+  // Cargar historial de envíos del usuario
   useEffect(() => {
-    const loadPerfil = async () => {
+    const fetchEnvios = async () => {
       if (!userEmail) return;
       try {
-        const response = await fetch("/api/perfil", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        if (!response.ok) throw new Error("Error al obtener el perfil");
-        const data = await response.json();
-        const perfil = data.find((perf) => perf.correo === userEmail);
-        if (perfil) {
-          perfilIdRef.current = perfil.id;
-          if(perfil.esAdministrador){
-            console.log("perfil es admin",perfil);
-            setUserRole('admin');
-          }else if(perfil.esRecolector){
-            console.log("perfil es recolector",perfil);
-            setUserRole('recolector');
-          }else{
-            console.log("perfil es cliente",perfil);
-            setUserRole('cliente');
-          }
-          console.log("perfil-dentroif--->", perfilIdRef.current);
-          loadEnvios(perfil.id); // Cargar envíos una vez que tenemos el perfilId
-        } else {
-          console.log("Perfil no encontrado para el email:", userEmail);
-        }
-      } catch (error) {
-        console.error("Error al cargar perfil:", error);
+        const perfilRes = await fetch("/api/perfil");
+        const perfiles = await perfilRes.json();
+        const perfil = perfiles.find((p) => p.correo === userEmail);
+        if (!perfil) return;
+        const enviosRes = await fetch(`/api/obtenerenvios/${perfil.id}`);
+        const data = await enviosRes.json();
+        setEnvios(data);
+      } catch (e) {
+        setEnvios([]);
       }
     };
+    fetchEnvios();
+  }, [userEmail]);
 
-    loadPerfil();
-  }, [userEmail, loadEnvios]); // Incluir loadEnvios en las dependencias
+  // Filtrado por búsqueda
+  const filteredEnvios = envios.filter((envio) =>
+    Object.values(envio)
+      .join(" ")
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
 
-  const handleOpenUpdateStatusModal = useCallback((shipment) => {
-    setSelectedShipmentForUpdate(shipment);
-    setCurrentUpdatingStatus(shipment.Estado); // Estado actual como valor inicial del select
-    setIsUpdateStatusModalOpen(true);
-  }, []);
-
-  const handleCloseUpdateStatusModal = () => {
-    setIsUpdateStatusModalOpen(false);
-    setSelectedShipmentForUpdate(null);
-    setCurrentUpdatingStatus("");
-    setIsUpdating(false);
-  };
-  const handleConfirmUpdateStatus = async () => {
-    if (!selectedShipmentForUpdate || !currentUpdatingStatus) return;
-
-    setIsUpdating(true);
-    try {
-      // Asumiendo que tu envío tiene un 'id' o 'NumeroGuia' único para identificarlo
-      // Ajusta `selectedShipmentForUpdate.id` al identificador correcto de tu envío
-      const guiaId =
-        selectedShipmentForUpdate.id || selectedShipmentForUpdate.NumeroGuia;
-
-      const response = await fetch(`/api/envios/actualizar-estado/${guiaId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nuevoEstado: currentUpdatingStatus }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "Error al actualizar estado" }));
-        throw new Error(errorData.message || "Error al actualizar estado");
-      }
-
-      // Actualizar la tabla:
-      // Opción 1: Re-fetchear los datos
-      if (perfilIdRef.current) {
-        await loadEnvios(perfilIdRef.current);
-      }
-      // Opción 2: Actualizar localmente (más complejo, pero mejor UX)
-      // setDataCoti(prevData => prevData.map(item =>
-      //   (item.id || item.NumeroGuia) === envioId
-      //     ? { ...item, Estado: currentUpdatingStatus }
-      //     : item
-      // ));
-
-      handleCloseUpdateStatusModal();
-      // Aquí podrías mostrar un toast de éxito
-      alert("Estado actualizado con éxito!");
-    } catch (error) {
-      console.error("Error al actualizar estado:", error);
-      alert(`Error: ${error.message}`); // Mostrar error al usuario
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-  const columns = useMemo(() => {
-    const baseColumns = [
-      { header: "Nº guía", accessorKey: "NumeroGuia" },
-      { header: "Origen", accessorKey: "Origen" },
-      { header: "Destino", accessorKey: "Destino" },
-      { header: "Destinatario", accessorKey: "Destinatario" }, // `Destinatario` es un string en `HistorialEnvio`
-      {
-        header: "Estado",
-        accessorKey: "Estado",
-        cell: (info) => getStatusDisplay(info.getValue()),
-      },
-      {
-        header: "Fecha de solicitud",
-        accessorKey: "FechaSolicitud",
-        cell: (info) => dayjs(info.getValue()).isValid() ? dayjs(info.getValue()).format("DD/MM/YYYY HH:mm") : "Fecha inválida",
-      },
-    ];
-
-    // Definir qué roles pueden ver la columna de acciones
-    // AJUSTA ESTA CONDICIÓN si tienes un rol 'repartidor'
-    const canUpdateStatus = userRole === 'admin' || userRole === 'recolector';
-
-    if (canUpdateStatus) {
-      return [
-        ...baseColumns,
-        {
-          header: "Acciones",
-          id: "actions",
-          cell: ({ row }) => (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenUpdateStatusModal(row.original);
-              }}
-              className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              Actualizar Estado
-            </button>
-          ),
-        },
-      ];
-    }
-    return baseColumns;
-  }, [userRole, handleOpenUpdateStatusModal]);
-
-  // useEffect(() => {
-  //   const envioDatos = JSON.parse(localStorage.getItem("envioDatos"));
-
-  //     const idPerfilUsuario = perfilIdRef.current;
-  //     console.log("idPerfilUsuario--->", dataPerfilId);
-  //     //setDataPerfilId(idPerfilUsuario);
-
-  //     // Construir la URL con el parámetro idPerfilUsuario
-
-  //     const url = `/api/obtenerenvios/${idPerfilUsuario}`;
-
-  //     // Hacer la petición GET
-  //     fetch(url)
-  //       .then((response) => response.json())
-  //       .then((data) => {
-  //         setDataCoti(data); // Asume que data es un array de objetos
-  //       })
-  //       .catch((error) => {
-  //         console.error("Error al obtener los datos:", error);
-  //       });
-
-  // }, []);
-  console.log("dataCoti->mis-envios", dataCoti);
   return (
-    <div>
-      <TanstackReactTable data={dataCoti} columns={columns} />
-
-      {/* 3. Modal para Actualizar Estado */}
-      {isUpdateStatusModalOpen && selectedShipmentForUpdate && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75 px-4"
-          onClick={handleCloseUpdateStatusModal}
-        >
-          <div
-            className="modal-container bg-white rounded-lg p-6 shadow-xl w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              Actualizar Estado del Envío:{" "}
-              {selectedShipmentForUpdate.NumeroGuia}
-            </h2>
-            <div className="mb-4">
-              <label
-                htmlFor="statusSelect"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Nuevo Estado:
-              </label>
-              <select
-                id="statusSelect"
-                value={currentUpdatingStatus}
-                onChange={(e) => setCurrentUpdatingStatus(e.target.value)}
-                className="block w-full rounded-md border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                disabled={isUpdating}
-              >
-                {Object.entries(STATUS_STYLES).map(([key, { label }]) => {
-                  if (key === "DEFAULT") return null; // No permitir seleccionar "Desconocido"
+    <div className="min-h-screen w-full flex flex-col items-center justify-start bg-[#e3dfde] pb-24 pt-0">
+      {/* Espacio arriba del header */}
+      <div className="h-6" />
+      {/* Header igual que Mi Perfil */}
+      <div
+        className="w-[430px] h-[60px] flex items-center justify-center mx-auto"
+        style={{ background: ACCENT }}
+      >
+        <h2 className="text-white text-xl py-4  font-bold">Mis Envíos</h2>
+      </div>
+      {/* Encabezado secundario debajo */}
+      <div className="bg-[#18191A] py-4 text-center w-[430px] mx-auto">
+        <p className="text-white text-base font-semibold">
+          Consulta el historial de tus envíos realizados
+        </p>
+      </div>
+      {/* Card */}
+      <div className="w-full flex-1 flex flex-col items-center justify-start px-2 md:px-0">
+        <div className="w-full max-w-5xl mx-auto bg-[#18191A] rounded-2xl shadow-lg mt-6 p-6 flex flex-col">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          
+            <input
+              type="text"
+              placeholder="Buscar en historial (por cualquier campo)"
+              className="w-full md:w-80 px-4 py-2 rounded-lg border border-gray-700 bg-[#23272b] text-white focus:outline-none focus:ring-2 focus:ring-[#41e0b3] placeholder-gray-400 text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          {/* Resumen arriba si hay envíos */}
+          {filteredEnvios.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-2 justify-between items-center mb-6 bg-[#23272b] rounded-xl p-4 shadow">
+              <div className="flex items-center gap-2">
+                <svg className="w-7 h-7 text-[#41e0b3]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M3 7v10c0 1.1.9 2 2 2h14a2 2 0 002-2V7" />
+                  <path d="M16 3v4H8V3" />
+                  <path d="M3 7h18" />
+                </svg>
+                <span className="text-white font-semibold">
+                  Total envíos: <span className="text-[#41e0b3]">{filteredEnvios.length}</span>
+                </span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {Object.entries(STATUS_STYLES).map(([key, val]) => {
+                  const count = filteredEnvios.filter(e => e.Estado === key).length;
+                  if (count === 0) return null;
                   return (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
+                    <span
+                      key={key}
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${val.color} border border-[#23272b]`}
+                    >
+                      {val.label}: {count}
+                    </span>
                   );
                 })}
-              </select>
+              </div>
             </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={handleCloseUpdateStatusModal}
-                type="button"
-                disabled={isUpdating}
-                className="rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleConfirmUpdateStatus}
-                type="button"
-                disabled={isUpdating}
-                className="rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 disabled:bg-blue-300"
-              >
-                {isUpdating ? "Actualizando..." : "Confirmar"}
-              </button>
-            </div>
+          )}
+          <div className="overflow-x-auto rounded-xl shadow-inner">
+            <table className="min-w-full text-sm rounded-xl overflow-hidden">
+              <thead>
+                <tr style={{background: ELECTRIC_BLUE}}>
+                  <th className="px-3 py-3 text-left text-white font-bold">Nº guía</th>
+                  <th className="px-3 py-3 text-left text-white font-bold">Origen</th>
+                  <th className="px-3 py-3 text-left text-white font-bold">Destino</th>
+                  <th className="px-3 py-3 text-left text-white font-bold">Destinatario</th>
+                  <th className="px-3 py-3 text-left text-white font-bold">Estado</th>
+                  <th className="px-3 py-3 text-left text-white font-bold">Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEnvios.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="text-center text-gray-400 py-10 bg-[#18191A]"
+                    >
+                      No hay envíos registrados.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredEnvios.map((envio, idx) => (
+                    <tr
+                      key={envio.NumeroGuia + idx}
+                      className={`transition-all ${idx % 2 === 0 ? "bg-[#18191A]" : "bg-[#23272b]"} hover:bg-[#23272b]/90`}
+                    >
+                      <td className="px-3 py-3 text-[#41e0b3] font-mono font-bold">{envio.NumeroGuia}</td>
+                      <td className="px-3 py-3 text-white">{envio.Origen}</td>
+                      <td className="px-3 py-3 text-white">{envio.Destino}</td>
+                      <td className="px-3 py-3 text-white">{envio.Destinatario}</td>
+                      <td className="px-3 py-3">{getStatusDisplay(envio.Estado)}</td>
+                      <td className="px-3 py-3 text-gray-300">
+                        {dayjs(envio.FechaSolicitud).isValid()
+                          ? dayjs(envio.FechaSolicitud).format("DD/MM/YYYY HH:mm")
+                          : "Fecha inválida"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
-};
-
-export default ShippingHistoryForm;
+}

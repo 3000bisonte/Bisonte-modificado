@@ -99,124 +99,14 @@ function Sidebar({ isOpen, onClose }) {
   }, []);
 
   return (
-    <div
-      className={`fixed inset-0 z-50 transform ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      } transition-transform duration-300 ease-out bg-[#e2e8f0]/90 text-[#2d3748] w-64 h-full overflow-y-auto`}
-    >
-      {/* Botón para cerrar el sidebar */}
-      <button
-        className="text-[#2d3748] p-4 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-        onClick={onClose}
-        aria-label="Cerrar Sidebar"
-      >
-        ✕
-      </button>
-
-      {/* Mostrar la información de sesión o el botón para iniciar sesión */}
-      {session?.user ? (
-        <div
-          className="flex items-center justify-center p-4 cursor-pointer hover:bg-gray-100 transition-colors"
-          title="Ver perfil"
-          //onClick={() => (window.location.href = "/profile")}
-        >
-          <img
-            className="w-10 h-10 rounded-full"
-            src={session.user.image}
-            alt="User Avatar"
-          />
-          <span className="ml-3 text-lg font-bold">{session.user.name}</span>
-        </div>
-      ) : (
-        <div className="p-4">
-          <button
-            onClick={() => signIn()}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center focus:outline-none focus:ring-2 focus:ring-blue-700"
-            aria-label="Iniciar sesión"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-5 h-5 mr-2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 12h14M12 5l7 7-7 7"
-              />
-            </svg>
-            Accede a tu cuenta
-          </button>
-        </div>
-      )}
-
-      {/* Mostrar el perfil y enlaces internos */}
-      <div className="text-[#2d3748] p-4 mt-4">
-        {loading && <p>Cargando perfil...</p>}
-        {error && <p>Error al cargar perfil: {error}</p>}
-        {!loading && !error && (
-          <>
-            {miperfil.map((perf) => {
-              if (perf.correo === session?.user?.email) {
-                return <PerfilCard perf={perf} key={perf.id} />;
-              }
-              // <PerfilCard perf={perf} key={perf.id} />
-            })}
-          </>
-        )}
-      </div>
-
-      {/* Separador visual */}
-      <hr className="border-gray-300 my-4" />
-      <div className="p-4">
-        <Link
-          href="/misenvios"
-          className="text-[#2d3748] hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-        >
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-100 flex flex-col items-center py-8 px-2">
+      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-100 p-8">
+        <h2 className="text-2xl font-bold text-teal-600 mb-6 text-center">
           Mis Envíos
-        </Link>
+        </h2>
+        <TanstackReactTable data={dataCoti} columns={columns} />
+        {/* Modales y otros elementos siguen el mismo patrón visual */}
       </div>
-      <div className="p-4">
-        <Link
-          href="/politica-datos"
-          className="text-[#2d3748] hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-        >
-          Tratamiento de Datos
-        </Link>
-      </div>
-      <div className="p-4">
-        <Link
-          href="/terminos"
-          className="text-[#2d3748] hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-        >
-          Condiciones de Servicio
-        </Link>
-      </div>
-      <div className="p-4">
-        <Link
-          href="/contacto"
-          className="text-[#2d3748] hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-        >
-          Contáctanos
-        </Link>
-      </div>
-      {/* Botón de logout */}
-      {session?.user && (
-        <div className="p-4">
-          <button
-            className="text-[#2d3748] hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-            onClick={() =>
-              signOut({ callbackUrl: `${window.location.origin}/` })
-            }
-            aria-label="Cerrar sesión"
-          >
-            Logout
-          </button>
-        </div>
-      )}
     </div>
   );
 }

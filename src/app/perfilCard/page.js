@@ -1,15 +1,15 @@
 "use client";
 import { useState } from "react";
 
-export default function Contacto() {
+export default function PerfilCard() {
   const [form, setForm] = useState({
     nombre: "",
     tipoDocumento: "",
     numeroDocumento: "",
     celular: "",
     email: "",
-    ciudad: "",
-    mensaje: "",
+    direccion: "",
+    apartamento: "",
   });
 
   const handleChange = (e) => {
@@ -18,17 +18,8 @@ export default function Contacto() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Aquí puedes enviar el formulario a tu API o mostrar un mensaje de éxito
-    alert("Mensaje enviado correctamente");
-    setForm({
-      nombre: "",
-      tipoDocumento: "",
-      numeroDocumento: "",
-      celular: "",
-      email: "",
-      ciudad: "",
-      mensaje: "",
-    });
+    // Aquí puedes guardar los cambios del perfil
+    alert("Perfil actualizado correctamente");
   };
 
   return (
@@ -38,11 +29,7 @@ export default function Contacto() {
           <h2 className="text-white text-xl font-bold">Mis Envios</h2>
         </div>
         <div className="bg-[#18191A] py-4 text-center">
-          <p className="text-white text-base">
-            Estamos aquí para <span className="font-bold">ayudarte</span>
-            <br />
-            con tus consultas
-          </p>
+          <p className="text-white text-base font-semibold">Edita tu perfil</p>
         </div>
         <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-3">
           <div>
@@ -111,33 +98,33 @@ export default function Contacto() {
             />
           </div>
           <div>
-            <label className="text-sm font-semibold">Ciudad*</label>
+            <label className="text-sm font-semibold">Dirección de Entrega*</label>
             <input
               type="text"
-              name="ciudad"
-              placeholder="Ej: Bogotá"
+              name="direccion"
+              placeholder="Ej. Calle 123 #45-67"
               className="w-full mt-1 px-3 py-2 rounded border border-gray-300 focus:outline-none"
-              value={form.ciudad}
+              value={form.direccion}
               onChange={handleChange}
               required
             />
           </div>
           <div>
-            <label className="text-sm font-semibold">Mensaje</label>
-            <textarea
-              name="mensaje"
-              placeholder="Mensaje"
+            <label className="text-sm font-semibold">Apartamento/Torre/Conjunto (opcional)</label>
+            <input
+              type="text"
+              name="apartamento"
+              placeholder="Ej : Torre 5, Apto 301, Conjunto La Colina"
               className="w-full mt-1 px-3 py-2 rounded border border-gray-300 focus:outline-none"
-              value={form.mensaje}
+              value={form.apartamento}
               onChange={handleChange}
-              rows={2}
             />
           </div>
           <button
             type="submit"
             className="w-full bg-[#41e0b3] text-white font-bold py-2 rounded mt-2 hover:bg-[#2bbd8c] transition"
           >
-            Enviar
+            Editar
           </button>
         </form>
       </div>

@@ -2,255 +2,139 @@
 import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import GoogleButton from "@/components/GoogleButton";
 import { useRouter } from "next/navigation";
-//import { useMessagePort } from "../app/context/MessagePortContext";
+
 const LoginForm = () => {
-  //const { setPort } = useMessagePort();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [hasSentPort, setHasSentPort] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const handleMessage = (event) => {
-      var port = event.ports[0];
-      if (typeof port === "undefined") return;
-      //console.log("port desde login", port);
-
-      port.postMessage("Test");
-      // Receive upcoming messages on this port.
-      port.onmessage = function (event) {
-        console.log("[PostMessage1] Got message" + event.data);
-        try {
-          let messageData;
-
-          if (typeof event.data === "string") {
-            messageData = JSON.parse(event.data);
-          } else {
-            messageData = event.data; // Si ya es objeto, úsalo directamente
-          }
-
-          if (messageData && messageData.type === "myAppMessage") {
-            setMessages((prevMessages) => [
-              ...prevMessages,
-              messageData.content,
-            ]);
-          } else {
-            console.log(
-              "[PostMessage] Mensaje no válido o sin tipo esperado",
-              messageData
-            );
-          }
-        } catch (error) {
-          console.error("[PostMessage] Error al analizar el mensaje:", error);
-        }
-      };
-
-      if (
-        event.origin !==
-        "android-app://bisonte-logistica-6od4.vercel.app/app.vercel.bisonte_logistica_6od4.twa"
-        //"http://localhost:3000"
-      ) {
-        console.log(
-          "[PostMessage] Mensaje de origen no permitido",
-          event.origin
-        );
-        return;
-      }
-    };
-
-    // Registra el listener del evento `message`
-    window.addEventListener("message", handleMessage);
-
-    // Limpia el listener cuando el componente se desmonte
-    return () => {
-      window.removeEventListener("message", handleMessage);
-    };
+    const lastUser = localStorage.getItem("lastUser");
+    if (lastUser) setEmail(lastUser);
   }, []);
 
-  const handleGoogleSignIn = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setIsLoading(true);
     setErrorMessage("");
     try {
-      const res = await signIn("google", {
+      const res = await signIn("credentials", {
         redirect: false,
+        email,
+        password,
       });
       if (res.error) {
-        throw new Error(res.error);
+        if (res.error === "No user found") {
+          setErrorMessage("No estás registrado, por favor regístrate.");
+        } else {
+          setErrorMessage("Correo o contraseña incorrectos.");
+        }
+      } else {
+        localStorage.setItem("lastUser", email);
+        router.push("/home");
       }
-      router.push("/home");
     } catch (error) {
-      console.error("Error al iniciar sesión con Google", error);
-      setErrorMessage(
-        "Hubo un problema al iniciar sesión. Inténtalo de nuevo."
-      );
+      setErrorMessage("Error al iniciar sesión.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setErrorMessage("");
+    try {
+      await signIn("google", { callbackUrl: "/home" });
+      // No necesitas router.push aquí, Google hará la redirección automáticamente
+    } catch (error) {
+      setErrorMessage("Error con Google.");
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-r from-gray-100 to-blue-100">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
-        <h2 className="mb-6 text-3xl font-semibold text-center text-gray-800">
+    <div className="w-screen h-screen min-h-screen min-w-full flex items-center justify-center bg-[#18191A]">
+      <div className="w-full max-w-md bg-[#18191A] rounded-lg shadow-lg px-4 py-8 sm:px-8 sm:py-10 flex flex-col items-center">
+        {/* Logo */}
+        <img
+          src="/bisonte-logo.png"
+          alt="Bisonte Logo"
+          className="w-20 h-20 sm:w-24 sm:h-24 mb-2 sm:mb-4"
+        />
+        <h1 className="text-white text-xl sm:text-2xl font-bold mb-6 tracking-wide">
+          BISONTE
+        </h1>
+        {/* Título */}
+        <h2 className="text-white text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center">
           Iniciar Sesión
         </h2>
-        {/* <h1>Mensajes Recibidos:</h1>
-        {messages.length > 0 ? (
-          <ul>
-            {messages.map((message, index) => (
-              <li key={index}>{message}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>No se han recibido mensajes aún.</p>
-        )} */}
-        {/* Mensaje de error */}
-        {errorMessage && (
-          <p className="mb-4 text-sm text-center text-red-600 font-bold">
-            {errorMessage}
-          </p>
-        )}
-
-        <GoogleButton
-          onClick={handleGoogleSignIn}
-          disabled={isLoading}
-          className="w-full h-12 text-lg flex justify-center items-center bg-black text-white rounded-lg shadow-md hover:bg-gray-800"
+        {/* Formulario */}
+        <form
+          className="w-full flex flex-col gap-3 sm:gap-4"
+          onSubmit={handleSubmit}
         >
-          {isLoading ? (
-            "Cargando..."
-          ) : (
-            <>
-              <img
-                src="/google-icon.svg"
-                alt="Google"
-                className="w-6 h-6 mr-2"
-              />
-              Iniciar sesión con Google
-            </>
-          )}
-        </GoogleButton>
-
-        {/* Opción de Registro */}
-        <p className="mt-6 text-sm text-center text-gray-600">
-          ¿No tienes una cuenta?{" "}
-          <Link
-            href="/auth/register"
-            className="text-blue-600 font-medium hover:underline"
+          <input
+            type="email"
+            placeholder="Correo electronico "
+            className="rounded-md px-4 py-2 bg-white text-gray-800 focus:outline-none text-sm sm:text-base"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Contraseña"
+            className="rounded-md px-4 py-2 bg-white text-gray-800 focus:outline-none text-sm sm:text-base"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button
+            type="submit"
+            className="w-full bg-[#41e0b3] text-white font-bold py-2 rounded-md mt-1 hover:bg-[#2bbd8c] transition text-sm sm:text-base"
+            disabled={isLoading}
           >
-            Regístrate
+            {isLoading ? "Cargando..." : "Iniciar Sesión"}
+          </button>
+        </form>
+        {/* Error */}
+        {errorMessage && (
+          <p className="text-red-400 text-sm mt-2">{errorMessage}</p>
+        )}
+        {/* Olvidaste tu contraseña */}
+        <div className="w-full text-left mt-2">
+          <a
+            href="/recuperar"
+            className="text-gray-300 text-xs sm:text-sm hover:underline"
+          >
+            ¿Olvidaste tu contraseña?
+          </a>
+        </div>
+        {/* Google */}
+        <button
+          onClick={handleGoogleSignIn}
+          className="w-full flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 rounded-md mt-5 hover:bg-gray-100 transition text-sm sm:text-base"
+          disabled={isLoading}
+        >
+          <img src="/google-logo.svg" alt="Google" className="w-5 h-5" />
+          Sign in With Google
+        </button>
+        {/* Registro */}
+        <div className="w-full text-center mt-6">
+          <span className="text-gray-300 text-xs sm:text-sm">¿No tienes cuenta? </span>
+          <Link
+            href="/register"
+            className="text-[#41e0b3] text-xs sm:text-sm font-bold hover:underline"
+          >
+            Registrate aquí
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
 };
 
 export default LoginForm;
-
-// const LoginFormjksdfsdf = () => {
-//   const [messages, setMessages] = useState([]); // Estado para almacenar los mensajes
-//   const [port, setPort] = useState(null); // Almacenar el puerto recibido
-
-//   useEffect(() => {
-//     // Crea un canal de comunicación
-//     const channel = new MessageChannel();
-
-//     // Escucha los mensajes que se envían por el puerto 1 del canal
-//     channel.port1.onmessage = (messageEvent) => {
-//       console.log(
-//         "[MessageChannel] Mensaje recibido a través del puerto:",
-//         messageEvent.data
-//       );
-//       setMessages((prevMessages) => [...prevMessages, messageEvent.data]);
-//     };
-
-//     const handleMessage = (event) => {
-//       console.log("[--------] Got message" + event.data);
-//       var port = event.ports[0];
-//       if (typeof port === "undefined") return;
-
-//       // Post message on this port.
-//       port.postMessage("Test");
-//       // Receive upcoming messages on this port.
-//       port.onmessage = function (event) {
-//         console.log("[PostMessage1] Got message" + event.data);
-//         try {
-//           let messageData;
-
-//           if (typeof event.data === "string") {
-//             messageData = JSON.parse(event.data);
-//           } else {
-//             messageData = event.data; // Si ya es objeto, úsalo directamente
-//           }
-
-//           if (messageData && messageData.type === "myAppMessage") {
-//             setMessages((prevMessages) => [
-//               ...prevMessages,
-//               messageData.content,
-//             ]);
-//           } else {
-//             console.log(
-//               "[PostMessage] Mensaje no válido o sin tipo esperado",
-//               messageData
-//             );
-//           }
-//         } catch (error) {
-//           console.error("[PostMessage] Error al analizar el mensaje:", error);
-//         }
-//       };
-
-//       //console.log("[PostMessage] Mensaje recibido:", event.data);
-
-//       // Verifica el origen del mensaje (puedes personalizar este origen)
-//       if (
-//         event.origin !==
-//         "android-app://bisonte-logistica-6od4.vercel.app/app.vercel.bisonte_logistica_6od4.twa"
-//       ) {
-//         console.log(
-//           "[PostMessage] Mensaje de origen no permitido",
-//           event.origin
-//         );
-//         return;
-//       }
-
-//       // Verifica si el mensaje tiene el formato correcto (por ejemplo, type === "myAppMessage")
-//       // if (event.data && event.data.type === "myAppMessage") {
-//       //   // Si el mensaje tiene el formato esperado, procesalo
-//       //   setMessages((prevMessages) => [...prevMessages, event.data.content]);
-//       // } else {
-//       //   console.log(
-//       //     "[PostMessage] Mensaje no válido o sin tipo esperado",
-//       //     event.data
-//       //   );
-//       // }
-//     };
-
-//     // Registra el listener del evento `message`
-//     window.addEventListener("message", handleMessage);
-
-//     // Limpia el listener cuando el componente se desmonte
-//     return () => {
-//       window.removeEventListener("message", handleMessage);
-//     };
-//   }, []);
-
-//   return (
-//     <div>
-//       <h1>Mensajes Recibidos:</h1>
-//       {messages.length > 0 ? (
-//         <ul>
-//           {messages.map((message, index) => (
-//             <li key={index}>{message}</li>
-//           ))}
-//         </ul>
-//       ) : (
-//         <p>No se han recibido mensajes aún.</p>
-//       )}
-//     </div>
-//   );
-// };
-
-// //export default LoginFormjksdfsdf;
