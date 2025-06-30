@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { signIn, useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import PerfilCard from "@/components/PerfilCard";
+import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table";
 
 // Función para hacer la llamada a la API
 async function fetchPerfil() {
@@ -17,6 +18,44 @@ async function fetchPerfil() {
   const data = await response.json();
   //console.log("Datos de perfil:", data);
   return data;
+}
+
+function TanstackReactTable({ data, columns }) {
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  return (
+    <table className="min-w-full divide-y divide-gray-200">
+      <thead>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <tr key={headerGroup.id}>
+            {headerGroup.headers.map((header) => (
+              <th
+                key={header.id}
+                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                {flexRender(header.column.columnDef.header, header.getContext())}
+              </th>
+            ))}
+          </tr>
+        ))}
+      </thead>
+      <tbody>
+        {table.getRowModel().rows.map((row) => (
+          <tr key={row.id}>
+            {row.getVisibleCells().map((cell) => (
+              <td key={cell.id} className="px-4 py-2 whitespace-nowrap">
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 function Sidebar({ isOpen, onClose }) {
@@ -97,6 +136,18 @@ function Sidebar({ isOpen, onClose }) {
     };
     loadPerfil();
   }, []);
+
+  // Ejemplo de datos y columnas para la tabla
+  const dataCoti = [
+    { id: 1, destino: "Bogotá", estado: "En camino" },
+    { id: 2, destino: "Medellín", estado: "Entregado" },
+  ];
+
+  const columns = [
+    { accessorKey: "id", header: "ID", cell: (info) => info.getValue() },
+    { accessorKey: "destino", header: "Destino", cell: (info) => info.getValue() },
+    { accessorKey: "estado", header: "Estado", cell: (info) => info.getValue() },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-100 flex flex-col items-center py-8 px-2">

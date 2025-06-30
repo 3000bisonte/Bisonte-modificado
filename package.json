@@ -12,7 +12,7 @@
   "dependencies": {
     "@mercadopago/sdk-react": "^0.0.15",
     "@prisma/client": "^5.21.1",
-    "@tanstack/react-table": "^8.11.6",
+    "@tanstack/react-table": "^8.21.3",
     "bcrypt": "^6.0.0",
     "classnames": "^2.3.2",
     "dayjs": "^1.11.10",
