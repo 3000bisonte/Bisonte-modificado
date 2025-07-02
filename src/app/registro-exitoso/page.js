@@ -1,26 +1,47 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { signIn } from "next-auth/react";
 
 export default function RegistroExitoso() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   /**
-   * Navega a la pantalla de inicio
+   * Login automático y navega a la pantalla de inicio
    */
-  const handleComenzar = () => {
-    router.push("/home");
+  const handleComenzar = async () => {
+    setIsLoggingIn(true);
+    console.log("Intentando login automático con:", email, password);
+    const res = await signIn("credentials", {
+      redirect: false,
+      email,
+      password,
+    });
+    console.log("Resultado login automático:", res);
+    if (res?.ok) {
+      router.push("/home");
+    } else {
+      router.push("/");
+    }
+    setIsLoggingIn(false);
   };
 
   useEffect(() => {
     setTimeout(() => {
       setLoading(false);
       localStorage.removeItem("bienvenidaMostrada"); // Esto fuerza mostrar la bienvenida
-      // Leer el nombre del registro
+      // Leer el nombre, email y password del registro
       const nombreGuardado = localStorage.getItem("nombreRegistro") || "";
+      const emailGuardado = localStorage.getItem("emailRegistro") || "";
+      const passwordGuardado = localStorage.getItem("passwordRegistro") || "";
       setNombre(nombreGuardado);
+      setEmail(emailGuardado);
+      setPassword(passwordGuardado);
     }, 500); // puedes ajustar el tiempo si lo deseas
   }, []);
 
@@ -63,8 +84,9 @@ export default function RegistroExitoso() {
         <button
           onClick={handleComenzar}
           className="w-full bg-[#41e0b3] text-white font-bold py-2 rounded mt-2 hover:bg-[#2bbd8c] transition"
+          disabled={isLoggingIn}
         >
-          Comenzar
+          {isLoggingIn ? "Cargando..." : "Comenzar"}
         </button>
       </div>
     </div>

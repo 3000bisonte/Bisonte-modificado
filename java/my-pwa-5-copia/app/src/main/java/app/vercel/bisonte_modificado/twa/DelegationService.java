@@ -1,4 +1,4 @@
-package app.vercel.bisonte_logistica_6od4.twa;
+package app.vercel.bisonte_modificado.twa;
 
 
 import com.google.androidbrowserhelper.locationdelegation.LocationDelegationExtraCommandHandler;

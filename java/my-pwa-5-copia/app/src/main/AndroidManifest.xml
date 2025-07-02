@@ -20,12 +20,12 @@
      application, the package attribute will need to reflect the correct path in order to use
      the abbreviated format. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="app.vercel.bisonte_logistica_6od4.twa">
+    package="app.vercel.bisonte_modificado.twa">
 
     
         <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
-    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.INTERNET"/>
 
 
 
@@ -85,7 +85,7 @@
             android:exported="true">
 
             <meta-data android:name="android.support.customtabs.trusted.DEFAULT_URL"
-                android:value="https://bisonte-logistica-6od4.vercel.app" />
+                android:value="https://bisonte_modificado.vercel.app" />
 
 
             <meta-data

@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import MegaSaleModal from "./MegaSaleModal";
+import DescuentoAnunciosModal from "./DescuentoAnunciosModal";
 
 function formatDate(date) {
   const d = new Date(date);
@@ -17,6 +19,9 @@ export default function Resumen() {
   const [fecha, setFecha] = useState(formatDate(new Date()));
   const [showRemitente, setShowRemitente] = useState(false);
   const [showDestinatario, setShowDestinatario] = useState(false);
+  const [showMegaSale, setShowMegaSale] = useState(true);
+  const [showDescuento, setShowDescuento] = useState(false);
+  const [adState, setAdState] = useState("idle"); // idle | loading | error | done
 
   const router = useRouter();
 
@@ -38,6 +43,7 @@ export default function Resumen() {
   useEffect(() => {
     function handleRewardedAdMessage(event) {
       if (event.data === "rewardEarned") {
+        setAdState("done");
         const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
         if (cotizadorData && typeof cotizadorData.costoTotal === "number") {
           const descuento = 10000;
@@ -48,10 +54,74 @@ export default function Resumen() {
           setCotizador({ ...cotizadorData });
         }
       }
+      if (event.data === "rewardError") {
+        setAdState("error");
+      }
     }
     window.addEventListener("message", handleRewardedAdMessage);
     return () => window.removeEventListener("message", handleRewardedAdMessage);
   }, []);
+
+  // Precarga automática al montar
+  useEffect(() => {
+    if (window.AndroidInterface && window.AndroidInterface.preloadRewardedAd) {
+      window.AndroidInterface.preloadRewardedAd();
+    }
+  }, []);
+
+  // Mostrar el modal automáticamente al entrar
+  useEffect(() => {
+    setShowMegaSale(true);
+  }, []);
+
+  // Cuando el usuario ve el anuncio completo:
+  const handleVerAnuncio = () => {
+    setShowMegaSale(false);
+    // Simula que el anuncio terminó (puedes poner aquí tu lógica real)
+    setTimeout(() => setShowDescuento(true), 1000); // 1 segundo de espera
+  };
+
+  const handleVerOtroAnuncio = () => {
+    setShowDescuento(false);
+    setShowMegaSale(true);
+  };
+
+  const handlePagar = async () => {
+    setShowMegaSale(false);
+    setShowDescuento(false);
+    // Aquí puedes poner tu lógica de pago (MercadoPago, etc)
+    router.push("/mercadopago");
+    // Después de pago exitoso, notifica por correo
+    await notificarEnvioPorCorreo();
+  };
+
+  // Función para enviar notificación por correo
+  const notificarEnvioPorCorreo = async () => {
+    try {
+      await fetch("/api/notificar-envio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          remitente,
+          destinatario,
+          cotizador,
+          fecha,
+        }),
+      });
+    } catch (error) {
+      // Puedes mostrar un toast o alert si falla, pero no es obligatorio
+      console.error("Error enviando notificación de envío:", error);
+    }
+  };
+
+  const handleVerAnuncios = () => {
+    if (window.AndroidInterface && window.AndroidInterface.showRewardedAd) {
+      setAdState("loading");
+      window.AndroidInterface.showRewardedAd();
+      return;
+    }
+    alert("Esta función solo está disponible en la app móvil.");
+  };
 
   if (!cotizador || !remitente || !destinatario) {
     return (
@@ -82,51 +152,6 @@ export default function Resumen() {
     "25785": "Tabio",
     "25740": "Soacha",
     "25743": "Sibaté",
-  };
-
-  // Función para enviar notificación por correo
-  const notificarEnvioPorCorreo = async () => {
-    try {
-      await fetch("/api/notificar-envio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          remitente,
-          destinatario,
-          cotizador,
-          fecha,
-        }),
-      });
-    } catch (error) {
-      // Puedes mostrar un toast o alert si falla, pero no es obligatorio
-      console.error("Error enviando notificación de envío:", error);
-    }
-  };
-
-  const handlePagar = async () => {
-    // Aquí puedes poner tu lógica de pago (MercadoPago, etc)
-    router.push("/mercadopago");
-    // Después de pago exitoso, notifica por correo
-    await notificarEnvioPorCorreo();
-  };
-
-  const handleVerAnuncios = () => {
-    if (window.AndroidInterface && window.AndroidInterface.showRewardedAd) {
-      window.AndroidInterface.showRewardedAd();
-      return;
-    }
-
-    const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
-    if (cotizadorData && typeof cotizadorData.costoTotal === "number") {
-      const descuento = 10000;
-      const nuevoCosto = Math.max(0, cotizadorData.costoTotal - descuento);
-      cotizadorData.costoTotal = nuevoCosto;
-      localStorage.setItem("formCotizador", JSON.stringify(cotizadorData));
-      alert(`¡Descuento aplicado! Nuevo costo: $${nuevoCosto.toLocaleString("es-CO")}`);
-      setCotizador({ ...cotizadorData });
-    } else {
-      alert("No se encontró la cotización para aplicar el descuento.");
-    }
   };
 
   return (
@@ -359,6 +384,57 @@ export default function Resumen() {
           </div>
         </div>
       </div>
+
+      {/* MODAL MEGA SALE */}
+      <MegaSaleModal
+        open={showMegaSale}
+        onClose={() => setShowMegaSale(false)}
+        onPay={() => {
+          setShowMegaSale(false);
+          handlePagar();
+        }}
+        onWatchAd={() => {
+          setShowMegaSale(false);
+          handleVerAnuncios();
+        }}
+      />
+
+      {/* MODAL DESCUENTO ANUNCIOS */}
+      <DescuentoAnunciosModal
+        open={showDescuento}
+        onClose={() => setShowDescuento(false)}
+        onPay={() => {
+          setShowDescuento(false);
+          handlePagar();
+        }}
+        onWatchAd={() => {
+          setShowDescuento(false);
+          handleVerOtroAnuncio();
+        }}
+      />
+
+      {/* Feedback visual de AdMob */}
+      {adState === "loading" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-white rounded-xl p-8 shadow text-center">
+            <span className="block mb-2 text-lg font-bold text-[#41e0b3]">Cargando anuncio...</span>
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#41e0b3] mx-auto"></div>
+          </div>
+        </div>
+      )}
+      {adState === "error" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-white rounded-xl p-8 shadow text-center">
+            <span className="block mb-2 text-lg font-bold text-red-500">Error al cargar el anuncio. Intenta de nuevo.</span>
+            <button
+              className="bg-[#41e0b3] text-white px-4 py-2 rounded font-bold"
+              onClick={() => setAdState("idle")}
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

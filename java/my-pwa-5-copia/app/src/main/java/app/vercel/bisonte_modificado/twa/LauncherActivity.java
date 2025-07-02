@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package app.vercel.bisonte_logistica_6od4.twa;
+package app.vercel.bisonte_modificado.twa;
 
 import android.content.ComponentName;
 import android.content.pm.ActivityInfo;
@@ -54,13 +54,13 @@ public class LauncherActivity
         extends com.google.androidbrowserhelper.trusted.LauncherActivity {
     private CustomTabsClient mClient;
     private CustomTabsSession mSession;
-    private Uri URL = Uri.parse("https://bisonte-logistica-6od4.vercel.app");
+    private Uri URL = Uri.parse("https://bisonte-modificado.vercel.app");
 
     // This origin is going to be validated via DAL, please see
     // (https://developer.chrome.com/docs/android/post-message-twa#add_the_app_to_web_validation),
     // it has to either start with http or https.
-    private Uri SOURCE_ORIGIN = Uri.parse("https://bisonte-logistica-6od4.vercel.app");
-    private Uri TARGET_ORIGIN = Uri.parse("https://bisonte-logistica-6od4.vercel.app");
+    private Uri SOURCE_ORIGIN = Uri.parse("https://bisonte-modificado.vercel.app");
+    private Uri TARGET_ORIGIN = Uri.parse("https://bisonte-modificado.vercel.app");
     private boolean mValidated = false;
 
     private final String TAG = "PostMessageDemo";

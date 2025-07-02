@@ -1,8 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import React, { useState, useEffect, useRef } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import BottomNav from "./BottomNav";
 
 // Iconos SVG
 const IconUser = () => (
@@ -61,24 +62,18 @@ const IconContact = () => (
   </svg>
 );
 
-const SLIDES = [
-  { 
-    id: 1, 
-    title: "Envíos Inteligentes", 
-    subtitle: "Tecnología que optimiza cada entrega",
-    img: "/slider/slider1.jpg" 
+const sliderData = [
+  {
+    img: "/slider/slider1.jpg",
+   
   },
-  { 
-    id: 2, 
-    title: "Precios Transparentes", 
-    subtitle: "Sin sorpresas, sin costos ocultos",
-    img: "/slider/slider2.jpg" 
+  {
+    img: "/slider/slider2.jpg",
+    
   },
-  { 
-    id: 3, 
-    title: "Red Nacional", 
-    subtitle: "Conectamos todo el territorio",
-    img: "/slider/slider3.jpg" 
+  {
+    img: "/slider/slider3.jpg",
+   
   },
 ];
 
@@ -88,11 +83,12 @@ const Home = () => {
   const [slide, setSlide] = useState(0);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const sliderTrackRef = useRef(null);
 
   // Redirigir si no está autenticado
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      router.push("/");
     }
   }, [status, router]);
 
@@ -117,13 +113,13 @@ const Home = () => {
   };
 
   // Slider handlers
-  const prevSlide = () => setSlide((s) => (s === 0 ? SLIDES.length - 1 : s - 1));
-  const nextSlide = () => setSlide((s) => (s === SLIDES.length - 1 ? 0 : s + 1));
+  const prevSlide = () => setSlide((s) => (s === 0 ? sliderData.length - 1 : s - 1));
+  const nextSlide = () => setSlide((s) => (s === sliderData.length - 1 ? 0 : s + 1));
 
   // Auto slide
   useEffect(() => {
     const interval = setInterval(() => {
-      setSlide((s) => (s === SLIDES.length - 1 ? 0 : s + 1));
+      setSlide((s) => (s === sliderData.length - 1 ? 0 : s + 1));
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -137,18 +133,38 @@ const Home = () => {
     }
   }, [showProfileMenu]);
 
-  const handleLogout = () => {
-    console.log("Cerrando sesión...");
+  const handleLogout = async () => {
     setShowProfileMenu(false);
+    await signOut({ callbackUrl: "/" });
   };
 
-  // Navegación inferior
-  const navItems = [
-    { label: "Inicio", icon: <IconHome />, href: "/home" },
-    { label: "Envíos", icon: <IconEnvios />, href: "/misenvios" },
-    { label: "Perfil", icon: <IconPerfil />, href: "/perfil" },
-    { label: "Chat", icon: <IconContact />, href: "/contacto" },
-  ];
+  const handleTouchStart = (e) => {
+    sliderTrackRef.current.touchStartX = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const swipeDistance = sliderTrackRef.current.touchStartX - touchEndX;
+    if (Math.abs(swipeDistance) > 50) {
+      if (swipeDistance > 0) nextSlide();
+      else prevSlide();
+    }
+  };
+  const handleMouseDown = (e) => {
+    sliderTrackRef.current.mouseStartX = e.clientX;
+    sliderTrackRef.current.style.cursor = "grabbing";
+  };
+  const handleMouseUp = (e) => {
+    const mouseEndX = e.clientX;
+    const swipeDistance = sliderTrackRef.current.mouseStartX - mouseEndX;
+    if (Math.abs(swipeDistance) > 50) {
+      if (swipeDistance > 0) nextSlide();
+      else prevSlide();
+    }
+    sliderTrackRef.current.style.cursor = "grab";
+  };
+  const handleMouseLeave = () => {
+    sliderTrackRef.current.style.cursor = "default";
+  };
 
   if (status === "loading") {
     return (
@@ -191,7 +207,7 @@ const Home = () => {
               <IconChevronDown className={`transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
             </button>
             {showProfileMenu && (
-              <div className="absolute right-0 top-full mt-2 bg-[#18191A]/95 backdrop-blur-xl rounded-2xl shadow-xl border border-[#41e0b3]/30 py-2 min-w-[140px] z-40 animate-fade-in-down">
+              <div className="absolute right-0 top-full mt-2 bg-[#18191A]/95 backdrop-blur-xl rounded-2xl shadow-xl border border-[#41e0b3]/30 py-2 min-w-[180px] z-40 animate-fade-in-down">
                 <Link
                   href="/perfil"
                   className="flex items-center gap-3 px-4 py-3 text-[#41e0b3] hover:bg-[#23272b] transition-colors rounded-xl mx-2"
@@ -199,6 +215,20 @@ const Home = () => {
                 >
                   <IconPerfil />
                   <span className="text-sm">Mi Perfil</span>
+                </Link>
+                <Link
+                  href="/politica-datos"
+                  className="flex items-center gap-3 px-4 py-3 text-[#41e0b3] hover:bg-[#23272b] transition-colors rounded-xl mx-2"
+                  onClick={() => setShowProfileMenu(false)}
+                >
+                  <span className="text-sm">Tratamiento de Datos</span>
+                </Link>
+                <Link
+                  href="/terminos"
+                  className="flex items-center gap-3 px-4 py-3 text-[#41e0b3] hover:bg-[#23272b] transition-colors rounded-xl mx-2"
+                  onClick={() => setShowProfileMenu(false)}
+                >
+                  <span className="text-sm">Condiciones de Servicio</span>
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -225,7 +255,6 @@ const Home = () => {
         {/* Hero section */}
         <section className="bg-[#18191A]/90 rounded-3xl p-8 border-2 border-[#41e0b3]/30 shadow-2xl shadow-[#41e0b3]/10 animate-fade-in-up">
           <div className="text-center mb-8">
-            <p className="text-[#41e0b3] text-sm mb-3 font-light animate-fade-in">{getUserName()} ✨</p>
             <h1 className="text-white font-extrabold text-3xl mb-4 leading-tight drop-shadow">
               Envíos más <span className="bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] bg-clip-text text-transparent">inteligentes</span>
             </h1>
@@ -246,55 +275,69 @@ const Home = () => {
         </section>
 
         {/* Slider atractivo */}
-        <section className="bg-[#23272b]/90 rounded-3xl overflow-hidden border-2 border-[#41e0b3]/20 shadow-xl shadow-[#41e0b3]/10 animate-fade-in-up">
-          <div className="relative py-6">
-            <div className="flex items-center px-2 sm:px-4">
-              <button
-                onClick={prevSlide}
-                className="p-2 rounded-full bg-[#41e0b3]/10 hover:bg-[#41e0b3]/30 transition-all duration-200 z-10 mr-4 shadow"
-                aria-label="Anterior"
+        <section className="w-full flex flex-col items-center">
+          <div className="w-full max-w-lg mx-auto bg-white rounded-2xl shadow-xl overflow-hidden relative slider-container">
+            <div
+              className="relative w-full h-[220px] sm:h-[300px] lg:h-[400px] slider-wrapper"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+            >
+              <div
+                ref={sliderTrackRef}
+                className="flex transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] h-full"
+                style={{ transform: `translateX(-${slide * 100}%)` }}
               >
-                <svg className="w-6 h-6 text-[#41e0b3]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div className="flex-1 flex justify-center">
-                <div className="relative w-full max-w-[430px] h-[224px] rounded-xl overflow-hidden shadow-lg group">
-                  <img
-                    src={SLIDES[slide].img}
-                    alt={SLIDES[slide].title}
-                    className="w-full h-full object-cover object-center transition-all duration-700 scale-100 group-hover:scale-105"
-                    draggable={false}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                  <div className="absolute bottom-4 left-4 right-4 text-white drop-shadow-lg animate-fade-in-up">
-                    <h3 className="font-bold text-lg mb-1">{SLIDES[slide].title}</h3>
-                    <p className="text-sm opacity-90 font-light">{SLIDES[slide].subtitle}</p>
+                {sliderData.map((slideItem, idx) => (
+                  <div
+                    key={idx}
+                    className={`min-w-full h-full relative slide ${slide === idx ? "active" : ""}`}
+                  >
+                    <img
+                      src={slideItem.img}
+                      alt={slideItem.title}
+                      className="w-full h-full object-cover block"
+                      draggable={false}
+                    />
+                    <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-transparent to-transparent text-white px-6 py-6 transition-transform duration-300 ${slide === idx ? "translate-y-0" : "translate-y-full"} slide-overlay`}>
+                      <div className="text-lg font-semibold mb-1 slide-title">{slideItem.title}</div>
+                      <div className="text-sm opacity-90 slide-description">{slideItem.desc}</div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
+              {/* Botones de navegación */}
               <button
-                onClick={nextSlide}
-                className="p-2 rounded-full bg-[#41e0b3]/10 hover:bg-[#41e0b3]/30 transition-all duration-200 z-10 ml-4 shadow"
-                aria-label="Siguiente"
+                className="slider-nav prev absolute top-1/2 left-3 -translate-y-1/2 bg-white/90 w-10 h-10 rounded-full flex items-center justify-center text-xl text-[#41e0b3] shadow hover:bg-white z-10"
+                onClick={prevSlide}
+                aria-label="Anterior"
+                type="button"
               >
-                <svg className="w-6 h-6 text-[#41e0b3]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M9 5l7 7-7 7" />
-                </svg>
+                ‹
               </button>
+              <button
+                className="slider-nav next absolute top-1/2 right-3 -translate-y-1/2 bg-white/90 w-10 h-10 rounded-full flex items-center justify-center text-xl text-[#41e0b3] shadow hover:bg-white z-10"
+                onClick={nextSlide}
+                aria-label="Siguiente"
+                type="button"
+              >
+                ›
+              </button>
+              {/* Indicador touch */}
+              <div className="touch-indicator absolute bottom-14 left-1/2 -translate-x-1/2 text-white text-xs opacity-70 animate-pulse pointer-events-none">
+                Desliza para cambiar
+              </div>
             </div>
-            {/* Dots animados */}
-            <div className="flex justify-center gap-2 mt-6">
-              {SLIDES.map((_, idx) => (
-                <button
+            {/* Dots */}
+            <div className="flex justify-center gap-2 py-3 bg-white slider-dots">
+              {sliderData.map((_, idx) => (
+                <span
                   key={idx}
+                  className={`dot w-2 h-2 rounded-full transition-all duration-300 ${slide === idx ? "bg-[#41e0b3] scale-125" : "bg-gray-300"}`}
                   onClick={() => setSlide(idx)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 border-2 ${
-                    slide === idx 
-                      ? "bg-[#41e0b3] border-[#41e0b3] scale-125 shadow-lg shadow-[#41e0b3]/30"
-                      : "bg-[#23272b] border-[#41e0b3]/30 hover:bg-[#41e0b3]/40"
-                  }`}
-                  aria-label={`Ir al slide ${idx + 1}`}
+                  style={{ cursor: "pointer" }}
                 />
               ))}
             </div>
@@ -375,35 +418,7 @@ const Home = () => {
       </main>
 
       {/* Navegación inferior atractiva */}
-      <nav className="fixed bottom-0 left-0 w-full bg-[#18191A]/95 backdrop-blur-xl border-t-2 border-[#41e0b3]/30 shadow-2xl z-50 animate-fade-in-up">
-        <div className="max-w-md mx-auto flex justify-around items-center px-6 py-3">
-          {navItems.map((item, idx) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`
-                flex flex-col items-center text-[#41e0b3] hover:text-white transition-all duration-300 group
-                font-bold text-sm tracking-wide relative
-              `}
-            >
-              <span
-                className={`
-                  px-4 py-2 rounded-xl
-                  group-hover:bg-[#41e0b3]/20
-                  group-active:scale-95
-                  transition-all duration-300
-                  shadow
-                  ${idx === 0 ? "animate-bounce" : ""}
-                `}
-              >
-                {item.label}
-              </span>
-              {/* Subrayado animado */}
-              <span className="absolute left-1/2 -bottom-1 w-0 h-1 bg-[#41e0b3] rounded-full group-hover:w-8 transition-all duration-300 -translate-x-1/2"></span>
-            </Link>
-          ))}
-        </div>
-      </nav>
+      <BottomNav />
 
       {/* Modal de bienvenida */}
       {showWelcome && (

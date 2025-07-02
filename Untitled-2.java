@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package app.vercel.bisonte_logistica_6od4.twa;
+package app.vercel.bisonte_modificado.twa;
 
 import android.content.ComponentName;
 import android.content.pm.ActivityInfo;

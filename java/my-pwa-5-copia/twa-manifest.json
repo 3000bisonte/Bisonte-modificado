@@ -1,6 +1,6 @@
 {
-  "packageId": "app.vercel.bisonte_logistica_6od4.twa",
-  "host": "bisonte-logistica-6od4.vercel.app",
+  "packageId": "app.vercel.bisonte_modificado.twa",
+  "host": "bisonte-bisonte_modificado.app",
   "name": "Bisonte logística",
   "launcherName": "Bisonte",
   "display": "standalone",
@@ -13,7 +13,7 @@
   "backgroundColor": "#101010",
   "enableNotifications": true,
   "startUrl": "/",
-  "iconUrl": "https://bisonte-logistica-6od4.vercel.app/bisonte-logo.png",
+  "iconUrl": "https://bisonte_modificado.vercel.app/bisonte-logo.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "C:\\Users\\Mauricio\\OneDrive\\Documentos\\GERMAN-FORERO-APP-PWA\\nestjs-pwa-setup-master\\my-pwa-3\\android.keystore",
@@ -23,7 +23,7 @@
   "appVersionCode": 1,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://bisonte-logistica-6od4.vercel.app/manifest.json",
+  "webManifestUrl": "https://bisonte_modificado.vercel.app/manifest.json",
   "fallbackType": "customtabs",
   "features": {
     "locationDelegation": {
@@ -36,7 +36,7 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://bisonte-logistica-6od4.vercel.app/",
+  "fullScopeUrl": "https://bisonte_modificado.vercel.app/",
   "minSdkVersion": 19,
   "orientation": "default",
   "fingerprints": [],

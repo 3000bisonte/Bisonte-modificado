@@ -1,4 +1,4 @@
-package app.vercel.bisonte_logistica_6od4.twa;
+package app.vercel.bisonte_modificado.twa;
 /*
  *    Copyright 2023 Google LLC
  *
@@ -24,7 +24,7 @@ public class PostMessageBroadcastReceiver extends BroadcastReceiver {
 
     private CustomTabsSession customTabsSession;
 
-    public final static String POST_MESSAGE_ACTION = "bisonte-logistica-6od4.vercel.app.postmessage.POST_MESSAGE_ACTION";
+    public final static String POST_MESSAGE_ACTION = "bisonte-modificado.vercel.app.postmessage.POST_MESSAGE_ACTION";
 
     public PostMessageBroadcastReceiver(CustomTabsSession session) {
         customTabsSession = session;

@@ -26,18 +26,42 @@ const LoginForm = () => {
         email,
         password,
       });
-      if (res.error) {
-        if (res.error === "No user found") {
-          setErrorMessage("No estás registrado, por favor regístrate.");
+
+      // Si la respuesta tiene error, NO redirigir, solo mostrar mensaje
+      if (res?.error) {
+        if (
+          res.error.toLowerCase().includes("no user") ||
+          res.error.toLowerCase().includes("not found")
+        ) {
+          setErrorMessage(
+            "El correo no está registrado. Por favor regístrate o inicia sesión con Google."
+          );
         } else {
-          setErrorMessage("Correo o contraseña incorrectos.");
+          setErrorMessage(
+            "Correo o contraseña incorrectos. Si no tienes cuenta, regístrate o usa Google."
+          );
         }
-      } else {
+        setIsLoading(false);
+        // Borra el passwordRegistro si existe, por seguridad
+        localStorage.removeItem("passwordRegistro");
+        return; // Detener aquí, NO hacer nada más
+      }
+
+      // Si es exitoso, redirigir
+      if (res?.ok) {
         localStorage.setItem("lastUser", email);
+        // Borra el passwordRegistro si existe, por seguridad
+        localStorage.removeItem("passwordRegistro");
         router.push("/home");
+      } else {
+        setErrorMessage("Error al iniciar sesión.");
+        // Borra el passwordRegistro si existe, por seguridad
+        localStorage.removeItem("passwordRegistro");
       }
     } catch (error) {
       setErrorMessage("Error al iniciar sesión.");
+      // Borra el passwordRegistro si existe, por seguridad
+      localStorage.removeItem("passwordRegistro");
     } finally {
       setIsLoading(false);
     }

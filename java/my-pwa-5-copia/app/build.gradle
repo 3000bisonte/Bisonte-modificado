@@ -21,8 +21,8 @@ plugins {
 }
 
 def twaManifest = [
-        applicationId: 'app.vercel.bisonte_logistica_6od4.twa',
-        hostName: 'bisonte-logistica-6od4.vercel.app', // The domain being opened in the TWA.
+        applicationId: 'app.vercel.bisonte_modificado.twa',
+        hostName: 'bisonte_modificado.app', // The domain being opened in the TWA.
         launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
         name: 'Bisonte logística', // The application name.
         launcherName: 'Bisonte', // The name shown on the Android Launcher.
@@ -67,9 +67,9 @@ android {
     }
 
     compileSdkVersion 35 // Asegúrate de que esto sea compatible con tus dependencias, puede ser necesario ajustarlo (34 podría ser más estable actualmente)
-    namespace "app.vercel.bisonte_logistica_6od4.twa"
+    namespace "app.vercel.bisonte_modificado.twa"
     defaultConfig {
-        applicationId "app.vercel.bisonte_logistica_6od4.twa"
+        applicationId "app.vercel.bisonte_modif.twa"
         minSdkVersion 21
         targetSdkVersion 35 // Igual que compileSdkVersion
 
@@ -90,11 +90,11 @@ android {
         // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
         // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
         // the TWA, as it will probably give a better user experience for non-mobile devices.
-        resValue "string", "webManifestUrl", 'https://bisonte-logistica-6od4.vercel.app/manifest.json'
+        resValue "string", "webManifestUrl", 'https://bisonte_modificado.vercel.app/manifest.json'
 
 
         // This is used by Meta Quest.
-        resValue "string", "fullScopeUrl", 'https://bisonte-logistica-6od4.vercel.app/'
+        resValue "string", "fullScopeUrl", 'https://bisonte_modificado.vercel.app/'
 
 
         // The hostname is used when building the intent-filter, so the TWA is able to
