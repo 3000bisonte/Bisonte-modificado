@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Client } from "pg";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 export async function POST(req) {
   const { email, token, newPassword } = await req.json();
