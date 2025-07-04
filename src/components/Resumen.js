@@ -42,11 +42,15 @@ export default function Resumen() {
   // Escucha el mensaje de recompensa desde Android
   useEffect(() => {
     function handleRewardedAdMessage(event) {
-      if (event.data === "rewardEarned") {
+      let data = event.data;
+      try {
+        if (typeof data === "string") data = JSON.parse(data);
+      } catch {}
+      if (data && data.type === "reward" && data.status === "completed") {
         setAdState("done");
         const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
         if (cotizadorData && typeof cotizadorData.costoTotal === "number") {
-          const descuento = 10000;
+          const descuento = 2013;
           const nuevoCosto = Math.max(0, cotizadorData.costoTotal - descuento);
           cotizadorData.costoTotal = nuevoCosto;
           localStorage.setItem("formCotizador", JSON.stringify(cotizadorData));
@@ -54,7 +58,7 @@ export default function Resumen() {
           setCotizador({ ...cotizadorData });
         }
       }
-      if (event.data === "rewardError") {
+      if (data && data.type === "adStatus" && data.status === "error") {
         setAdState("error");
       }
     }
@@ -153,6 +157,8 @@ export default function Resumen() {
     "25740": "Soacha",
     "25743": "Sibaté",
   };
+
+  const canProceed = true; // Cambia esto según tu lógica de habilitación
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#e3dfde] via-[#f8fafc] to-[#41e0b3]/10 py-8 px-4">
@@ -383,58 +389,76 @@ export default function Resumen() {
             </div>
           </div>
         </div>
+
+        {/* Navegación entre pantallas */}
+        <div className="flex justify-between w-full mt-6">
+          <button
+            type="button"
+            className="bg-gray-300 text-gray-700 px-6 py-2 rounded font-semibold"
+            onClick={() => router.push("/destinatario")}
+          >
+            Anterior
+          </button>
+          <button
+            type="button"
+            className="bg-teal-500 hover:bg-teal-600 text-white px-6 py-2 rounded font-semibold"
+            onClick={() => router.push("/pagar")}
+          >
+            Continuar
+          </button>
+        </div>
+
+        {/* MODAL MEGA SALE */}
+        <MegaSaleModal
+          open={showMegaSale}
+          onClose={() => setShowMegaSale(false)}
+          onPay={() => {
+            setShowMegaSale(false);
+            handlePagar();
+          }}
+          onWatchAd={() => {
+            setShowMegaSale(false);
+            handleVerAnuncios();
+          }}
+        />
+
+        {/* MODAL DESCUENTO ANUNCIOS */}
+        <DescuentoAnunciosModal
+          open={showDescuento}
+          onClose={() => setShowDescuento(false)}
+          onPay={() => {
+            setShowDescuento(false);
+            handlePagar();
+          }}
+          onWatchAd={() => {
+            setShowDescuento(false);
+            handleVerOtroAnuncio();
+          }}
+        />
+
+        {/* Feedback visual de AdMob */}
+        {adState === "loading" && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="bg-white rounded-xl p-8 shadow text-center">
+              <span className="block mb-2 text-lg font-bold text-[#41e0b3]">Cargando anuncio...</span>
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#41e0b3] mx-auto"></div>
+            </div>
+          </div>
+        )}
+        {adState === "error" && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="bg-white rounded-xl p-8 shadow text-center">
+              <span className="block mb-2 text-lg font-bold text-red-500">Error al cargar el anuncio. Intenta de nuevo.</span>
+              <button
+                className="bg-[#41e0b3] text-white px-4 py-2 rounded font-bold"
+                onClick={() => setAdState("idle")}
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* MODAL MEGA SALE */}
-      <MegaSaleModal
-        open={showMegaSale}
-        onClose={() => setShowMegaSale(false)}
-        onPay={() => {
-          setShowMegaSale(false);
-          handlePagar();
-        }}
-        onWatchAd={() => {
-          setShowMegaSale(false);
-          handleVerAnuncios();
-        }}
-      />
-
-      {/* MODAL DESCUENTO ANUNCIOS */}
-      <DescuentoAnunciosModal
-        open={showDescuento}
-        onClose={() => setShowDescuento(false)}
-        onPay={() => {
-          setShowDescuento(false);
-          handlePagar();
-        }}
-        onWatchAd={() => {
-          setShowDescuento(false);
-          handleVerOtroAnuncio();
-        }}
-      />
-
-      {/* Feedback visual de AdMob */}
-      {adState === "loading" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-white rounded-xl p-8 shadow text-center">
-            <span className="block mb-2 text-lg font-bold text-[#41e0b3]">Cargando anuncio...</span>
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#41e0b3] mx-auto"></div>
-          </div>
-        </div>
-      )}
-      {adState === "error" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-white rounded-xl p-8 shadow text-center">
-            <span className="block mb-2 text-lg font-bold text-red-500">Error al cargar el anuncio. Intenta de nuevo.</span>
-            <button
-              className="bg-[#41e0b3] text-white px-4 py-2 rounded font-bold"
-              onClick={() => setAdState("idle")}
-            >
-              Reintentar
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

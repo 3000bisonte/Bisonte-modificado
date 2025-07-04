@@ -28,7 +28,7 @@
         \"relation\": [\"delegate_permission/common.handle_all_urls\"],
         \"target\": {
             \"namespace\": \"web\",
-            \"site\": \"https://bisonte_modificado.vercel.app\"
+            \"site\": \"https://bisonte-bisonte-modificado.app\"
         }
     }]
     

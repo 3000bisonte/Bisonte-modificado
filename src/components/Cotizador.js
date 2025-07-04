@@ -270,6 +270,86 @@ export default function Cotizador() {
         volumetricError   // Recalcular si el error cambia (aparece o desaparece)
     ]);
 
+    // 1. AGREGAR ESTE useEffect DESPUÉS DE LOS useEffect EXISTENTES (cerca de la línea 140-150)
+
+// Cargar datos del localStorage al montar el componente
+useEffect(() => {
+    const loadSavedData = () => {
+        try {
+            const savedData = localStorage.getItem("formCotizador");
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                console.log("Datos recuperados del localStorage:", parsedData);
+                
+                // Actualizar el estado del formulario con los datos guardados
+                setFormData({
+                    ciudadOrigen: parsedData.ciudadOrigen || "11001", // Siempre Bogotá por defecto
+                    ciudadDestino: parsedData.ciudadDestino || "",
+                    tipoEnvio: parsedData.tipoEnvio || "",
+                    alto: parsedData.alto || "",
+                    ancho: parsedData.ancho || "",
+                    largo: parsedData.largo || "",
+                    peso: parsedData.peso || "",
+                    valorDeclarado: parsedData.valorDeclarado || "",
+                    recomendaciones: parsedData.recomendaciones || "",
+                });
+                
+                // También cargar la descripción "Otro" si existe
+                if (parsedData.otraDescripcion) {
+                    setOtraDescripcion(parsedData.otraDescripcion);
+                }
+                
+                console.log("Formulario prellenado con datos guardados");
+            } else {
+                console.log("No hay datos guardados en localStorage");
+            }
+        } catch (error) {
+            console.error("Error al cargar datos del localStorage:", error);
+            // Si hay error, continuar con formulario vacío
+        }
+    };
+
+    loadSavedData();
+}, []); // Se ejecuta solo al montar el componente
+
+// 2. FUNCIÓN PARA LIMPIAR DATOS DEL LOCALSTORAGE Y REINICIAR EL FORMULARIO
+const clearSavedData = () => {
+    try {
+        localStorage.removeItem("formCotizador");
+        console.log("Datos del localStorage eliminados");
+        
+        // Resetear el formulario
+        setFormData({
+            ciudadOrigen: "11001",
+            ciudadDestino: "",
+            tipoEnvio: "",
+            alto: "",
+            ancho: "",
+            largo: "",
+            peso: "",
+            valorDeclarado: "",
+            recomendaciones: "",
+        });
+        setOtraDescripcion("");
+        setCostoTotal(null);
+        setVolumetricWeight(null);
+        setVolumetricError('');
+        
+        alert("Formulario reiniciado");
+    } catch (error) {
+        console.error("Error al limpiar localStorage:", error);
+    }
+};
+
+// 3. OPCIONAL: BOTÓN PARA LIMPIAR DATOS (agregar en el JSX donde consideres apropiado)
+// <button 
+//     type="button"
+//     onClick={clearSavedData}
+//     className="text-sm text-gray-500 hover:text-gray-700 underline"
+// >
+//     Limpiar datos guardados
+// </button>
+
     // --- Handlers ---
 
     const handleChange = (e) => {
@@ -280,57 +360,75 @@ export default function Cotizador() {
   }));
 };
 
-    const handleActionClick = async () => {
-        // Esta función se llama al hacer clic en el botón de Precio/Acción
-        // No previene default porque el botón es type="button"
-        setIsLoadingAction(true); // Activar loader del botón
+   // Reemplaza la función handleActionClick completa con esta versión corregida:
 
-        // Re-validar antes de la acción final
-        if (volumetricError || costoTotal === null || !session?.user) {
-            console.error("Intento de acción con cotización inválida o sin sesión.");
-             if(volumetricError) alert(volumetricError);
-             else if (!session?.user) alert("Debes iniciar sesión para continuar.");
-             else alert("Completa todos los campos requeridos para obtener una cotización válida.");
-            setIsLoadingAction(false);
-            return;
-        }
+const handleActionClick = async () => {
+    setIsLoadingAction(true);
 
-        // Calcular peso facturable para guardarlo
-         const actualPeso = parseFloat(formData.peso) || 0;
-         const chargeableWeight = volumetricWeight !== null ? Math.max(actualPeso, volumetricWeight) : actualPeso; // Manejar caso donde volumetricWeight podría ser null brevemente
+    // Re-validar antes de la acción final
+    if (volumetricError || costoTotal === null || !session?.user) {
+        console.error("Intento de acción con cotización inválida o sin sesión.");
+        if(volumetricError) alert(volumetricError);
+        else if (!session?.user) alert("Debes iniciar sesión para continuar.");
+        else alert("Completa todos los campos requeridos para obtener una cotización válida.");
+        setIsLoadingAction(false);
+        return;
+    }
 
-        // Crear objeto de cotización para guardar
-        const cotizacionData = {
-            ...formData,
-            costoTotal,
-            pesoVolumetrico: volumetricWeight,
-            pesoFacturable: chargeableWeight, // Guardar el peso que se usó para calcular
-            fechaCotizacion: new Date().toISOString(), // Añadir fecha
-        };
+    // Calcular peso facturable
+    const actualPeso = parseFloat(formData.peso) || 0;
+    const chargeableWeight = volumetricWeight !== null ? Math.max(actualPeso, volumetricWeight) : actualPeso;
 
-        // Guardar en localStorage
-        try {
-            localStorage.setItem("formCotizador", JSON.stringify(cotizacionData));
-            console.log("Cotización guardada en localStorage:", cotizacionData);
-
-             // Buscar perfil y Redirigir
-             const userProfile = miperfil.find(
-                (perf) => perf.correo === session.user.email
-            );
-
-            if (userProfile?.id) {
-                router.push(`/remitente/edit/${userProfile.id}`);
-            } else {
-                router.push("/remitente/edit/9"); // Cambia aquí la ruta según lo que necesites
-                setIsLoadingAction(false);
-            }
-
-        } catch (error) {
-            console.error("Error al guardar en localStorage o redirigir:", error);
-            alert("Hubo un problema al guardar la cotización. Inténtalo de nuevo.");
-            setIsLoadingAction(false);
-        }
+    // Crear objeto de cotización
+    const cotizacionData = {
+        ...formData,
+        otraDescripcion, // Agregar la descripción "Otro" al objeto
+        costoTotal,
+        pesoVolumetrico: volumetricWeight,
+        pesoFacturable: chargeableWeight,
+        fechaCotizacion: new Date().toISOString(),
     };
+
+    // Guardar en localStorage - VERSIÓN SIMPLIFICADA
+    try {
+        localStorage.setItem("formCotizador", JSON.stringify(cotizacionData));
+        console.log("Cotización guardada en localStorage:", cotizacionData);
+        
+        // Verificar que se guardó correctamente
+        const saved = localStorage.getItem("formCotizador");
+        if (saved) {
+            console.log("Verificación: Datos guardados correctamente");
+        } else {
+            throw new Error("No se pudo verificar el guardado");
+        }
+        
+    } catch (storageError) {
+        console.error("Error específico de localStorage:", storageError);
+        alert("Error al guardar la cotización. Verifica el almacenamiento del navegador.");
+        setIsLoadingAction(false);
+        return;
+    }
+
+    // Buscar perfil y redirigir
+    try {
+        const userProfile = miperfil.find(
+            (perf) => perf.correo === session.user.email
+        );
+
+        if (userProfile?.id) {
+            console.log("Redirigiendo a perfil específico:", userProfile.id);
+            router.push(`/remitente/edit/${userProfile.id}`);
+        } else {
+            console.log("Redirigiendo a perfil por defecto");
+            router.push("/remitente/edit/9");
+        }
+        
+    } catch (routerError) {
+        console.error("Error al redirigir:", routerError);
+        alert("Error al navegar. Inténtalo de nuevo.");
+        setIsLoadingAction(false);
+    }
+};
 
     // Handler para prevenir letras en inputs numéricos (solo bloquea e, E, +, -)
     const handleNumberKeyDown = (e) => {
@@ -665,6 +763,29 @@ export default function Cotizador() {
                     <p className="text-center text-gray-500 text-sm mt-4">Cargando datos de usuario...</p>
                  )}
 
+            </div>
+
+            {/* Navegación */}
+            <div className="flex justify-between mt-6 gap-4">
+              {/* Botón Anterior (lleva al home) */}
+              <button
+                type="button"
+                className="bg-gray-300 text-gray-700 px-6 py-2 rounded font-semibold"
+                onClick={() => router.push("/home")}
+              >
+                Anterior
+              </button>
+              {/* Botón Continuar */}
+              <button
+                type="button"
+                onClick={handleActionClick}
+                className={`bg-teal-500 hover:bg-teal-600 text-white px-6 py-2 rounded font-semibold transition ${
+                  !canProceed || isLoadingAction || isCalculating ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                disabled={!canProceed || isLoadingAction || isCalculating}
+              >
+                Continuar
+              </button>
             </div>
 
             {/* Estilos para el Loader */}

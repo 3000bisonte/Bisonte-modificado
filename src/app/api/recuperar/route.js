@@ -40,9 +40,10 @@ export async function POST(req) {
       console.log("Enviando correo de recuperación a:", email);
       console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY ? "OK" : "NO KEY");
       try {
+       
         await resend.emails.send({
-          from: 'onboarding@resend.dev',
-          to: '3000bisonte@gmail.com',
+          from: 'recuperar@notificaciones.bisonteapp.com',
+          to: email,
           subject: 'Código de recuperación de contraseña',
           text: `
 Hola ${res.rows[0].nombre},
@@ -52,7 +53,7 @@ Tu código de recuperación de contraseña es: ${token}
 Este código es válido por 10 minutos. Si no solicitaste este código, ignora este mensaje.
 
 ¡Gracias!
-          `,
+`,
         });
         console.log("Correo enviado correctamente a:", email);
       } catch (sendError) {

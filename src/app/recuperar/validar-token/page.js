@@ -109,7 +109,7 @@ export default function ValidarToken() {
         )}
         <div className="w-full flex justify-center mt-6">
           <a
-            href="/login"
+            href="/"
             className="text-[#41e0b3] text-sm font-semibold hover:underline transition"
           >
             Volver al inicio de sesión

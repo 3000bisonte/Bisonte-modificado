@@ -1,6 +1,6 @@
 {
   "packageId": "app.vercel.bisonte_modificado.twa",
-  "host": "bisonte-bisonte_modificado.app",
+  "host": "bisonte-bisonte-modificado.app",
   "name": "Bisonte logística",
   "launcherName": "Bisonte",
   "display": "standalone",
@@ -13,17 +13,17 @@
   "backgroundColor": "#101010",
   "enableNotifications": true,
   "startUrl": "/",
-  "iconUrl": "https://bisonte_modificado.vercel.app/bisonte-logo.png",
+  "iconUrl": "https://bisonte-modificado.vercel.app/bisonte-logo.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "C:\\Users\\Mauricio\\OneDrive\\Documentos\\GERMAN-FORERO-APP-PWA\\nestjs-pwa-setup-master\\my-pwa-3\\android.keystore",
+    "path": "C:\\Users\\Yesica\\Documents\\android.keystore",
     "alias": "android"
   },
-  "appVersionName": "1",
-  "appVersionCode": 1,
+  "appVersionName": "4",
+  "appVersionCode": 4,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://bisonte_modificado.vercel.app/manifest.json",
+  "webManifestUrl": "https://bisonte-modificado.vercel.app/manifest.json",
   "fallbackType": "customtabs",
   "features": {
     "locationDelegation": {
@@ -36,11 +36,11 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://bisonte_modificado.vercel.app/",
+  "fullScopeUrl": "https://bisonte-modificado.vercel.app/",
   "minSdkVersion": 19,
   "orientation": "default",
   "fingerprints": [],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
-  "appVersion": "1"
+  "appVersion": "4"
 }

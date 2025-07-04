@@ -76,12 +76,12 @@ export async function POST(request) {
         callback_url:
           //"https://mercaenvios.com/dashboard/tables/mercadopago/statusbrick", // URL de callback
           //"http://localhost:3000/mercadopago/statusbrick",
-          "https://bisonte-logistica-6od4.vercel.app/mercadopago/statusbrick",
+          "https://bisonte-modificado.vercel.app/mercadopago/statusbrick",
       },
       back_urls: {
-        success: "http://localhost:3000/feedback",
-        failure: "http://localhost:3000/failure",
-        pending: "http://localhost:3000/pending",
+        success: "http://bisonte-modificado.vercel.app/feedback",
+        failure: "http://bisonte-modificado.vercel.app/failure",
+        pending: "http://bisonte-modificado.vercel.app/pending",
       },
       notification_url: "https://ecee-186-86-32-77.ngrok-free.app/webhook", // URL de notificación
     });

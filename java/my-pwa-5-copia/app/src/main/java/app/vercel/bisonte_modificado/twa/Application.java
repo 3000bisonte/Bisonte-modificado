@@ -19,11 +19,11 @@ package app.vercel.bisonte_modificado.twa;
 
 public class Application extends android.app.Application {
 
-
+  
 
   @Override
   public void onCreate() {
       super.onCreate();
-
+      
   }
 }
