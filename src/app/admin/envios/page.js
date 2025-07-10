@@ -4,6 +4,9 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+// ✅ AÑADIR IMPORTS DE NOTIFICACIONES
+import { useNotification } from "@/context/NotificationContext";
+import Notification from "@/components/Notification";
 
 export default function AdminEnvios() {
   const { data: session, status } = useSession();
@@ -12,6 +15,12 @@ export default function AdminEnvios() {
   const [actualizando, setActualizando] = useState(null);
   const [loading, setLoading] = useState(true);
   const [envioExpandido, setEnvioExpandido] = useState(null);
+  
+  // ✅ AÑADIR ESTADO DE NOTIFICACIÓN
+  const [notification, setNotification] = useState(null);
+  
+  // ✅ USAR HOOK DE NOTIFICACIÓN
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     if (session?.user?.email !== "3000bisonte@gmail.com") {
@@ -408,6 +417,14 @@ export default function AdminEnvios() {
       </div>
       {/* Footer - BottomNav existente */}
       <BottomNav />
+      {/* ✅ AÑADIR COMPONENTE DE NOTIFICACIÓN AL FINAL */}
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
     </div>
   );
 }
