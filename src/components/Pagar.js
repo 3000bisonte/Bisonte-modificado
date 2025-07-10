@@ -255,9 +255,7 @@ const PagarComponent = ({ saldo, onRecargarSaldo, onPagarAhora, onClick }) => {
   const handleFreeShipment = useCallback(async () => {
     if (!perfilId) {
       console.error("No se puede registrar el envío: Falta perfilId.");
-      alert(
-        "Error al obtener tus datos de perfil. Intenta recargar la página."
-      );
+      alert("Error al obtener tus datos de perfil. Intenta recargar la página.");
       setIsCreatingShipment(false);
       return;
     }
@@ -265,108 +263,76 @@ const PagarComponent = ({ saldo, onRecargarSaldo, onPagarAhora, onClick }) => {
     if (costoTotal === null || costoTotal > 0) {
       console.error("Intento de envío gratuito con costo > 0 o nulo.");
       setIsCreatingShipment(false);
-      return; // Seguridad extra
-    }
-
-    setIsCreatingShipment(true);
-    console.log("Iniciando registro de envío gratuito...");
-
-    const numeroGuia = generarNumeroGuia();
-    let datosLocalStorage;
-    let datosLocalStorageformDataRemitente;
-    let datosLocalStoragedestinatarioId;
-
-    try {
-      // Validar y obtener datos de localStorage DENTRO del try-catch
-      const formDataString = localStorage.getItem("destinatarioInfo");
-      const remitenteString = localStorage.getItem("formDataRemitente");
-      const destinatarioIdString = localStorage.getItem("destinatarioId");
-
-      if (!formDataString || !remitenteString || !destinatarioIdString) {
-        throw new Error("Faltan datos necesarios del envío en localStorage.");
-      }
-
-      datosLocalStorage = JSON.parse(formDataString);
-      datosLocalStorageformDataRemitente = JSON.parse(remitenteString);
-      datosLocalStoragedestinatarioId = parseInt(destinatarioIdString, 10);
-
-      if (isNaN(datosLocalStoragedestinatarioId)) {
-        throw new Error("El ID del destinatario no es un número válido.");
-      }
-      if (
-        !datosLocalStorage?.nombre ||
-        !datosLocalStorage?.apellido ||
-        !datosLocalStorage?.direccionEntrega
-      ) {
-        throw new Error("Faltan datos del destinatario en formData.");
-      }
-      if (!datosLocalStorageformDataRemitente?.direccionRecogida) {
-        throw new Error("Falta dirección de recogida en formDataRemitente.");
-      }
-    } catch (error) {
-      console.error("Error al obtener/parsear datos de localStorage:", error);
-      alert(
-        "Error al recuperar los datos del envío. Por favor, verifica la información e intenta de nuevo."
-      );
-      setIsCreatingShipment(false);
       return;
     }
 
-    const nombreCompleto = `${datosLocalStorage.nombre} ${datosLocalStorage.apellido}`;
-    const direccionEntrega = datosLocalStorage.direccionEntrega;
-    const direccionRecogida =
-      datosLocalStorageformDataRemitente.direccionRecogida;
+    setIsCreatingShipment(true);
+    console.log("🆓 Iniciando registro de envío gratuito...");
 
+    const numeroGuia = generarNumeroGuia();
+    
     try {
-      // Usamos un paymentId simulado o nulo ya que no hubo pago real
-      const simulatedPaymentId = `FREE-${Date.now()}`; // O simplemente null
+      const formDataString = localStorage.getItem("destinatarioInfo");
+      const remitenteString = localStorage.getItem("formDataRemitente");
+      
+      if (!formDataString || !remitenteString) {
+        throw new Error("Faltan datos necesarios del envío en localStorage.");
+      }
+
+      const datosLocalStorage = JSON.parse(formDataString);
+      const datosLocalStorageformDataRemitente = JSON.parse(remitenteString);
+
+      const nombreCompleto = `${datosLocalStorage.nombre} ${datosLocalStorage.apellido}`;
+      const direccionEntrega = datosLocalStorage.direccionEntrega;
+      const direccionRecogida = datosLocalStorageformDataRemitente.direccionRecogida;
+
+      console.log("📋 Datos del envío gratuito:", {
+        numeroGuia,
+        origen: direccionRecogida,
+        destino: direccionEntrega,
+        destinatario: nombreCompleto,
+        usuarioEmail: session?.user?.email,
+      });
 
       const response = await fetch("/api/guardarenvio", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           numeroGuia,
-          paymentId: simulatedPaymentId, // Indicar que fue gratuito
+          paymentId: `FREE-${Date.now()}`,
           origen: direccionRecogida,
           destino: direccionEntrega,
-          nombreCompleto,
-          DestinatarioId: datosLocalStoragedestinatarioId,
-          perfilId: perfilId,
-          // Podrías añadir un campo extra como 'costoReal: 0' o 'tipoPago: "RECOMPENSA"'
+          destinatario: nombreCompleto,
+          usuarioEmail: session?.user?.email,
         }),
       });
 
       if (response.ok) {
         const responseData = await response.json();
-        console.log("Envío gratuito registrado exitosamente:", responseData);
+        console.log("✅ Envío gratuito registrado exitosamente:", responseData);
+        
         localStorage.setItem("envioDatos", JSON.stringify(responseData));
-        // Redirigir a una página de confirmación de envío exitoso
-        router.push("/misenvios"); // ¡Asegúrate que esta ruta exista!
+        localStorage.setItem("envioExitoso", "true");
+        
+        alert("¡Envío gratuito realizado exitosamente! Espere pronta actualización.");
+        
+        setTimeout(() => {
+          router.push("/misenvios");
+        }, 2000);
+        
       } else {
-        console.error(
-          "Error al registrar el envío gratuito: Status",
-          response.status
-        );
-        const errorData = await response.text(); // Intenta obtener más detalles del error
-        console.error("Detalle del error del servidor:", errorData);
-        alert(
-          `Hubo un problema al registrar tu envío (Estado: ${response.status}). Por favor, contacta a soporte.`
-        );
+        console.error("❌ Error al registrar el envío gratuito: Status", response.status);
+        const errorData = await response.text();
+        console.error("Detalle del error:", errorData);
+        alert(`Hubo un problema al registrar tu envío (Estado: ${response.status}). Por favor, contacta a soporte.`);
       }
     } catch (error) {
-      console.error(
-        "Error de red o excepción al registrar el envío gratuito:",
-        error
-      );
-      alert(
-        "Hubo un problema de conexión al registrar tu envío. Por favor, inténtalo de nuevo."
-      );
+      console.error("❌ Error de red al registrar el envío gratuito:", error);
+      alert("Hubo un problema de conexión al registrar tu envío. Por favor, inténtalo de nuevo.");
     } finally {
-      setIsCreatingShipment(false); // Terminar estado de carga
+      setIsCreatingShipment(false);
     }
-  }, [perfilId, router, costoTotal]);
+  }, [perfilId, router, costoTotal, session?.user?.email]);
   const handleClick = () => {
     // Asegurarse que costoTotal no sea null antes de comparar
     if (costoTotal !== null && costoTotal <= 0) {

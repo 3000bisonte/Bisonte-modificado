@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -10,6 +10,7 @@ const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
+  const { data: session } = useSession();
 
   useEffect(() => {
     const lastUser = localStorage.getItem("lastUser");
@@ -78,6 +79,9 @@ const LoginForm = () => {
       setIsLoading(false);
     }
   };
+
+  const ADMIN_EMAIL = "3000bisonte@gmail.com";
+  const isAdmin = session?.user?.email === ADMIN_EMAIL;
 
   return (
     <div className="w-screen h-screen min-h-screen min-w-full flex items-center justify-center bg-[#18191A]">

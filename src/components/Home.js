@@ -63,18 +63,9 @@ const IconContact = () => (
 );
 
 const sliderData = [
-  {
-    img: "/slider/slider1.jpg",
-   
-  },
-  {
-    img: "/slider/slider2.jpg",
-    
-  },
-  {
-    img: "/slider/slider3.jpg",
-   
-  },
+  { img: "/slider/slider1.jpg" },
+  { img: "/slider/slider2.jpg" },
+  { img: "/slider/slider3.jpg" },
 ];
 
 const Home = () => {
@@ -84,6 +75,7 @@ const Home = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const sliderTrackRef = useRef(null);
+  const [stats, setStats] = useState({ usuarios: 0, envios: 0, mensajes: 0 });
 
   // Redirigir si no está autenticado
   useEffect(() => {
@@ -128,14 +120,15 @@ const Home = () => {
   useEffect(() => {
     const handleClickOutside = () => setShowProfileMenu(false);
     if (showProfileMenu) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
     }
   }, [showProfileMenu]);
 
   const handleLogout = async () => {
     setShowProfileMenu(false);
-    await signOut({ callbackUrl: "/" });
+    await signOut({ redirect: false });
+    router.push("/"); // Redirige SIEMPRE al home después de salir
   };
 
   const handleTouchStart = (e) => {
@@ -166,6 +159,28 @@ const Home = () => {
     sliderTrackRef.current.style.cursor = "default";
   };
 
+  const ADMIN_EMAIL = "3000bisonte@gmail.com";
+  const isAdmin = session?.user?.email === ADMIN_EMAIL;
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("/api/admin/stats");
+        if (res.ok) {
+          const data = await res.json();
+          setStats({
+            usuarios: data.usuarios,
+            envios: data.envios,
+            mensajes: data.mensajes ,
+          });
+        }
+      } catch (err) {
+        // Si falla, deja los valores en 0
+      }
+    };
+    fetchStats();
+  }, []);
+
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -184,7 +199,7 @@ const Home = () => {
         <div className="absolute w-[600px] h-[600px] bg-[#41e0b3]/20 rounded-full blur-3xl top-[-200px] left-[-200px] animate-pulse" />
         <div className="absolute w-[400px] h-[400px] bg-[#18191A]/10 rounded-full blur-2xl bottom-[-100px] right-[-100px] animate-pulse" />
       </div>
-      
+
       {/* Header con contraste y sombra */}
       <header className="w-full max-w-md flex items-center justify-between px-6 py-4 bg-[#18191A] shadow-xl rounded-b-3xl border-b-4 border-[#41e0b3] fixed top-0 left-1/2 -translate-x-1/2 z-30 animate-fade-in-down">
         <div className="flex items-center gap-3">
@@ -204,12 +219,12 @@ const Home = () => {
               className="flex items-center gap-2 text-[#41e0b3] hover:text-white p-2 rounded-xl transition-all duration-200 bg-[#23272b] hover:bg-[#41e0b3]/20 shadow"
             >
               <IconUser />
-              <IconChevronDown className={`transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
+              <IconChevronDown className={`transition-transform duration-200 ${showProfileMenu ? "rotate-180" : ""}`} />
             </button>
             {showProfileMenu && (
               <div className="absolute right-0 top-full mt-2 bg-[#18191A]/95 backdrop-blur-xl rounded-2xl shadow-xl border border-[#41e0b3]/30 py-2 min-w-[180px] z-40 animate-fade-in-down">
                 <Link
-                  href="/perfil"
+                  href="/perfilCard"
                   className="flex items-center gap-3 px-4 py-3 text-[#41e0b3] hover:bg-[#23272b] transition-colors rounded-xl mx-2"
                   onClick={() => setShowProfileMenu(false)}
                 >
@@ -235,7 +250,7 @@ const Home = () => {
                   className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-100/10 transition-colors w-full text-left rounded-xl mx-2"
                 >
                   <IconLogout />
-                  <span className="text-sm">Salir</span>
+                  <span className="text-sm">salir</span>
                 </button>
               </div>
             )}
@@ -251,7 +266,6 @@ const Home = () => {
 
       {/* Contenido principal */}
       <main className="w-full max-w-md flex-1 flex flex-col gap-8 pb-32 px-4 relative z-10">
-        
         {/* Hero section */}
         <section className="bg-[#18191A]/90 rounded-3xl p-8 border-2 border-[#41e0b3]/30 shadow-2xl shadow-[#41e0b3]/10 animate-fade-in-up">
           <div className="text-center mb-8">
@@ -307,27 +321,6 @@ const Home = () => {
                     </div>
                   </div>
                 ))}
-              </div>
-              {/* Botones de navegación */}
-              <button
-                className="slider-nav prev absolute top-1/2 left-3 -translate-y-1/2 bg-white/90 w-10 h-10 rounded-full flex items-center justify-center text-xl text-[#41e0b3] shadow hover:bg-white z-10"
-                onClick={prevSlide}
-                aria-label="Anterior"
-                type="button"
-              >
-                ‹
-              </button>
-              <button
-                className="slider-nav next absolute top-1/2 right-3 -translate-y-1/2 bg-white/90 w-10 h-10 rounded-full flex items-center justify-center text-xl text-[#41e0b3] shadow hover:bg-white z-10"
-                onClick={nextSlide}
-                aria-label="Siguiente"
-                type="button"
-              >
-                ›
-              </button>
-              {/* Indicador touch */}
-              <div className="touch-indicator absolute bottom-14 left-1/2 -translate-x-1/2 text-white text-xs opacity-70 animate-pulse pointer-events-none">
-                Desliza para cambiar
               </div>
             </div>
             {/* Dots */}
@@ -415,45 +408,144 @@ const Home = () => {
             ))}
           </div>
         </section>
-      </main>
 
-      {/* Navegación inferior atractiva */}
-      <BottomNav />
+        {/* Panel de administración - solo para admin */}
 
-      {/* Modal de bienvenida */}
-      {showWelcome && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#18191A]/95 backdrop-blur-xl rounded-3xl shadow-2xl max-w-sm w-full mx-4 border-2 border-[#41e0b3]/30 overflow-hidden animate-fade-in-up">
-            <div className="p-8 text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#41e0b3] to-[#2bbd8c] rounded-2xl flex items-center justify-center mx-auto mb-6 animate-bounce">
-                <IconSparkles className="w-8 h-8 text-white" />
+        {isAdmin && (
+          <section className="bg-gradient-to-br from-[#18191A]/95 to-[#23272b]/90 rounded-3xl p-6 border-2 border-[#41e0b3]/30 shadow-2xl shadow-[#41e0b3]/10 animate-fade-in-up backdrop-blur-xl">
+            <div className="text-center mb-6">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#41e0b3] to-[#2bbd8c] rounded-2xl flex items-center justify-center mx-auto mb-3 animate-bounce">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                  <path d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m0 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                </svg>
               </div>
-              <h2 className="text-2xl font-bold text-[#41e0b3] mb-3">¡Bienvenido!</h2>
-              <p className="text-gray-300 font-light mb-2">
-                Hola <span className="font-medium text-[#41e0b3]">{getUserName()}</span>
-              </p>
-              <p className="text-gray-400 text-sm font-light leading-relaxed mb-8">
-                Ahora puedes disfrutar de nuestros servicios de envío inteligente
-              </p>
-              <div className="bg-amber-50/50 border border-amber-200/50 rounded-2xl p-4 mb-8">
-                <p className="text-amber-800 text-sm font-light">
-                  <span className="font-medium">Importante:</span> Completa tu perfil para comenzar
-                </p>
+              <h2 className="text-xl font-bold text-[#41e0b3] mb-1 drop-shadow">Panel de Administración</h2>
+              <p className="text-gray-300 text-sm font-light">Gestión de la plataforma</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Usuarios registrados */}
+              <Link
+                href="/admin/usuarios"
+                className="group bg-[#23272b]/80 hover:bg-[#41e0b3]/10 rounded-2xl p-5 border border-[#41e0b3]/20 hover:border-[#41e0b3]/40 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-[#41e0b3]/20 transform hover:scale-105 flex items-center gap-4"
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-white text-base mb-1 group-hover:text-[#41e0b3] transition-colores">Usuarios</h3>
+                  <p className="text-gray-300 text-sm font-light">Gestionar usuarios registrados</p>
+                </div>
+                <div className="text-[#41e0b3] group-hover:translate-x-1 transition-transform duration-300">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </Link>
+
+              {/* Envíos realizados */}
+              <Link
+                href="/admin/envios"
+                className="group bg-[#23272b]/80 hover:bg-[#41e0b3]/10 rounded-2xl p-5 border border-[#41e0b3]/20 hover:border-[#41e0b3]/40 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-[#41e0b3]/20 transform hover:scale-105 flex items-center gap-4"
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path d="M8.25 18.75a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0zM19.5 18.75a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0zM3 4.5h2.25l.75 12.75c.094.621.568 1.125 1.19 1.125h11.555c.621 0 1.134-.504 1.19-1.125L21 7.5H6" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-white text-base mb-1 group-hover:text-[#41e0b3] transition-colores">Envíos</h3>
+                  <p className="text-gray-300 text-sm font-light">Monitorear envíos realizados</p>
+                </div>
+                <div className="text-[#41e0b3] group-hover:translate-x-1 transition-transform duration-300">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </Link>
+
+              {/* Mensajes de contacto */}
+              <Link
+                href="/admin/contactos"
+                className="group bg-[#23272b]/80 hover:bg-[#41e0b3]/10 rounded-2xl p-5 border border-[#41e0b3]/20 hover:border-[#41e0b3]/40 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-[#41e0b3]/20 transform hover:scale-105 flex items-center gap-4"
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.760 1.614-2.760 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.740.194V21l4.155-4.155" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-white text-base mb-1 group-hover:text-[#41e0b3] transition-colores">Mensajes</h3>
+                  <p className="text-gray-300 text-sm font-light">Revisar mensajes de contacto</p>
+                </div>
+                <div className="text-[#41e0b3] group-hover:translate-x-1 transition-transform duration-300">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </Link>
+            </div>
+
+            {/* Estadísticas reales */}
+            <div className="mt-8 pt-6 border-t border-[#41e0b3]/20">
+              <h3 className="text-lg font-semibold text-[#41e0b3] mb-4 text-center">Estadísticas Rápidas</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white mb-1">{stats.usuarios}</div>
+                  <div className="text-xs text-gray-300 font-light">Usuarios</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white mb-1">{stats.envios}</div>
+                  <div className="text-xs text-gray-300 font-light">Envíos</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white mb-1">{stats.mensajes}</div>
+                  <div className="text-xs text-gray-300 font-light">Mensajes</div>
+                </div>
               </div>
             </div>
-            <div className="px-8 pb-8">
-              <button
-                onClick={handleCloseWelcome}
-                className="w-full bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] text-white font-bold py-4 rounded-2xl hover:shadow-lg transform hover:scale-105 transition-all duration-300 animate-bounce"
-              >
-                Comenzar
-              </button>
+          </section>
+        )}
+
+        {/* Navegación inferior atractiva */}
+        <BottomNav />
+
+        {/* Modal de bienvenida */}
+        {showWelcome && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
+            <div className="bg-[#18191A]/95 backdrop-blur-xl rounded-3xl shadow-2xl max-w-sm w-full mx-4 border-2 border-[#41e0b3]/30 overflow-hidden animate-fade-in-up">
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-[#41e0b3] to-[#2bbd8c] rounded-2xl flex items-center justify-center mx-auto mb-6 animate-bounce">
+                  <IconSparkles className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-[#41e0b3] mb-3">¡Bienvenido!</h2>
+                <p className="text-gray-300 font-light mb-2">
+                  Hola <span className="font-medium text-[#41e0b3]">{getUserName()}</span>
+                </p>
+                <p className="text-gray-400 text-sm font-light leading-relaxed mb-8">
+                  Ahora puedes disfrutar de nuestros servicios de envío inteligente
+                </p>
+                <div className="bg-amber-50/50 border border-amber-200/50 rounded-2xl p-4 mb-8">
+                  <p className="text-amber-800 text-sm font-light">
+                    <span className="font-medium">Importante:</span> Completa tu perfil para comenzar
+                  </p>
+                </div>
+              </div>
+              <div className="px-8 pb-8">
+                <button
+                  onClick={handleCloseWelcome}
+                  className="w-full bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] text-white font-bold py-4 rounded-2xl hover:shadow-lg transform hover:scale-105 transition-all duration-300 animate-bounce"
+                >
+                  Comenzar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 };
-
 export default Home;

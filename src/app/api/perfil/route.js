@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/libs/prisma";
 export async function GET() {
-  const perfil = await prisma.perfil.findMany();
+  const perfil = await prisma.usuarios.findMany();
   console.log("perfil-get", perfil);
   return NextResponse.json(perfil);
 }
@@ -20,7 +20,7 @@ export async function POST(request) {
   } = await request.json();
 
   try {
-    const existingUser = await prisma.perfil.findUnique({
+    const existingUser = await prisma.usuarios.findUnique({
       where: { correo },
     });
 
@@ -33,7 +33,7 @@ export async function POST(request) {
     }
 
     // Si no existe, creamos el nuevo perfil
-    const newRemitente = await prisma.perfil.create({
+    const newRemitente = await prisma.usuarios.create({
       data: {
         nombre: nombrePerfil,
         tipo_documento: tipoDocumento,
@@ -43,7 +43,7 @@ export async function POST(request) {
         detalle_direccion: detalleDireccion,
         recomendaciones,
         correo,
-        nickname,
+       
       },
     });
     console.log("newRemitente", newRemitente);

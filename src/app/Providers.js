@@ -1,10 +1,17 @@
 "use client";
+
 import { SessionProvider } from "next-auth/react";
-import { MessagePortProvider } from "../app/context/MessagePortContext";
+import { NotificationProvider } from "@/context/NotificationContext";
+import { ConfirmModalProvider } from "@/context/ConfirmModalContext";
+
 export function Providers({ children }) {
   return (
     <SessionProvider>
-      <MessagePortProvider>{children} </MessagePortProvider>
+      <NotificationProvider>
+        <ConfirmModalProvider>
+          {children}
+        </ConfirmModalProvider>
+      </NotificationProvider>
     </SessionProvider>
   );
 }

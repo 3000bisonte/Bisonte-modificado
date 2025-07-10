@@ -13,7 +13,7 @@ export async function GET(request, { params }) {
   }
 
   // Obtener el perfil del usuario
-  const perfil = await prisma.perfil.findUnique({
+  const perfil = await prisma.usuario.findUnique({
     where: { id: perfilId },
   });
 

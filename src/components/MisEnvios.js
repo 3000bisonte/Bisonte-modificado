@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import BottomNav from "@/components/BottomNav";
+
 import dayjs from "dayjs";
 
 // Colores y estilos
@@ -58,7 +60,22 @@ export default function MisEnvios() {
   const { data: session } = useSession();
   const [envios, setEnvios] = useState([]);
   const [search, setSearch] = useState("");
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const userEmail = session?.user?.email;
+
+  // Verificar si viene de un envío exitoso
+  useEffect(() => {
+    const envioExitoso = localStorage.getItem("envioExitoso");
+    if (envioExitoso === "true") {
+      setShowSuccessMessage(true);
+      localStorage.removeItem("envioExitoso");
+
+      // Ocultar mensaje después de 5 segundos
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 5000);
+    }
+  }, []);
 
   // Cargar historial de envíos del usuario
   useEffect(() => {
@@ -69,10 +86,13 @@ export default function MisEnvios() {
         const perfiles = await perfilRes.json();
         const perfil = perfiles.find((p) => p.correo === userEmail);
         if (!perfil) return;
+
         const enviosRes = await fetch(`/api/obtenerenvios/${perfil.id}`);
         const data = await enviosRes.json();
+        console.log("Envíos del usuario:", data);
         setEnvios(data);
       } catch (e) {
+        console.error("Error al cargar envíos:", e);
         setEnvios([]);
       }
     };
@@ -89,6 +109,13 @@ export default function MisEnvios() {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-start bg-[#e3dfde] pb-24 pt-0">
+      {/* Mensaje de éxito */}
+      {showSuccessMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce">
+          ¡Envío realizado exitosamente! Espere pronta actualización.
+        </div>
+      )}
+
       {/* Espacio arriba del header */}
       <div className="h-6" />
       {/* Header igual que Mi Perfil */}
@@ -108,7 +135,6 @@ export default function MisEnvios() {
       <div className="w-full flex-1 flex flex-col items-center justify-start px-2 md:px-0">
         <div className="w-full max-w-5xl mx-auto bg-[#18191A] rounded-2xl shadow-lg mt-6 p-6 flex flex-col">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          
             <input
               type="text"
               placeholder="Buscar en historial (por cualquier campo)"
@@ -121,18 +147,27 @@ export default function MisEnvios() {
           {filteredEnvios.length > 0 && (
             <div className="flex flex-col sm:flex-row gap-2 justify-between items-center mb-6 bg-[#23272b] rounded-xl p-4 shadow">
               <div className="flex items-center gap-2">
-                <svg className="w-7 h-7 text-[#41e0b3]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg
+                  className="w-7 h-7 text-[#41e0b3]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M3 7v10c0 1.1.9 2 2 2h14a2 2 0 002-2V7" />
                   <path d="M16 3v4H8V3" />
                   <path d="M3 7h18" />
                 </svg>
                 <span className="text-white font-semibold">
-                  Total envíos: <span className="text-[#41e0b3]">{filteredEnvios.length}</span>
+                  Total envíos:{" "}
+                  <span className="text-[#41e0b3]">{filteredEnvios.length}</span>
                 </span>
               </div>
               <div className="flex gap-2 flex-wrap">
                 {Object.entries(STATUS_STYLES).map(([key, val]) => {
-                  const count = filteredEnvios.filter(e => e.Estado === key).length;
+                  const count = filteredEnvios.filter(
+                    (e) => e.Estado === key
+                  ).length;
                   if (count === 0) return null;
                   return (
                     <span
@@ -149,13 +184,25 @@ export default function MisEnvios() {
           <div className="overflow-x-auto rounded-xl shadow-inner">
             <table className="min-w-full text-sm rounded-xl overflow-hidden">
               <thead>
-                <tr style={{background: ELECTRIC_BLUE}}>
-                  <th className="px-3 py-3 text-left text-white font-bold">Nº guía</th>
-                  <th className="px-3 py-3 text-left text-white font-bold">Origen</th>
-                  <th className="px-3 py-3 text-left text-white font-bold">Destino</th>
-                  <th className="px-3 py-3 text-left text-white font-bold">Destinatario</th>
-                  <th className="px-3 py-3 text-left text-white font-bold">Estado</th>
-                  <th className="px-3 py-3 text-left text-white font-bold">Fecha</th>
+                <tr style={{ background: ELECTRIC_BLUE }}>
+                  <th className="px-3 py-3 text-left text-white font-bold">
+                    Nº guía
+                  </th>
+                  <th className="px-3 py-3 text-left text-white font-bold">
+                    Origen
+                  </th>
+                  <th className="px-3 py-3 text-left text-white font-bold">
+                    Destino
+                  </th>
+                  <th className="px-3 py-3 text-left text-white font-bold">
+                    Destinatario
+                  </th>
+                  <th className="px-3 py-3 text-left text-white font-bold">
+                    Estado
+                  </th>
+                  <th className="px-3 py-3 text-left text-white font-bold">
+                    Fecha
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -172,13 +219,19 @@ export default function MisEnvios() {
                   filteredEnvios.map((envio, idx) => (
                     <tr
                       key={envio.NumeroGuia + idx}
-                      className={`transition-all ${idx % 2 === 0 ? "bg-[#18191A]" : "bg-[#23272b]"} hover:bg-[#23272b]/90`}
+                      className={`transition-all ${
+                        idx % 2 === 0 ? "bg-[#18191A]" : "bg-[#23272b]"
+                      } hover:bg-[#23272b]/90`}
                     >
-                      <td className="px-3 py-3 text-[#41e0b3] font-mono font-bold">{envio.NumeroGuia}</td>
+                      <td className="px-3 py-3 text-[#41e0b3] font-mono font-bold">
+                        {envio.NumeroGuia}
+                      </td>
                       <td className="px-3 py-3 text-white">{envio.Origen}</td>
                       <td className="px-3 py-3 text-white">{envio.Destino}</td>
                       <td className="px-3 py-3 text-white">{envio.Destinatario}</td>
-                      <td className="px-3 py-3">{getStatusDisplay(envio.Estado)}</td>
+                      <td className="px-3 py-3">
+                        {getStatusDisplay(envio.Estado)}
+                      </td>
                       <td className="px-3 py-3 text-gray-300">
                         {dayjs(envio.FechaSolicitud).isValid()
                           ? dayjs(envio.FechaSolicitud).format("DD/MM/YYYY HH:mm")
@@ -189,6 +242,7 @@ export default function MisEnvios() {
                 )}
               </tbody>
             </table>
+            <BottomNav />
           </div>
         </div>
       </div>

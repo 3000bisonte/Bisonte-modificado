@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { Client } from "pg";
 import bcrypt from "bcryptjs";
-import {Resend} from "resend";
 
+// Permite registro aunque algunos campos estén vacíos (excepto email y password)
 export async function POST(req) {
   const { nombre, celular, ciudad, email, password } = await req.json();
 
-  if (!nombre || !celular || !ciudad || !email || !password) {
-    return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
+  if (!email || !password) {
+    return NextResponse.json({ error: "Email y contraseña son obligatorios" }, { status: 400 });
   }
 
   // Conexión a PostgreSQL (ajusta los datos según tu Neon)
@@ -33,15 +33,22 @@ export async function POST(req) {
     // Encripta la contraseña
     const hash = await bcrypt.hash(password, 10);
 
-    // Inserta el usuario
+    // Inserta el usuario, dejando campos vacíos si no se envían
     await client.query(
-      "INSERT INTO usuarios (nombre, celular, ciudad, email, password) VALUES ($1, $2, $3, $4, $5)",
-      [nombre, celular, ciudad, email, hash]
+      `INSERT INTO usuarios (nombre, celular, ciudad, email, password)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        nombre || null,
+        celular || null,
+        ciudad || null,
+        email,
+        hash,
+      ]
     );
     await client.end();
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: "Error de conexión con la base de datos" }, { status: 500 });
+    return NextResponse.json({ error: "Error de conexión con la base de datos", detalle: error.message }, { status: 500 });
   }
 }

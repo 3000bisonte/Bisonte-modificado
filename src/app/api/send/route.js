@@ -21,8 +21,8 @@ export async function POST(request) {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: "Bisonte <envios@bisonte.app>",
-      to: ["3000bisonte@gmail.com"],
+      from: "Bisonte <envios@notificaciones.bisonteapp.com>",
+      to: email,
       subject: "¡Gracias por tu interés en Bisonte! 🌟",
       react: EmailTemplate(emailData), // Pasar el objeto completo al template
     });

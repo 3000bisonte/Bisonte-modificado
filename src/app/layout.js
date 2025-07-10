@@ -1,9 +1,7 @@
-//import { Inter } from "next/font/google";
 import "./globals.css";
-//import { ProviderWrapper } from "@/components/ProviderWrapper";
 import { Providers } from "./Providers";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-//const inter = Inter({ subsets: ["latin"] });
+import BottomNav from "@/components/BottomNav"; // Asegúrate de importar el componente
 
 export const metadata = {
   title: "Bisonte",

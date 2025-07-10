@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import MegaSaleModal from "./MegaSaleModal";
 import DescuentoAnunciosModal from "./DescuentoAnunciosModal";
+import BottomNav from "./BottomNav";
 
 function formatDate(date) {
   const d = new Date(date);
@@ -12,20 +14,47 @@ function formatDate(date) {
   return `${day}/${month}/${year}`;
 }
 
+// Función para generar número de guía
+function generarNumeroGuia() {
+  const timestamp = Date.now().toString();
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+  return `BIS${timestamp.slice(-6)}${random}`;
+}
+
 export default function Resumen() {
+  const { data: session } = useSession();
   const [cotizador, setCotizador] = useState(null);
   const [remitente, setRemitente] = useState(null);
   const [destinatario, setDestinatario] = useState(null);
   const [fecha, setFecha] = useState(formatDate(new Date()));
   const [showRemitente, setShowRemitente] = useState(false);
   const [showDestinatario, setShowDestinatario] = useState(false);
-  const [showMegaSale, setShowMegaSale] = useState(true);
+  const [showMegaSale, setShowMegaSale] = useState(false); // ✅ Cambiado a false inicialmente
   const [showDescuento, setShowDescuento] = useState(false);
-  const [adState, setAdState] = useState("idle"); // idle | loading | error | done
+  const [adState, setAdState] = useState("idle");
+  const [isCreatingShipment, setIsCreatingShipment] = useState(false);
 
   const router = useRouter();
 
-  // Actualiza la fecha en tiempo real (cada minuto)
+  // Estados para manejar pagos
+  const [costoTotal, setCostoTotal] = useState(null);
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
+    const remitenteData = JSON.parse(localStorage.getItem("formRemitente"));
+    const destinatarioData = JSON.parse(localStorage.getItem("formDestinatario"));
+    
+    setCotizador(cotizadorData);
+    setRemitente(remitenteData);
+    setDestinatario(destinatarioData);
+    
+    if (cotizadorData?.costoTotal !== undefined) {
+      setCostoTotal(cotizadorData.costoTotal);
+    }
+  }, []);
+
+  // Actualiza la fecha en tiempo real
   useEffect(() => {
     const interval = setInterval(() => {
       setFecha(formatDate(new Date()));
@@ -33,69 +62,190 @@ export default function Resumen() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    setCotizador(JSON.parse(localStorage.getItem("formCotizador")));
-    setRemitente(JSON.parse(localStorage.getItem("formRemitente")));
-    setDestinatario(JSON.parse(localStorage.getItem("formDestinatario")));
-  }, []);
-
-  // Escucha el mensaje de recompensa desde Android
+  // Lógica de anuncios mejorada
   useEffect(() => {
     function handleRewardedAdMessage(event) {
       let data = event.data;
       try {
         if (typeof data === "string") data = JSON.parse(data);
-      } catch {}
+      } catch (parseError) {
+        console.log("⚠️ Error parseando mensaje del anuncio:", parseError);
+        return;
+      }
+      
       if (data && data.type === "reward" && data.status === "completed") {
+        console.log("🎉 Anuncio completado exitosamente");
         setAdState("done");
+        
         const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
         if (cotizadorData && typeof cotizadorData.costoTotal === "number") {
           const descuento = 2013;
           const nuevoCosto = Math.max(0, cotizadorData.costoTotal - descuento);
           cotizadorData.costoTotal = nuevoCosto;
           localStorage.setItem("formCotizador", JSON.stringify(cotizadorData));
-          alert(`¡Descuento aplicado! Nuevo costo: $${nuevoCosto.toLocaleString("es-CO")}`);
+          
+          // ✅ Mejor notificación
+          alert(`🎉 ¡Descuento aplicado!\n💰 Descuento: $${descuento.toLocaleString("es-CO")}\n💵 Nuevo costo: $${nuevoCosto.toLocaleString("es-CO")}`);
+          
           setCotizador({ ...cotizadorData });
+          setCostoTotal(nuevoCosto);
+          
+          // ✅ Auto-resetear estado después de éxito
+          setTimeout(() => setAdState("idle"), 2000);
         }
       }
+      
       if (data && data.type === "adStatus" && data.status === "error") {
+        console.error("❌ Error en el anuncio");
         setAdState("error");
+        // ✅ Auto-resetear después de error
+        setTimeout(() => setAdState("idle"), 3000);
+      }
+      
+      // ✅ Manejar estado de anuncio listo
+      if (data && data.type === "adStatus" && data.status === "ready") {
+        console.log("📺 Anuncio listo para mostrar");
       }
     }
+    
     window.addEventListener("message", handleRewardedAdMessage);
     return () => window.removeEventListener("message", handleRewardedAdMessage);
   }, []);
 
-  // Precarga automática al montar
+  // Precarga automática de anuncios
   useEffect(() => {
     if (window.AndroidInterface && window.AndroidInterface.preloadRewardedAd) {
+      console.log("📺 Precargando anuncio...");
       window.AndroidInterface.preloadRewardedAd();
     }
   }, []);
 
-  // Mostrar el modal automáticamente al entrar
+  // ✅ Mostrar modal automáticamente solo después de cargar datos
   useEffect(() => {
-    setShowMegaSale(true);
-  }, []);
+    if (cotizador && remitente && destinatario && costoTotal !== null) {
+      // Mostrar modal después de un pequeño delay
+      const timer = setTimeout(() => {
+        setShowMegaSale(true);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [cotizador, remitente, destinatario, costoTotal]);
 
-  // Cuando el usuario ve el anuncio completo:
-  const handleVerAnuncio = () => {
-    setShowMegaSale(false);
-    // Simula que el anuncio terminó (puedes poner aquí tu lógica real)
-    setTimeout(() => setShowDescuento(true), 1000); // 1 segundo de espera
-  };
+  // **LÓGICA DE ENVÍO GRATUITO**
+  const handleFreeShipment = useCallback(async () => {
+    // Verificar sesión primero
+    if (!session?.user?.email) {
+      console.error("❌ No hay sesión de usuario activa");
+      alert("Error: No se detectó una sesión activa. Por favor, inicia sesión nuevamente.");
+      return;
+    }
 
-  const handleVerOtroAnuncio = () => {
-    setShowDescuento(false);
-    setShowMegaSale(true);
-  };
+    if (costoTotal === null || costoTotal > 0) {
+      console.error("❌ Intento de envío gratuito con costo > 0 o nulo.");
+      console.log("💰 Costo actual:", costoTotal);
+      return;
+    }
 
+    setIsCreatingShipment(true);
+    console.log("🆓 Iniciando registro de envío gratuito...");
+
+    const numeroGuia = generarNumeroGuia();
+    
+    try {
+      // Usar las claves correctas de localStorage
+      const destinatarioString = localStorage.getItem("formDestinatario");
+      const remitenteString = localStorage.getItem("formRemitente");
+      
+      if (!destinatarioString || !remitenteString) {
+        throw new Error("Faltan datos necesarios del envío en localStorage.");
+      }
+
+      const datosDestinatario = JSON.parse(destinatarioString);
+      const datosRemitente = JSON.parse(remitenteString);
+
+      // Validar que los datos necesarios existen
+      if (!datosDestinatario.nombre || !datosDestinatario.direccionEntrega) {
+        throw new Error("Datos del destinatario incompletos");
+      }
+      
+      if (!datosRemitente.nombre || !datosRemitente.direccionRecogida) {
+        throw new Error("Datos del remitente incompletos");
+      }
+
+      const nombreCompleto = datosDestinatario.nombre;
+      const direccionEntrega = datosDestinatario.direccionEntrega;
+      const nombreRemitente = datosRemitente.nombre;
+      const direccionRecogida = datosRemitente.direccionRecogida;
+
+      console.log("📋 Datos del envío gratuito:", {
+        numeroGuia,
+        origen: direccionRecogida,
+        destino: direccionEntrega,
+        destinatario: nombreCompleto,
+        remitente: nombreRemitente,
+        usuarioEmail: session.user.email
+      });
+
+      const envioData = {
+        numeroGuia,
+        paymentId: `FREE-${Date.now()}`,
+        origen: direccionRecogida,
+        destino: direccionEntrega,
+        destinatario: nombreCompleto,
+        remitente: nombreRemitente,
+        usuarioEmail: session.user.email,
+        tipo: "gratuito"
+      };
+
+      const response = await fetch("/api/guardarenvio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(envioData),
+      });
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log("✅ Envío gratuito registrado exitosamente:", responseData);
+        
+        localStorage.setItem("envioDatos", JSON.stringify(responseData));
+        localStorage.setItem("envioExitoso", "true");
+        
+        alert("¡Envío gratuito realizado exitosamente! Espere pronta actualización.");
+        
+        setTimeout(() => {
+          router.push("/misenvios");
+        }, 2000);
+        
+      } else {
+        console.error("❌ Error al registrar el envío gratuito: Status", response.status);
+        const errorData = await response.text();
+        console.error("Detalle del error:", errorData);
+        alert(`Hubo un problema al registrar tu envío (Estado: ${response.status}). Por favor, contacta a soporte.`);
+      }
+    } catch (error) {
+      console.error("❌ Error de red al registrar el envío gratuito:", error);
+      alert("Hubo un problema de conexión al registrar tu envío. Por favor, inténtalo de nuevo.");
+    } finally {
+      setIsCreatingShipment(false);
+    }
+  }, [router, costoTotal, session?.user?.email]);
+
+  // **MANEJO DE PAGO REGULAR**
   const handlePagar = async () => {
     setShowMegaSale(false);
     setShowDescuento(false);
-    // Aquí puedes poner tu lógica de pago (MercadoPago, etc)
+    
+    // Si el costo es 0, procesar como envío gratuito
+    if (costoTotal === 0) {
+      console.log("💰 Costo es 0, procesando como envío gratuito...");
+      await handleFreeShipment();
+      return;
+    }
+    
+    // Si hay costo, ir a MercadoPago
+    console.log("💳 Costo > 0, redirigiendo a MercadoPago...");
     router.push("/mercadopago");
-    // Después de pago exitoso, notifica por correo
     await notificarEnvioPorCorreo();
   };
 
@@ -113,18 +263,49 @@ export default function Resumen() {
         }),
       });
     } catch (error) {
-      // Puedes mostrar un toast o alert si falla, pero no es obligatorio
-      console.error("Error enviando notificación de envío:", error);
+      console.error("❌ Error enviando notificación de envío:", error);
     }
   };
 
+  // ✅ Función mejorada para ver anuncios
   const handleVerAnuncios = () => {
-    if (window.AndroidInterface && window.AndroidInterface.showRewardedAd) {
-      setAdState("loading");
-      window.AndroidInterface.showRewardedAd();
+    // Verificar que hay costo para reducir
+    if (costoTotal <= 0) {
+      alert("¡Tu envío ya es gratuito! 🎉");
       return;
     }
-    alert("Esta función solo está disponible en la app móvil.");
+    
+    if (window.AndroidInterface && window.AndroidInterface.showRewardedAd) {
+      console.log("📺 Iniciando anuncio recompensado...");
+      setAdState("loading");
+      window.AndroidInterface.showRewardedAd();
+      
+      // ✅ Timeout de seguridad
+      setTimeout(() => {
+        if (adState === "loading") {
+          setAdState("error");
+        }
+      }, 10000); // 10 segundos timeout
+      
+      return;
+    }
+    
+    // ✅ Mejor mensaje para web
+    alert("📱 Los anuncios solo están disponibles en la app móvil.\n💡 Descarga la app para obtener descuentos.");
+  };
+
+  const handleVerAnuncio = () => {
+    setShowMegaSale(false);
+    setTimeout(() => setShowDescuento(true), 500); // ✅ Reducido delay
+  };
+
+  // ✅ Función corregida para ver otro anuncio
+  const handleVerOtroAnuncio = () => {
+    setShowDescuento(false);
+    // Mostrar directamente el anuncio en lugar de crear bucle
+    setTimeout(() => {
+      handleVerAnuncios();
+    }, 500);
   };
 
   if (!cotizador || !remitente || !destinatario) {
@@ -158,8 +339,6 @@ export default function Resumen() {
     "25743": "Sibaté",
   };
 
-  const canProceed = true; // Cambia esto según tu lógica de habilitación
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#e3dfde] via-[#f8fafc] to-[#41e0b3]/10 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -189,7 +368,7 @@ export default function Resumen() {
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-[#41e0b3] drop-shadow">
-                ${Number(cotizador.costoTotal).toLocaleString("es-CO")}
+                {costoTotal === 0 ? "¡GRATIS!" : `$${Number(costoTotal || cotizador.costoTotal).toLocaleString("es-CO")}`}
               </p>
               <p className="text-sm text-white">Costo total</p>
             </div>
@@ -334,6 +513,16 @@ export default function Resumen() {
             {/* Resumen del pedido */}
             <div className="bg-[#18191A]/95 rounded-3xl shadow-2xl border-2 border-[#41e0b3]/30 p-6 sticky top-8 animate-fade-in-up">
               <h3 className="font-bold text-[#41e0b3] mb-6">Resumen</h3>
+              
+              {/* Debug info - solo en desarrollo */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="bg-yellow-900/20 border border-yellow-600/30 rounded p-2 mb-4 text-xs">
+                  <p className="text-yellow-400">Debug:</p>
+                  <p className="text-white">Email: {session?.user?.email || "No disponible"}</p>
+                  <p className="text-white">Costo: {costoTotal}</p>
+                </div>
+              )}
+              
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-[#41e0b3]">Tipo de envío</span>
@@ -347,6 +536,12 @@ export default function Resumen() {
                   <span className="text-[#41e0b3]">Modalidad</span>
                   <span className="text-white">Recogida en ubicación</span>
                 </div>
+                {session?.user?.email && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#41e0b3]">Usuario</span>
+                    <span className="text-white text-xs truncate max-w-32">{session.user.email}</span>
+                  </div>
+                )}
                 {cotizador.numeroGuia && (
                   <div className="flex justify-between text-sm">
                     <span className="text-[#41e0b3]">N° Guía</span>
@@ -358,34 +553,68 @@ export default function Resumen() {
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-bold text-[#41e0b3]">Total</span>
                   <span className="text-2xl font-extrabold text-white drop-shadow">
-                    ${Number(cotizador.costoTotal).toLocaleString("es-CO")}
+                    {costoTotal === 0 ? "¡GRATIS!" : `$${Number(costoTotal || cotizador.costoTotal).toLocaleString("es-CO")}`}
                   </span>
                 </div>
               </div>
+              
               {/* Botones de acción */}
               <div className="space-y-3">
                 <button
                   onClick={handlePagar}
-                  className="w-full bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] hover:from-[#2bbd8c] hover:to-[#41e0b3] text-white font-bold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 animate-bounce"
+                  disabled={isCreatingShipment || !session?.user?.email}
+                  className={`w-full font-bold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 ${
+                    costoTotal === 0 
+                      ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white" 
+                      : "bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] hover:from-[#2bbd8c] hover:to-[#41e0b3] text-white"
+                  } ${(isCreatingShipment || !session?.user?.email) ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <span>Proceder al pago</span>
+                  {isCreatingShipment ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Procesando...</span>
+                    </>
+                  ) : !session?.user?.email ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <span>Inicia sesión para continuar</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <span>{costoTotal === 0 ? "Confirmar Envío Gratis" : "Proceder al pago"}</span>
+                    </>
+                  )}
                 </button>
-                <button
-                  onClick={handleVerAnuncios}
-                  className="w-full bg-[#23272b] hover:bg-[#41e0b3]/20 text-[#41e0b3] font-bold py-3 px-6 rounded-2xl shadow transition-all duration-300 flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 7.165 6 9.388 6 12v2.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  <span>Reducir costo</span>
-                </button>
+                
+                {costoTotal > 0 && (
+                  <button
+                    onClick={handleVerAnuncios}
+                    className="w-full bg-[#23272b] hover:bg-[#41e0b3]/20 text-[#41e0b3] font-bold py-3 px-6 rounded-2xl shadow transition-all duration-300 flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 7.165 6 9.388 6 12v2.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <span>Reducir costo</span>
+                  </button>
+                )}
               </div>
-              <p className="text-xs text-[#41e0b3] text-center mt-4">
-                Ve anuncios para obtener descuentos en tu envío
-              </p>
+              
+              {costoTotal > 0 && (
+                <p className="text-xs text-[#41e0b3] text-center mt-4">
+                  💡 Ve anuncios para obtener descuentos en tu envío
+                </p>
+              )}
+              
+              {costoTotal === 0 && (
+                <p className="text-xs text-green-400 text-center mt-4">
+                  🎉 ¡Tu envío es completamente gratuito!
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -394,15 +623,16 @@ export default function Resumen() {
         <div className="flex justify-between w-full mt-6">
           <button
             type="button"
-            className="bg-gray-300 text-gray-700 px-6 py-2 rounded font-semibold"
+            className="bg-gray-300 text-gray-700 px-6 py-2 rounded font-semibold hover:bg-gray-400 transition-colors"
             onClick={() => router.push("/destinatario")}
           >
             Anterior
           </button>
+          {/* ✅ Botón "Continuar" corregido */}
           <button
             type="button"
-            className="bg-teal-500 hover:bg-teal-600 text-white px-6 py-2 rounded font-semibold"
-            onClick={() => router.push("/pagar")}
+            className="bg-[#41e0b3] text-white px-6 py-2 rounded font-semibold hover:bg-[#2bbd8c] transition-colors"
+            onClick={handlePagar}
           >
             Continuar
           </button>
@@ -416,10 +646,7 @@ export default function Resumen() {
             setShowMegaSale(false);
             handlePagar();
           }}
-          onWatchAd={() => {
-            setShowMegaSale(false);
-            handleVerAnuncios();
-          }}
+          onWatchAd={handleVerAnuncio} // ✅ Cambiar a handleVerAnuncio para evitar bucle
         />
 
         {/* MODAL DESCUENTO ANUNCIOS */}
@@ -430,27 +657,46 @@ export default function Resumen() {
             setShowDescuento(false);
             handlePagar();
           }}
-          onWatchAd={() => {
-            setShowDescuento(false);
-            handleVerOtroAnuncio();
-          }}
+          onWatchAd={handleVerOtroAnuncio}
         />
 
         {/* Feedback visual de AdMob */}
         {adState === "loading" && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
             <div className="bg-white rounded-xl p-8 shadow text-center">
-              <span className="block mb-2 text-lg font-bold text-[#41e0b3]">Cargando anuncio...</span>
+              <span className="block mb-4 text-lg font-bold text-[#41e0b3]">Cargando anuncio...</span>
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#41e0b3] mx-auto"></div>
+              <p className="text-sm text-gray-600 mt-2">Por favor espera...</p>
             </div>
           </div>
         )}
+        
+        {adState === "done" && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="bg-white rounded-xl p-8 shadow text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span className="block mb-2 text-lg font-bold text-green-600">¡Descuento aplicado!</span>
+              <p className="text-sm text-gray-600">Tu nuevo costo se reflejará en breve</p>
+            </div>
+          </div>
+        )}
+        
         {adState === "error" && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
             <div className="bg-white rounded-xl p-8 shadow text-center">
-              <span className="block mb-2 text-lg font-bold text-red-500">Error al cargar el anuncio. Intenta de nuevo.</span>
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <span className="block mb-4 text-lg font-bold text-red-500">Error al cargar el anuncio</span>
+              <p className="text-sm text-gray-600 mb-4">Intenta de nuevo o verifica tu conexión</p>
               <button
-                className="bg-[#41e0b3] text-white px-4 py-2 rounded font-bold"
+                className="bg-[#41e0b3] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#2bbd8c] transition-colors"
                 onClick={() => setAdState("idle")}
               >
                 Reintentar
@@ -459,6 +705,7 @@ export default function Resumen() {
           </div>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }

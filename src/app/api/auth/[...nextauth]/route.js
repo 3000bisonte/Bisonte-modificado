@@ -1,4 +1,3 @@
-// app/api/auth/[...nextauth]/route.js o auth.js
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -17,16 +16,23 @@ async function getUserByEmail(email) {
   return res.rows[0];
 }
 
-// Configuración de NextAuth
+// Asegura que el usuario de Google exista en la base de datos
+async function ensureGoogleUser(email, name) {
+  const res = await pool.query("SELECT id FROM usuarios WHERE email = $1", [email]);
+  if (res.rows.length === 0) {
+    await pool.query(
+      "INSERT INTO usuarios (nombre, email) VALUES ($1, $2)",
+      [name || null, email]
+    );
+  }
+}
+
 const handler = NextAuth({
   providers: [
-    // Login con Google
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
-
-    // Login con email y contraseña
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -43,10 +49,6 @@ const handler = NextAuth({
           throw new Error("No user found");
         }
 
-        // LOG para depuración
-        console.log("Password recibido:", credentials.password);
-        console.log("Hash en BD:", user.password);
-
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) {
           throw new Error("Invalid password");
@@ -54,36 +56,54 @@ const handler = NextAuth({
 
         return {
           id: user.id,
-          name: user.name,
+          name: user.nombre,
           email: user.email,
         };
       },
     }),
   ],
 
-  // Opcional: callbacks para personalizar sesión o token
   callbacks: {
-    async session({ session, token }) {
-      if (token?.id) {
-        session.user.id = token.id;
+    async jwt({ token, user, account }) {
+      try {
+        if (account?.provider === "google" && user?.email) {
+          await ensureGoogleUser(user.email, user.name);
+          const dbUser = await getUserByEmail(user.email);
+          if (dbUser) token.id = dbUser.id;
+        }
+        if (user) {
+          token.id = user.id;
+        }
+        return token;
+      } catch (error) {
+        console.error("Error en callback jwt:", error);
+        throw error;
       }
-      return session;
     },
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
+    async session({ session, token }) {
+      try {
+        if (token?.id) {
+          session.user.id = token.id;
+        }
+        return session;
+      } catch (error) {
+        console.error("Error en callback session:", error);
+        throw error;
       }
-      return token;
+    },
+    async redirect({ url, baseUrl }) {
+      return "/home";
     },
   },
 
+  // Puedes eliminar la línea signIn si no usas página personalizada
   pages: {
-    signIn: "/auth/signin", // Ruta personalizada para el login
-    error: "/auth/error",   // Ruta para errores de autenticación
+    error: "/auth/error",
+    signOut: "/", // Redirige al home al cerrar sesión
   },
 
   session: {
-    strategy: "jwt", // Puedes cambiar a "database" si lo prefieres
+    strategy: "jwt",
   },
 
   secret: process.env.NEXTAUTH_SECRET,

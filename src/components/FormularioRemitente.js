@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import BottomNav from "./BottomNav";
 
 const FormularioRemitente = ({ id }) => {
   const router = useRouter();
+  const { data: session } = useSession();
   const [formData, setFormData] = useState({
     nombre: "",
     tipoDocumento: "",
@@ -30,6 +33,8 @@ const FormularioRemitente = ({ id }) => {
     if (typeof window !== 'undefined' && isClient) {
       try {
         localStorage.setItem("formRemitente", JSON.stringify(data));
+        // También guardar en formDataRemitente para compatibilidad
+        localStorage.setItem("formDataRemitente", JSON.stringify(data));
       } catch (error) {
         console.error("Error saving to localStorage:", error);
       }
@@ -62,45 +67,65 @@ const FormularioRemitente = ({ id }) => {
         setFormData(savedData);
       }
     }
-  }, [isClient]); // Removido formData de las dependencias para evitar loops
+  }, [isClient]);
 
-  // Cargar datos del perfil si hay un ID
+  // Cargar datos del perfil del usuario actual desde la sesión
   useEffect(() => {
-    if (!id || !isClient) return;
+    if (!session?.user?.email || !isClient) return;
     
-    const fetchData = async () => {
+    const fetchUserProfile = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/perfil/${id}`);
-        if (!response.ok) throw new Error("Failed to fetch profile data");
-        const data = await response.json();
+        console.log("🔍 Buscando perfil del usuario:", session.user.email);
         
-        if (data) {
+        const response = await fetch("/api/perfil");
+        if (!response.ok) {
+          throw new Error("Failed to fetch profiles");
+        }
+        
+        const perfiles = await response.json();
+        const userProfile = perfiles.find(p => p.correo === session.user.email);
+        
+        if (userProfile) {
+          console.log("👤 Perfil encontrado:", userProfile);
+          
+          // Solo llenar campos vacíos para no sobreescribir datos ya ingresados
+          setFormData((prev) => ({
+            nombre: prev.nombre || userProfile.nombre || "",
+            tipoDocumento: prev.tipoDocumento || "",
+            numeroDocumento: prev.numeroDocumento || "",
+            celular: prev.celular || userProfile.celular || "",
+            correo: prev.correo || userProfile.correo || session.user.email,
+            direccionRecogida: prev.direccionRecogida || "",
+            detalleDireccion: prev.detalleDireccion || "",
+            recomendaciones: prev.recomendaciones || "",
+          }));
+        } else {
+          console.log("⚠️ No se encontró perfil, usando datos de sesión");
+          // Si no hay perfil, al menos llenar el correo de la sesión
           setFormData((prev) => ({
             ...prev,
-            nombre: prev.nombre || data.nombre || "",
-            numeroDocumento: prev.numeroDocumento || data.numero_documento || "",
-            tipoDocumento: prev.tipoDocumento || data.tipo_documento || "",
-            celular: prev.celular || data.celular || "",
-            direccionRecogida: prev.direccionRecogida || data.direccion_recogida || "",
-            detalleDireccion: prev.detalleDireccion || data.detalle_direccion || "",
-            recomendaciones: prev.recomendaciones || data.recomendaciones || "",
+            correo: prev.correo || session.user.email || "",
           }));
         }
       } catch (error) {
-        console.error("Error fetching profile data:", error);
-        setErrorMessage("Error al cargar los datos del perfil. Por favor intenta de nuevo.");
+        console.error("❌ Error al cargar datos del perfil:", error);
+        // Llenar al menos el correo de la sesión en caso de error
+        setFormData((prev) => ({
+          ...prev,
+          correo: prev.correo || session.user.email || "",
+        }));
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchData();
-  }, [id, isClient]);
+    fetchUserProfile();
+  }, [session?.user?.email, isClient]);
 
   // Guardar en localStorage cada vez que cambia el formData
   useEffect(() => {
-    if (isClient) {
+    if (isClient && Object.values(formData).some(val => val !== "")) {
       saveToLocalStorage(formData);
     }
   }, [formData, isClient]);
@@ -190,229 +215,357 @@ const FormularioRemitente = ({ id }) => {
       return;
     }
     
+    console.log("📤 Datos del remitente guardados:", formData);
+    
     // Navega a la página de destinatario
     router.push("/destinatario");
-  };
-
-  // Función para limpiar localStorage (útil para debugging o reset)
-  const clearLocalStorage = () => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem("formRemitente");
-      } catch (error) {
-        console.error("Error clearing localStorage:", error);
-      }
-    }
   };
 
   const canProceed = isFormValid && !isLoading;
 
   return (
-    <div className="relative w-full max-w-md mx-auto">
-    
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col items-center p-4 w-full bg-white rounded-lg shadow-md"
-      >
-        <h2 className="text-lg font-bold mb-4 text-gray-700 text-center">
-          Información del remitente
-        </h2>
-        
-        {errorMessage && (
-          <div className="bg-red-100 text-red-700 p-2 mb-4 rounded w-full">
-            {errorMessage}
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 px-4 py-8">
+      <div className="max-w-lg mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-500 rounded-full mb-4">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
           </div>
-        )}
-
-        <div className="mb-4 w-full">
-          <label className="block text-sm font-medium text-gray-700">
-            Nombre quien envía<span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="nombre"
-            placeholder="Ej. Juan Pérez"
-            value={formData.nombre}
-            onChange={handleChange}
-            className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              fieldErrors.nombre ? 'border-red-500' : 'border-gray-300'
-            }`}
-            required
-          />
-          {fieldErrors.nombre && (
-            <span className="text-red-600 text-xs mt-1 block">{fieldErrors.nombre}</span>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Información del Remitente</h1>
+          <p className="text-gray-600">Completa los datos de quien envía el paquete</p>
+          {session?.user?.email && (
+            <p className="text-sm text-teal-600 mt-2">
+              📧 Usuario: {session.user.email}
+            </p>
           )}
         </div>
 
-        <div className="mb-4 w-full">
-          <label className="block text-sm font-medium text-gray-700">
-            Tipo de Documento<span className="text-red-500">*</span>
-          </label>
-          <select
-            name="tipoDocumento"
-            value={formData.tipoDocumento}
-            onChange={handleChange}
-            className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              fieldErrors.tipoDocumento ? 'border-red-500' : 'border-gray-300'
-            }`}
-            required
-          >
-            <option value="">Selecciona un tipo</option>
-            <option value="CC">Cédula de Ciudadanía</option>
-            <option value="NIT">NIT</option>
-            <option value="CE">Cédula de Extranjería</option>
-            <option value="TI">Tarjeta de Identidad</option>
-          </select>
-          {fieldErrors.tipoDocumento && (
-            <span className="text-red-600 text-xs mt-1 block">{fieldErrors.tipoDocumento}</span>
-          )}
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-teal-600">Paso 2 de 4</span>
+            <span className="text-sm text-gray-500">50% completado</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="bg-teal-500 h-2 rounded-full transition-all duration-300" style={{ width: '50%' }}></div>
+          </div>
         </div>
 
-        <div className="mb-4 w-full">
-          <label className="block text-sm font-medium text-gray-700">
-            Número de Documento<span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="numeroDocumento"
-            placeholder="Ej. 123456789"
-            value={formData.numeroDocumento}
-            onChange={handleChange}
-            className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              fieldErrors.numeroDocumento ? 'border-red-500' : 'border-gray-300'
-            }`}
-            required
-          />
-          {fieldErrors.numeroDocumento && (
-            <span className="text-red-600 text-xs mt-1 block">{fieldErrors.numeroDocumento}</span>
-          )}
-        </div>
-
-        <div className="mb-4 w-full">
-          <label className="block text-sm font-medium text-gray-700">
-            Celular<span className="text-red-500">*</span>
-          </label>
-          <input
-            type="tel"
-            name="celular"
-            placeholder="+57 Número de celular"
-            value={formData.celular}
-            onChange={handleChange}
-            className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              fieldErrors.celular ? 'border-red-500' : 'border-gray-300'
-            }`}
-            required
-          />
-          {fieldErrors.celular && (
-            <span className="text-red-600 text-xs mt-1 block">{fieldErrors.celular}</span>
-          )}
-        </div>
-
-        <div className="mb-4 w-full">
-          <label className="block text-sm font-medium text-gray-700">
-            Correo electrónico<span className="text-red-500">*</span>
-          </label>
-          <input
-            type="email"
-            name="correo"
-            placeholder="example@gmail.com"
-            value={formData.correo}
-            onChange={handleChange}
-            className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              fieldErrors.correo ? 'border-red-500' : 'border-gray-300'
-            }`}
-            required
-          />
-          {fieldErrors.correo && (
-            <span className="text-red-600 text-xs mt-1 block">{fieldErrors.correo}</span>
-          )}
-        </div>
-
-        <div className="mb-4 w-full">
-          <label className="block text-sm font-medium text-gray-700">
-            Dirección de recogida<span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="direccionRecogida"
-            placeholder="Ej. Calle 123 #45-67"
-            value={formData.direccionRecogida}
-            onChange={handleChange}
-            className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              fieldErrors.direccionRecogida ? 'border-red-500' : 'border-gray-300'
-            }`}
-            required
-          />
-          {fieldErrors.direccionRecogida && (
-            <span className="text-red-600 text-xs mt-1 block">{fieldErrors.direccionRecogida}</span>
-          )}
-        </div>
-
-        <div className="mb-4 w-full">
-          <label className="block text-sm font-medium text-gray-700">
-            Apartamento/Torre/Conjunto (opcional)
-          </label>
-          <input
-            type="text"
-            name="detalleDireccion"
-            placeholder="Ej. Torre 5, Apto 301, Conjunto La Colina"
-            value={formData.detalleDireccion}
-            onChange={handleChange}
-            className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-              fieldErrors.detalleDireccion ? 'border-red-500' : 'border-gray-300'
-            }`}
-          />
-          {fieldErrors.detalleDireccion && (
-            <span className="text-red-600 text-xs mt-1 block">{fieldErrors.detalleDireccion}</span>
-          )}
-        </div>
-
-        <div className="mb-4 w-full">
-          <label className="block text-sm font-medium text-gray-700">
-            Recomendaciones para la transportadora (producto delicado)
-          </label>
-          <textarea
-            name="recomendaciones"
-            placeholder="Ej. Producto delicado, no voltear"
-            value={formData.recomendaciones}
-            onChange={handleChange}
-            className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none ${
-              fieldErrors.recomendaciones ? 'border-red-500' : 'border-gray-300'
-            }`}
-            rows="3"
-            maxLength="100"
-          />
-          <div className="flex justify-between items-center mt-1">
-            {fieldErrors.recomendaciones && (
-              <span className="text-red-600 text-xs">{fieldErrors.recomendaciones}</span>
+        {/* Form Container */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Error Message */}
+            {errorMessage && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                {errorMessage}
+              </div>
             )}
-            <span className="text-gray-500 text-xs ml-auto">
-              {formData.recomendaciones.length}/100
-            </span>
-          </div>
+
+            {/* Loading Indicator */}
+            {isLoading && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg flex items-center">
+                <svg className="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Cargando datos del perfil...
+              </div>
+            )}
+
+            {/* Datos Personales Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                Datos Personales
+              </h3>
+              
+              {/* Nombre */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Nombre completo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="nombre"
+                  placeholder="Ej. Juan Pérez García"
+                  value={formData.nombre}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors ${
+                    fieldErrors.nombre ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-teal-500'
+                  }`}
+                  required
+                />
+                {fieldErrors.nombre && (
+                  <p className="text-red-600 text-sm flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {fieldErrors.nombre}
+                  </p>
+                )}
+              </div>
+
+              {/* Tipo y Número de Documento */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Tipo de Documento <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="tipoDocumento"
+                    value={formData.tipoDocumento}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors ${
+                      fieldErrors.tipoDocumento ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-teal-500'
+                    }`}
+                    required
+                  >
+                    <option value="">Selecciona un tipo</option>
+                    <option value="CC">Cédula de Ciudadanía</option>
+                    <option value="NIT">NIT</option>
+                    <option value="CE">Cédula de Extranjería</option>
+                    <option value="TI">Tarjeta de Identidad</option>
+                  </select>
+                  {fieldErrors.tipoDocumento && (
+                    <p className="text-red-600 text-sm flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      {fieldErrors.tipoDocumento}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Número de Documento <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="numeroDocumento"
+                    placeholder="Ej. 123456789"
+                    value={formData.numeroDocumento}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors ${
+                      fieldErrors.numeroDocumento ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-teal-500'
+                    }`}
+                    required
+                  />
+                  {fieldErrors.numeroDocumento && (
+                    <p className="text-red-600 text-sm flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      {fieldErrors.numeroDocumento}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Información de Contacto Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                Información de Contacto
+              </h3>
+
+              {/* Celular */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Celular <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 text-sm">+57</span>
+                  </div>
+                  <input
+                    type="tel"
+                    name="celular"
+                    placeholder="3001234567"
+                    value={formData.celular}
+                    onChange={handleChange}
+                    className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors ${
+                      fieldErrors.celular ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-teal-500'
+                    }`}
+                    required
+                  />
+                </div>
+                {fieldErrors.celular && (
+                  <p className="text-red-600 text-sm flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {fieldErrors.celular}
+                  </p>
+                )}
+              </div>
+
+              {/* Correo */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Correo electrónico <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  name="correo"
+                  placeholder="ejemplo@gmail.com"
+                  value={formData.correo}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors ${
+                    fieldErrors.correo ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-teal-500'
+                  }`}
+                  required
+                />
+                {fieldErrors.correo && (
+                  <p className="text-red-600 text-sm flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {fieldErrors.correo}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Dirección de Recogida Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                Dirección de Recogida
+              </h3>
+
+              {/* Dirección Principal */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Dirección de recogida <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="direccionRecogida"
+                  placeholder="Ej. Calle 123 #45-67"
+                  value={formData.direccionRecogida}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors ${
+                    fieldErrors.direccionRecogida ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-teal-500'
+                  }`}
+                  required
+                />
+                {fieldErrors.direccionRecogida && (
+                  <p className="text-red-600 text-sm flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {fieldErrors.direccionRecogida}
+                  </p>
+                )}
+              </div>
+
+              {/* Detalle de Dirección */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Apartamento/Torre/Conjunto <span className="text-gray-400">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  name="detalleDireccion"
+                  placeholder="Ej. Torre 5, Apto 301, Conjunto La Colina"
+                  value={formData.detalleDireccion}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors ${
+                    fieldErrors.detalleDireccion ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-teal-500'
+                  }`}
+                />
+                {fieldErrors.detalleDireccion && (
+                  <p className="text-red-600 text-sm flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {fieldErrors.detalleDireccion}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Recomendaciones Section */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Recomendaciones para la transportadora <span className="text-gray-400">(opcional)</span>
+              </label>
+              <textarea
+                name="recomendaciones"
+                placeholder="Ej. Producto delicado, no voltear, manejar con cuidado..."
+                value={formData.recomendaciones}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none transition-colors ${
+                  fieldErrors.recomendaciones ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-teal-500'
+                }`}
+                rows="3"
+                maxLength="100"
+              />
+              <div className="flex justify-between items-center">
+                {fieldErrors.recomendaciones && (
+                  <p className="text-red-600 text-sm flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {fieldErrors.recomendaciones}
+                  </p>
+                )}
+                <span className="text-gray-400 text-sm ml-auto">
+                  {formData.recomendaciones.length}/100
+                </span>
+              </div>
+            </div>
+          </form>
         </div>
 
-        <div className="flex justify-between w-full mt-6">
-          {/* Botón Anterior */}
+        {/* Action Buttons */}
+        <div className="flex gap-4 mb-20">
           <button
             type="button"
-            className="bg-gray-300 text-gray-700 px-6 py-2 rounded font-semibold"
             onClick={() => router.push("/cotizador")}
+            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
           >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
             Anterior
           </button>
-          {/* Botón Continuar */}
+          
           <button
             type="submit"
-            className={`bg-teal-500 hover:bg-teal-600 text-white px-6 py-2 rounded font-semibold transition ${
-              !isFormValid || isLoading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            onClick={handleSubmit}
             disabled={!isFormValid || isLoading}
+            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center ${
+              isFormValid && !isLoading
+                ? "bg-teal-500 hover:bg-teal-600 text-white shadow-md hover:shadow-lg"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
           >
-            {isLoading ? "Cargando..." : "Continuar"}
+            {isLoading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Cargando...
+              </>
+            ) : (
+              <>
+                Continuar
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </>
+            )}
           </button>
         </div>
-      </form>
+
+        <BottomNav />
+      </div>
     </div>
   );
 };

@@ -169,25 +169,26 @@ const MercadoPagoComponent = () => {
 
   // Función que maneja el envío aprobado
   const manejarEnvioAprobado = React.useCallback(async () => {
-    const numeroGuia = generarNumeroGuia(); // Generar el número de guía aquí
-    const datosLocalStorage = JSON.parse(localStorage.getItem("destinatarioInfo"));
-    const datosLocalStorageformDataRemitente = JSON.parse(
-      localStorage.getItem("formDataRemitente")
-    );
-    const nombreCompleto = `${datosLocalStorage?.nombre} ${datosLocalStorage?.apellido}`;
-    const direccionEntrega = `${datosLocalStorage?.direccionEntrega}`;
-    const direccionRecogida = `${datosLocalStorageformDataRemitente?.direccionRecogida}`;
-    // Recuperar el ID del destinatario y convertirlo a número
-    const datosLocalStoragedestinatarioId = parseInt(
-      localStorage.getItem("destinatarioId"),
-      10
-    );
-
-    if (isNaN(datosLocalStoragedestinatarioId)) {
-      console.error("El ID del destinatario no es válido");
-      return; // Detener la ejecución si no es un número válido
-    }
+    const numeroGuia = generarNumeroGuia();
+    
     try {
+      const datosLocalStorage = JSON.parse(localStorage.getItem("destinatarioInfo"));
+      const datosLocalStorageformDataRemitente = JSON.parse(
+        localStorage.getItem("formDataRemitente")
+      );
+      const nombreCompleto = `${datosLocalStorage?.nombre} ${datosLocalStorage?.apellido}`;
+      const direccionEntrega = `${datosLocalStorage?.direccionEntrega}`;
+      const direccionRecogida = `${datosLocalStorageformDataRemitente?.direccionRecogida}`;
+
+      console.log("Registrando envío con datos:", {
+        numeroGuia,
+        paymentId,
+        origen: direccionRecogida,
+        destino: direccionEntrega,
+        destinatario: nombreCompleto,
+        usuarioEmail: session?.user?.email,
+      });
+
       const response = await fetch("/api/guardarenvio", {
         method: "POST",
         headers: {
@@ -198,24 +199,37 @@ const MercadoPagoComponent = () => {
           paymentId,
           origen: direccionRecogida,
           destino: direccionEntrega,
-          nombreCompleto,
-          DestinatarioId: datosLocalStoragedestinatarioId,
-          perfilId: perfilIdRef.current,
+          destinatario: nombreCompleto,
+          usuarioEmail: session?.user?.email,
         }),
       });
-      if (response.ok) {
-        const responseData = await response.json(); // Supongamos que devuelve el objeto guardado
-        console.log("Envío registrado exitosamente:", responseData);
 
-        // Almacenar la respuesta en el localStorage o contexto global para usar en otra pantalla
+      const responseData = await response.json();
+
+      if (response.ok) {
+        console.log("Envío registrado exitosamente:", responseData);
+        
+        // Guardar datos del envío
         localStorage.setItem("envioDatos", JSON.stringify(responseData));
+        localStorage.setItem("envioExitoso", "true");
+        
+        // Mostrar mensaje de éxito y redirigir
+        alert("¡Envío realizado exitosamente! Espere pronta actualización.");
+        
+        // Redirigir a mis envíos después de un breve delay
+        setTimeout(() => {
+          window.location.href = "/misenvios";
+        }, 2000);
+        
       } else {
-        console.error("Error al registrar el envío: Status", response.status);
+        console.error("Error al registrar el envío:", responseData);
+        alert("Hubo un error al registrar tu envío. Por favor contacta soporte.");
       }
     } catch (error) {
       console.error("Error al registrar el envío:", error);
+      alert("Error de conexión al registrar el envío. Inténtalo nuevamente.");
     }
-  }, [paymentId, perfilId]); // Dependencia correcta
+  }, [paymentId, session?.user?.email]);
 
   useEffect(() => {
     if (status === "approved") {
