@@ -31,33 +31,44 @@ export default function AdminEnvios() {
       .catch(() => setLoading(false));
   };
 
-  const handleActualizarEstado = async (id, nuevoEstado) => {
-    setActualizando(id);
+  const handleStatusChange = async (id, nuevoEstado) => {
+    // ✅ ACTUALIZA EL ESTADO LOCAL INMEDIATAMENTE
+    setEnvios(prevEnvios => 
+      prevEnvios.map(envio => 
+        envio.id === id 
+          ? { ...envio, Estado: nuevoEstado } // Nota: cambia 'estado' por 'Estado' si es necesario
+          : envio
+      )
+    );
+
     try {
-      const response = await fetch(`/api/envios/actualizar-estado/${id}`, { // ✅ Corregido: usar 'id' en lugar de 'guiaId'
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nuevoEstado }),
+      // ✅ USAR PATCH EN LUGAR DE PUT Y PARÁMETRO CORRECTO
+      const response = await fetch(`/api/envios/actualizar-estado/${id}`, {
+        method: 'PATCH', // ✅ Cambiar de PUT a PATCH
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nuevoEstado: nuevoEstado }) // ✅ Cambiar 'estado' por 'nuevoEstado'
       });
-      
-      if (response.ok) {
-        // Actualizar el estado local inmediatamente
-        setEnvios(prevEnvios => 
-          prevEnvios.map(envio => 
-            envio.id === id ? { ...envio, Estado: nuevoEstado } : envio
-          )
-        );
-        // También recargar para estar seguros
-        loadEnvios();
-      } else {
-        console.error("Error al actualizar estado");
-        alert("Error al actualizar el estado del envío");
+
+      if (!response.ok) {
+        // ❌ Si falla, revierte el cambio local
+        await loadEnvios();
+        showNotification('❌ Error al actualizar estado', 'error');
+        return;
       }
+
+      const result = await response.json();
+      console.log('✅ Respuesta del API:', result);
+
+      // ✅ Si funciona, recarga los datos para confirmar
+      await loadEnvios();
+      showNotification('✅ Estado actualizado correctamente', 'success');
+      
     } catch (error) {
-      console.error("Error actualizando estado:", error);
-      alert("Error de conexión al actualizar el estado");
-    } finally {
-      setActualizando(null);
+      console.error('Error:', error);
+      
+      // ❌ Revierte el cambio en caso de error
+      await loadEnvios();
+      showNotification('❌ Error de conexión', 'error');
     }
   };
 
@@ -314,7 +325,7 @@ export default function AdminEnvios() {
                             <select
                               disabled={actualizando === envio.id}
                               value={envio.Estado}
-                              onChange={(ev) => handleActualizarEstado(envio.id, ev.target.value)}
+                              onChange={(ev) => handleStatusChange(envio.id, ev.target.value)}
                               className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed bg-white min-w-[160px]"
                             >
                               <option value="RECOLECCION_PENDIENTE">Recolección pendiente</option>

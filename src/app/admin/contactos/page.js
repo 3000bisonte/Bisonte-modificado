@@ -58,6 +58,8 @@ export default function AdminContactos() {
       });
 
       if (response.ok) {
+        // ✅ FUERZA LA ACTUALIZACIÓN
+        router.refresh();
         loadMensajes();
         showNotification('✅ Mensaje marcado como leído', 'success');
       } else {
@@ -88,6 +90,8 @@ export default function AdminContactos() {
       });
 
       if (response.ok) {
+        // ✅ FUERZA LA ACTUALIZACIÓN
+        router.refresh();
         loadMensajes();
         setModalRespuesta(null);
         setRespuesta("");
@@ -133,6 +137,8 @@ export default function AdminContactos() {
       });
 
       if (response.ok) {
+        // ✅ FUERZA LA ACTUALIZACIÓN
+        router.refresh();
         loadMensajes();
         const textoNotification = wasArchived ? '📂 Mensaje desarchivado exitosamente' : '📁 Mensaje archivado exitosamente';
         showNotification(textoNotification, 'success');
@@ -548,3 +554,19 @@ export default function AdminContactos() {
     </>
   );
 }
+
+// En tu página de admin, añade esto
+import { useRouter } from 'next/navigation';
+
+const AdminEnvios = () => {
+  const router = useRouter();
+  
+  const handleStatusChange = async (id, nuevoEstado) => {
+    // ... tu lógica de actualización
+    
+    if (response.ok) {
+      // ✅ REFRESCA LA PÁGINA AUTOMÁTICAMENTE
+      router.refresh();
+    }
+  };
+};
