@@ -1,12 +1,9 @@
 "use client";
-import React from "react"; // ✅ Agregar import de React
+import React from "react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
-// ✅ AÑADIR IMPORTS DE NOTIFICACIONES
-import { useNotification } from "@/context/NotificationContext";
-import Notification from "@/components/Notification";
 
 export default function AdminEnvios() {
   const { data: session, status } = useSession();
@@ -16,11 +13,13 @@ export default function AdminEnvios() {
   const [loading, setLoading] = useState(true);
   const [envioExpandido, setEnvioExpandido] = useState(null);
   
-  // ✅ AÑADIR ESTADO DE NOTIFICACIÓN
+  // ✅ SISTEMA DE NOTIFICACIONES LOCAL SIMPLE
   const [notification, setNotification] = useState(null);
   
-  // ✅ USAR HOOK DE NOTIFICACIÓN
-  const { showNotification } = useNotification();
+  const showNotification = (message, type = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   useEffect(() => {
     if (session?.user?.email !== "3000bisonte@gmail.com") {
@@ -31,53 +30,80 @@ export default function AdminEnvios() {
   }, [session, router]);
 
   const loadEnvios = () => {
+    setLoading(true);
     fetch("/api/envios")
       .then((res) => res.json())
       .then((data) => {
-        setEnvios(data);
+        console.log('✅ Envíos cargados:', data);
+        setEnvios(Array.isArray(data) ? data : []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((error) => {
+        console.error('❌ Error cargando envíos:', error);
+        setLoading(false);
+      });
   };
 
   const handleStatusChange = async (id, nuevoEstado) => {
-    // ✅ ACTUALIZA EL ESTADO LOCAL INMEDIATAMENTE
+    console.log('🔄 Cambiando estado:', { id, nuevoEstado });
+    
+    // ✅ MARCAR COMO ACTUALIZANDO
+    setActualizando(id);
+    
+    // ✅ GUARDAR ESTADO ANTERIOR PARA POSIBLE ROLLBACK
+    const estadoAnterior = envios.find(e => e.id === id)?.Estado;
+    
+    // ✅ ACTUALIZACIÓN OPTIMISTA INMEDIATA
     setEnvios(prevEnvios => 
       prevEnvios.map(envio => 
         envio.id === id 
-          ? { ...envio, Estado: nuevoEstado } // Nota: cambia 'estado' por 'Estado' si es necesario
+          ? { ...envio, Estado: nuevoEstado }
           : envio
       )
     );
 
     try {
-      // ✅ USAR PATCH EN LUGAR DE PUT Y PARÁMETRO CORRECTO
       const response = await fetch(`/api/envios/actualizar-estado/${id}`, {
-        method: 'PATCH', // ✅ Cambiar de PUT a PATCH
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nuevoEstado: nuevoEstado }) // ✅ Cambiar 'estado' por 'nuevoEstado'
+        body: JSON.stringify({ nuevoEstado: nuevoEstado })
       });
 
+      console.log('📡 Status de respuesta:', response.status);
+
       if (!response.ok) {
-        // ❌ Si falla, revierte el cambio local
-        await loadEnvios();
+        // ❌ ROLLBACK - Volver al estado anterior
+        setEnvios(prevEnvios => 
+          prevEnvios.map(envio => 
+            envio.id === id 
+              ? { ...envio, Estado: estadoAnterior }
+              : envio
+          )
+        );
         showNotification('❌ Error al actualizar estado', 'error');
         return;
       }
 
       const result = await response.json();
-      console.log('✅ Respuesta del API:', result);
+      console.log('✅ Resultado exitoso:', result);
 
-      // ✅ Si funciona, recarga los datos para confirmar
-      await loadEnvios();
+      // ✅ ÉXITO - Solo mostrar notificación, NO recargar
       showNotification('✅ Estado actualizado correctamente', 'success');
       
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error en la petición:', error);
       
-      // ❌ Revierte el cambio en caso de error
-      await loadEnvios();
+      // ❌ ROLLBACK en caso de error de red
+      setEnvios(prevEnvios => 
+        prevEnvios.map(envio => 
+          envio.id === id 
+            ? { ...envio, Estado: estadoAnterior }
+            : envio
+        )
+      );
       showNotification('❌ Error de conexión', 'error');
+    } finally {
+      setActualizando(null);
     }
   };
 
@@ -275,7 +301,6 @@ export default function AdminEnvios() {
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {envios.map((envio) => (
-                    // ✅ Usar React.Fragment con key único
                     <React.Fragment key={envio.id}>
                       <tr className="hover:bg-slate-50 transition-colors duration-150">
                         <td className="px-6 py-4">
@@ -331,16 +356,26 @@ export default function AdminEnvios() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
+                            {/* ✅ SELECT CON KEY ÚNICA PARA FORZAR RE-RENDER */}
                             <select
+                              key={`${envio.id}-${envio.Estado}`} // ✅ Fuerza re-render cuando cambia Estado
                               disabled={actualizando === envio.id}
                               value={envio.Estado}
                               onChange={(ev) => handleStatusChange(envio.id, ev.target.value)}
                               className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed bg-white min-w-[160px]"
                             >
                               <option value="RECOLECCION_PENDIENTE">Recolección pendiente</option>
+                              <option value="RECOGIDO_TRANSPORTADORA">Recogido por transportadora</option>
                               <option value="EN_TRANSPORTE">En transporte</option>
+                              <option value="EN_CIUDAD_DESTINO">En ciudad destino</option>
+                              <option value="EN_DISTRIBUCION">En distribución</option>
                               <option value="ENTREGADO">Entregado</option>
+                              <option value="NO_ENTREGADO">No entregado</option>
+                              <option value="REPROGRAMAR">Reprogramar</option>
                               <option value="DEVOLUCION">Devolución</option>
+                              <option value="DEVUELTO_ORIGEN">Devuelto al origen</option>
+                              <option value="ENVIO_CANCELADO">Envío cancelado</option>
+                              <option value="EN_ESPERA_CLIENTE">En espera del cliente</option>
                             </select>
                             {actualizando === envio.id && (
                               <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
@@ -415,16 +450,31 @@ export default function AdminEnvios() {
           )}
         </div>
       </div>
-      {/* Footer - BottomNav existente */}
-      <BottomNav />
-      {/* ✅ AÑADIR COMPONENTE DE NOTIFICACIÓN AL FINAL */}
+
+      {/* ✅ NOTIFICACIÓN SIMPLE Y VISUAL */}
       {notification && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
+        <div className="fixed top-4 right-4 z-50">
+          <div className={`p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 ${
+            notification.type === 'success' ? 'bg-green-500 text-white' :
+            notification.type === 'error' ? 'bg-red-500 text-white' :
+            'bg-blue-500 text-white'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">{notification.message}</span>
+              <button
+                onClick={() => setNotification(null)}
+                className="ml-3 text-white hover:text-gray-200"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
+      
+      <BottomNav />
     </div>
   );
 }
