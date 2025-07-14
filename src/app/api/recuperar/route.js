@@ -1,72 +1,136 @@
-import { NextResponse } from "next/server";
-import { Client } from "pg";
-import { Resend } from "resend";
-import crypto from "crypto";
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import crypto from 'crypto';
+import { Resend } from 'resend';
 
-export async function POST(req) {
-  const { email } = await req.json();
+const prisma = new PrismaClient();
 
-  if (!email) {
-    return NextResponse.json({ usuarioExiste: false }, { status: 400 });
-  }
-
-  // Conexión a PostgreSQL (igual que en tu registro)
-  const client = new Client({
-    host: "ep-twilight-bird-a81mv90h-pooler.eastus2.azure.neon.tech",
-    user: "neondb_owner",
-    password: "npg_J8aQD0kGEOmj",
-    database: "neondb",
-    port: 5432,
-    ssl: { rejectUnauthorized: false },
-  });
-
+export async function POST(request) {
   try {
-    await client.connect();
-    const res = await client.query("SELECT id, nombre FROM usuarios WHERE email = $1", [email]);
+    const { email } = await request.json();
+    
+    if (!email) {
+      return NextResponse.json({ 
+        usuarioExiste: false, 
+        error: 'Email requerido' 
+      }, { status: 400 });
+    }
 
-    if (res.rows.length > 0) {
-      // Genera un token seguro y fecha de expiración (ej: 10 minutos)
-      const token = crypto.randomInt(100000, 999999).toString(); // Token de 6 dígitos
-      const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+    console.log('🔍 Buscando usuario con email:', email);
 
-      // Guarda el token y expiración en la base de datos
-      await client.query(
-        "UPDATE usuarios SET reset_token = $1, reset_token_expires = $2 WHERE email = $3",
-        [token, expires, email]
-      );
+    // ✅ USAR PRISMA en lugar de SQL directo
+    const usuario = await prisma.usuarios.findUnique({
+      where: { email: email.toLowerCase().trim() }
+    });
 
-      // Envía el token por correo
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      console.log("Enviando correo de recuperación a:", email);
-      console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY ? "OK" : "NO KEY");
-      try {
-       
+    if (!usuario) {
+      console.log('⚠️ Usuario no encontrado:', email);
+      // Por seguridad, siempre responder que se envió el email
+      return NextResponse.json({ 
+        usuarioExiste: false,
+        message: "Si el correo está registrado, recibirás un mensaje para recuperar tu contraseña."
+      });
+    }
+
+    console.log('👤 Usuario encontrado:', usuario.id);
+
+    // ✅ GENERAR TOKEN usando los campos correctos del schema
+    const token = crypto.randomInt(100000, 999999).toString(); // 6 dígitos
+    const tokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+
+    // ✅ GUARDAR TOKEN usando los nombres correctos de tu schema
+    await prisma.usuarios.update({
+      where: { id: usuario.id },
+      data: {
+        token: token,        // ✅ Usar 'token' no 'reset_token'
+        tokenFecha: tokenExpiry // ✅ Usar 'tokenFecha' no 'reset_token_expires'
+      }
+    });
+
+    console.log('🔑 Token generado y guardado:', token);
+
+    // ✅ ENVIAR EMAIL con configuración mejorada
+    try {
+      if (!process.env.RESEND_API_KEY) {
+        console.error('❌ RESEND_API_KEY no configurada');
+        // Continuar sin fallar para testing
+      } else {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        
         await resend.emails.send({
-          from: 'recuperar@notificaciones.bisonteapp.com',
-          to: email,
-          subject: 'Código de recuperación de contraseña',
+          from: 'Bisonte Logística <logistica@notificaciones.bisonteapp.com>', // ✅ Usar dominio verificado
+          to: [email],
+          subject: 'Código de recuperación de contraseña - Bisonte Logística',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <div style="background: linear-gradient(135deg, #41e0b3, #2bbd8c); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 28px;">Bisonte Logística</h1>
+              </div>
+              
+              <div style="background: #f9f9f9; padding: 40px; border-radius: 0 0 10px 10px;">
+                <h2 style="color: #333; text-align: center; margin-bottom: 20px;">Código de recuperación</h2>
+                
+                <p style="color: #666; line-height: 1.6; text-align: center;">
+                  Hola <strong>${usuario.nombre || 'Usuario'}</strong>,
+                </p>
+                
+                <p style="color: #666; line-height: 1.6; text-align: center;">
+                  Tu código de recuperación de contraseña es:
+                </p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                  <div style="display: inline-block; background: #41e0b3; color: white; padding: 20px 40px; border-radius: 10px; font-size: 32px; font-weight: bold; letter-spacing: 5px;">
+                    ${token}
+                  </div>
+                </div>
+                
+                <p style="color: #666; line-height: 1.6; text-align: center; font-size: 14px;">
+                  Este código es válido por <strong>10 minutos</strong>.<br>
+                  Si no solicitaste este código, puedes ignorar este mensaje.
+                </p>
+                
+                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+                  <p style="color: #999; font-size: 12px; margin: 0;">
+                    © 2024 Bisonte Logística. Todos los derechos reservados.
+                  </p>
+                </div>
+              </div>
+            </div>
+          `,
           text: `
-Hola ${res.rows[0].nombre},
+Hola ${usuario.nombre || 'Usuario'},
 
 Tu código de recuperación de contraseña es: ${token}
 
 Este código es válido por 10 minutos. Si no solicitaste este código, ignora este mensaje.
 
 ¡Gracias!
-`,
+Equipo Bisonte Logística
+          `
         });
-        console.log("Correo enviado correctamente a:", email);
-      } catch (sendError) {
-        console.error("Error al enviar el correo:", sendError);
-      }
 
-      await client.end();
-      return NextResponse.json({ usuarioExiste: true }, { status: 200 });
-    } else {
-      await client.end();
-      return NextResponse.json({ usuarioExiste: false }, { status: 200 });
+        console.log('📧 Email enviado exitosamente a:', email);
+      }
+    } catch (emailError) {
+      console.error('❌ Error enviando email:', emailError);
+      // No fallar la API si el email falla
     }
+
+    return NextResponse.json({ 
+      usuarioExiste: true,
+      message: "Si el correo está registrado, recibirás un código para recuperar tu contraseña."
+    });
+
   } catch (error) {
-    return NextResponse.json({ usuarioExiste: false, error: "Error de conexión" }, { status: 500 });
+    console.error('❌ Error en API recuperar:', error);
+    console.error('❌ Stack trace:', error.stack);
+    
+    return NextResponse.json({ 
+      usuarioExiste: false,
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Error de servidor'
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
