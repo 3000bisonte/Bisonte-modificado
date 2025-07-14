@@ -15,7 +15,7 @@ export default function RegistroExitoso() {
   const handleComenzar = async () => {
     if (!email || !password) {
       console.log("❌ No hay credenciales guardadas");
-      router.push("/login");
+      router.push("/");
       return;
     }
 
@@ -56,7 +56,7 @@ export default function RegistroExitoso() {
         
         // ✅ REDIRECT A LOGIN DESPUÉS DE 3 SEGUNDOS
         setTimeout(() => {
-          router.push("/login");
+          router.push("/");
         }, 3000);
       }
     } catch (error) {
@@ -64,7 +64,7 @@ export default function RegistroExitoso() {
       setError("Error de conexión. Serás redirigido al login.");
       
       setTimeout(() => {
-        router.push("/login");
+        router.push("/");
       }, 3000);
     }
     
@@ -76,7 +76,7 @@ export default function RegistroExitoso() {
     localStorage.removeItem("nombreRegistro");
     localStorage.removeItem("emailRegistro");
     localStorage.removeItem("passwordRegistro");
-    router.push("/login");
+    router.push("/");
   };
 
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function RegistroExitoso() {
       if (!emailGuardado || !passwordGuardado) {
         console.log("⚠️ No hay datos de registro, redirigiendo a login");
         setTimeout(() => {
-          router.push("/login");
+          router.push("/");
         }, 2000);
       }
     }, 1000);
