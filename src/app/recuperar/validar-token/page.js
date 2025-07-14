@@ -77,7 +77,7 @@ export default function ValidarToken() {
       if (res.ok && data.ok) {
         setMsg("¡Contraseña actualizada exitosamente!");
         setTimeout(() => {
-          router.push("recuperar/exito");
+          router.push("/recuperar/exito");
         }, 2000);
       } else {
         console.error('❌ Error del servidor:', data.error);
