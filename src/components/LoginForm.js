@@ -88,7 +88,7 @@ const LoginForm = () => {
       <div className="w-full max-w-md bg-[#18191A] rounded-lg shadow-lg px-4 py-8 sm:px-8 sm:py-10 flex flex-col items-center">
         {/* Logo */}
         <img
-          src="/LogoNew.png"
+          src="/LogoNew.jpg"
           alt="Bisonte Logo"
           className="w-20 h-20 sm:w-24 sm:h-24 mb-2 sm:mb-4"
         />
