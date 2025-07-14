@@ -8,7 +8,7 @@ export async function POST(req) {
   try {
     await resend.emails.send({
       from: 'Bisonte <envios@notificaciones.bisonteapp.com>', // Puedes usar un dominio verificado o el default de Resend
-      to: 'yesicacausado71@gmail.com',
+      to: '3000bisonte@gmail.com',
       subject: 'Nuevo envío realizado',
       text: `
         Se ha realizado un nuevo envío:

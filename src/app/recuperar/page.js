@@ -153,7 +153,7 @@ export default function Recuperar() {
           
           <div className="text-slate-400 text-sm">
             ¿Necesitas ayuda?{" "}
-            <a href="mailto:soporte@bisonte.com" className="text-[#41e0b3] hover:underline font-medium">
+            <a href="bisonte:3000bisonte@gmail.com" className="text-[#41e0b3] hover:underline font-medium">
               Contacta a soporte
             </a>
           </div>
