@@ -1,76 +1,98 @@
-import { NextResponse } from "next/server";
-import { Client } from "pg";
-import bcrypt from "bcryptjs";
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
-export async function POST(req) {
-  const { email, token, newPassword } = await req.json();
+const prisma = new PrismaClient();
 
-  if (!email || !token || !newPassword) {
-    return NextResponse.json({ ok: false, error: "Datos incompletos" }, { status: 400 });
-  }
-
-  // Validación de email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return NextResponse.json({ ok: false, error: "Correo electrónico inválido" }, { status: 400 });
-  }
-
-  // Validación de token (6 dígitos)
-  if (!/^\d{6}$/.test(token)) {
-    return NextResponse.json({ ok: false, error: "El código debe tener 6 dígitos" }, { status: 400 });
-  }
-
-  // Validación de contraseña segura
-  const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
-  if (!passwordRegex.test(newPassword)) {
-    return NextResponse.json({
-      ok: false,
-      error: "La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial."
-    }, { status: 400 });
-  }
-
-  const client = new Client({
-    host: "ep-twilight-bird-a81mv90h-pooler.eastus2.azure.neon.tech",
-    user: "neondb_owner",
-    password: "npg_J8aQD0kGEOmj",
-    database: "neondb",
-    port: 5432,
-    ssl: { rejectUnauthorized: false },
-  });
-
+export async function POST(request) {
   try {
-    await client.connect();
-    const res = await client.query(
-      "SELECT reset_token, reset_token_expires FROM usuarios WHERE email = $1",
-      [email]
-    );
+    const { email, token, newPassword } = await request.json();
 
-    if (res.rows.length === 0) {
-      await client.end();
-      return NextResponse.json({ ok: false, error: "Usuario no encontrado" }, { status: 400 });
+    console.log('🔧 Validando token y cambiando contraseña:', { email, token: token?.substring(0, 3) + '***' });
+
+    // Validaciones básicas
+    if (!email || !token || !newPassword) {
+      return NextResponse.json({ 
+        ok: false, 
+        error: 'Datos incompletos' 
+      }, { status: 400 });
     }
 
-    if (
-      res.rows[0].reset_token !== token ||
-      !res.rows[0].reset_token_expires ||
-      new Date(res.rows[0].reset_token_expires) < new Date()
-    ) {
-      await client.end();
-      return NextResponse.json({ ok: false, error: "Token inválido o expirado" }, { status: 400 });
+    // Validación de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ 
+        ok: false, 
+        error: 'Correo electrónico inválido' 
+      }, { status: 400 });
     }
 
-    // Hashea la nueva contraseña
-    const hash = await bcrypt.hash(newPassword, 10);
+    // Validación de token (6 dígitos)
+    if (!/^\d{6}$/.test(token)) {
+      return NextResponse.json({ 
+        ok: false, 
+        error: 'El código debe tener 6 dígitos' 
+      }, { status: 400 });
+    }
 
-    // Actualiza la contraseña y elimina el token
-    await client.query(
-      "UPDATE usuarios SET password = $1, reset_token = NULL, reset_token_expires = NULL WHERE email = $2",
-      [hash, email]
-    );
+    // Validación de contraseña segura
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return NextResponse.json({ 
+        ok: false, 
+        error: 'La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial.' 
+      }, { status: 400 });
+    }
 
-    await client.end();
-    return NextResponse.json({ ok: true });
+    // ✅ BUSCAR USUARIO con token válido usando Prisma
+    const usuario = await prisma.usuarios.findFirst({
+      where: {
+        email: email.toLowerCase().trim(),
+        token: token,
+        tokenFecha: {
+          gt: new Date() // Token no expirado
+        }
+      }
+    });
+
+    if (!usuario) {
+      console.log('❌ Usuario no encontrado o token inválido/expirado');
+      return NextResponse.json({ 
+        ok: false, 
+        error: 'Usuario no encontrado o código inválido/expirado' 
+      }, { status: 400 });
+    }
+
+    console.log('👤 Usuario válido encontrado:', usuario.email);
+
+    // ✅ HASHEAR nueva contraseña
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // ✅ ACTUALIZAR contraseña y limpiar token
+    const usuarioActualizado = await prisma.usuarios.update({
+      where: { id: usuario.id },
+      data: {
+        password: hashedPassword,
+        token: null,           // ✅ Limpiar token
+        tokenFecha: null       // ✅ Limpiar fecha de expiración
+      }
+    });
+
+    console.log('✅ Contraseña actualizada exitosamente para:', usuarioActualizado.email);
+
+    return NextResponse.json({ 
+      ok: true,
+      message: 'Contraseña actualizada exitosamente'
+    });
+
   } catch (error) {
-    return NextResponse.json({ ok: false, error: "Error de conexión" }, { status: 500 });
+    console.error('❌ Error en validar-token:', error);
+    return NextResponse.json({ 
+      ok: false, 
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Error de conexión'
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

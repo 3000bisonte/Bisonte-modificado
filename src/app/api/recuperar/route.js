@@ -91,7 +91,7 @@ export async function POST(request) {
                 
                 <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
                   <p style="color: #999; font-size: 12px; margin: 0;">
-                    © 2024 Bisonte Logística. Todos los derechos reservados.
+                    © 2025 Bisonte Logística. Todos los derechos reservados.
                   </p>
                 </div>
               </div>
