@@ -82,17 +82,23 @@ export default function MisEnvios() {
     const fetchEnvios = async () => {
       if (!userEmail) return;
       try {
-        const perfilRes = await fetch("/api/perfil");
-        const perfiles = await perfilRes.json();
-        const perfil = perfiles.find((p) => p.correo === userEmail);
-        if (!perfil) return;
+        console.log("🔍 Consultando envíos para usuario:", userEmail);
 
-        const enviosRes = await fetch("/api/guardarenvio");
+        // ✅ CAMBIAR ESTA LÍNEA - Usar nueva API para consultar
+        const enviosRes = await fetch(
+          `/api/envios/historial?email=${encodeURIComponent(userEmail)}`
+        );
+
+        if (!enviosRes.ok) {
+          throw new Error(`Error ${enviosRes.status}: ${enviosRes.statusText}`);
+        }
+
         const data = await enviosRes.json();
-        console.log("Envíos del usuario:", data);
-        setEnvios(data);
+        console.log("✅ Envíos encontrados:", data);
+
+        setEnvios(Array.isArray(data) ? data : []);
       } catch (e) {
-        console.error("Error al cargar envíos:", e);
+        console.error("❌ Error al cargar envíos:", e);
         setEnvios([]);
       }
     };
