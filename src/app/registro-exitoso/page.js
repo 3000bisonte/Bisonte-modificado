@@ -10,43 +10,112 @@ export default function RegistroExitoso() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [error, setError] = useState("");
 
-  /**
-   * Login automático y navega a la pantalla de inicio
-   */
   const handleComenzar = async () => {
-    setIsLoggingIn(true);
-    console.log("Intentando login automático con:", email, password);
-    const res = await signIn("credentials", {
-      redirect: false,
-      email,
-      password,
-    });
-    console.log("Resultado login automático:", res);
-    if (res?.ok) {
-      router.push("/home");
-    } else {
-      router.push("/");
+    if (!email || !password) {
+      console.log("❌ No hay credenciales guardadas");
+      router.push("/login");
+      return;
     }
+
+    setIsLoggingIn(true);
+    setError("");
+    
+    try {
+      console.log("🔄 Intentando login automático con:", email);
+      
+      // ✅ USAR SIGNIN CON CONFIGURACIÓN ESPECÍFICA
+      const res = await signIn("credentials", {
+        redirect: false,
+        email: email.toLowerCase().trim(),
+        password: password,
+        callbackUrl: "/home"
+      });
+      
+      console.log("📡 Resultado login:", res);
+      
+      if (res?.ok && !res?.error) {
+        console.log("✅ Login exitoso");
+        
+        // ✅ LIMPIAR DATOS DEL LOCALSTORAGE
+        localStorage.removeItem("nombreRegistro");
+        localStorage.removeItem("emailRegistro");
+        localStorage.removeItem("passwordRegistro");
+        localStorage.removeItem("bienvenidaMostrada");
+        
+        // ✅ NAVEGAR A HOME CON DELAY PARA ASEGURAR SESIÓN
+        setTimeout(() => {
+          router.push("/home");
+          router.refresh();
+        }, 1000);
+        
+      } else {
+        console.log("❌ Error en login:", res?.error);
+        setError("No se pudo iniciar sesión automáticamente. Serás redirigido al login.");
+        
+        // ✅ REDIRECT A LOGIN DESPUÉS DE 3 SEGUNDOS
+        setTimeout(() => {
+          router.push("/login");
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("❌ Error en handleComenzar:", error);
+      setError("Error de conexión. Serás redirigido al login.");
+      
+      setTimeout(() => {
+        router.push("/login");
+      }, 3000);
+    }
+    
     setIsLoggingIn(false);
   };
 
+  const handleIrALogin = () => {
+    // ✅ LIMPIAR DATOS Y IR A LOGIN
+    localStorage.removeItem("nombreRegistro");
+    localStorage.removeItem("emailRegistro");
+    localStorage.removeItem("passwordRegistro");
+    router.push("/login");
+  };
+
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setLoading(false);
-      localStorage.removeItem("bienvenidaMostrada"); // Esto fuerza mostrar la bienvenida
-      // Leer el nombre, email y password del registro
+      
+      // ✅ LEER DATOS DEL REGISTRO
       const nombreGuardado = localStorage.getItem("nombreRegistro") || "";
       const emailGuardado = localStorage.getItem("emailRegistro") || "";
       const passwordGuardado = localStorage.getItem("passwordRegistro") || "";
+      
+      console.log("📋 Datos del registro:", { 
+        nombre: nombreGuardado, 
+        email: emailGuardado, 
+        tienePassword: !!passwordGuardado 
+      });
+      
       setNombre(nombreGuardado);
       setEmail(emailGuardado);
       setPassword(passwordGuardado);
-    }, 500); // puedes ajustar el tiempo si lo deseas
-  }, []);
+      
+      // ✅ SI NO HAY DATOS, IR A LOGIN
+      if (!emailGuardado || !passwordGuardado) {
+        console.log("⚠️ No hay datos de registro, redirigiendo a login");
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [router]);
 
   if (loading) {
-    return null; // O un spinner de carga si lo prefieres
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-[#18191A]">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#41e0b3]"></div>
+      </div>
+    );
   }
 
   return (
@@ -69,25 +138,51 @@ export default function RegistroExitoso() {
             </div>
           </div>
         </div>
+        
         <h2 className="text-white text-2xl font-bold mb-2 text-center">
           ¡Registro exitoso!
         </h2>
+        
         {nombre && (
           <p className="text-[#41e0b3] text-lg font-semibold text-center mb-2">
-            {nombre}
+            ¡Bienvenido {nombre}!
           </p>
         )}
-        <p className="text-gray-200 text-center mb-2">
-          Gracias por registrarte en Bisonte. Ya puedes cotizar tus envíos
+        
+        <p className="text-gray-200 text-center mb-4">
+          Tu cuenta ha sido creada exitosamente. Ya puedes comenzar a cotizar tus envíos
         </p>
 
-        <button
-          onClick={handleComenzar}
-          className="w-full bg-[#41e0b3] text-white font-bold py-2 rounded mt-2 hover:bg-[#2bbd8c] transition"
-          disabled={isLoggingIn}
-        >
-          {isLoggingIn ? "Cargando..." : "Comenzar"}
-        </button>
+        {error && (
+          <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-200 px-4 py-2 rounded mb-4 text-sm text-center">
+            {error}
+          </div>
+        )}
+
+        <div className="w-full space-y-3">
+          <button
+            onClick={handleComenzar}
+            className="w-full bg-[#41e0b3] text-white font-bold py-3 rounded hover:bg-[#2bbd8c] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoggingIn || !email || !password}
+          >
+            {isLoggingIn ? (
+              <span className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Iniciando sesión...
+              </span>
+            ) : (
+              "Comenzar"
+            )}
+          </button>
+          
+          <button
+            onClick={handleIrALogin}
+            className="w-full bg-transparent border border-[#41e0b3] text-[#41e0b3] font-bold py-3 rounded hover:bg-[#41e0b3] hover:text-white transition"
+            disabled={isLoggingIn}
+          >
+            Ir a inicio de sesión
+          </button>
+        </div>
       </div>
     </div>
   );
