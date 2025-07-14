@@ -204,7 +204,7 @@ const Home = () => {
       <header className="w-full max-w-md flex items-center justify-between px-6 py-4 bg-[#18191A] shadow-xl rounded-b-3xl border-b-4 border-[#41e0b3] fixed top-0 left-1/2 -translate-x-1/2 z-30 animate-fade-in-down">
         <div className="flex items-center gap-3">
           <Link href="/home">
-            <img src="/logoNew.jpg" alt="Logo" className="w-12 h-12 rounded-xl shadow-lg hover:scale-110 transition-transform duration-300" />
+            <img src="/LogoNew.jpg" alt="Logo" className="w-12 h-12 rounded-xl shadow-lg hover:scale-110 transition-transform duration-300" />
           </Link>
           <span className="text-[#41e0b3] font-extrabold text-2xl tracking-wide drop-shadow">Bisonte</span>
         </div>
