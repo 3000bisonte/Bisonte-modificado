@@ -88,7 +88,7 @@ const LoginForm = () => {
       <div className="w-full max-w-md bg-[#18191A] rounded-lg shadow-lg px-4 py-8 sm:px-8 sm:py-10 flex flex-col items-center">
         {/* Logo */}
         <img
-          src="/bisonte-logo.png"
+          src="/LogoNew.png"
           alt="Bisonte Logo"
           className="w-20 h-20 sm:w-24 sm:h-24 mb-2 sm:mb-4"
         />
@@ -147,7 +147,7 @@ const LoginForm = () => {
           className="w-full flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 rounded-md mt-5 hover:bg-gray-100 transition text-sm sm:text-base"
           disabled={isLoading}
         >
-          <img src="/google-logo.svg" alt="Google" className="w-5 h-5" />
+          <img src="/google-logo.png" alt="Google" className="w-5 h-5" />
           Sign in With Google
         </button>
         {/* Registro */}
