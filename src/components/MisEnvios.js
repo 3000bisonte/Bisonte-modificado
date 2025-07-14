@@ -106,12 +106,54 @@ export default function MisEnvios() {
   }, [userEmail]);
 
   // Filtrado por búsqueda
-  const filteredEnvios = envios.filter((envio) =>
-    Object.values(envio)
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+  const filteredEnvios = envios.filter((envio) => {
+    if (!search) return true; // Si no hay búsqueda, mostrar todos
+
+    const searchTerm = search.toLowerCase().trim();
+
+    // ✅ BUSCAR EN CAMPOS ESPECÍFICOS
+    const searchableFields = [
+      envio.NumeroGuia?.toLowerCase() || "",
+      envio.Origen?.toLowerCase() || "",
+      envio.Destino?.toLowerCase() || "",
+      envio.Destinatario?.toLowerCase() || "",
+      envio.Remitente?.toLowerCase() || "",
+      envio.Estado?.toLowerCase() || "",
+      // ✅ INCLUIR VERSIONES LEGIBLES DEL ESTADO
+      STATUS_STYLES[envio.Estado]?.label?.toLowerCase() || "",
+      // ✅ BUSCAR EN FECHA FORMATEADA
+      dayjs(envio.FechaSolicitud).isValid()
+        ? dayjs(envio.FechaSolicitud).format("DD/MM/YYYY").toLowerCase()
+        : "",
+      dayjs(envio.FechaSolicitud).isValid()
+        ? dayjs(envio.FechaSolicitud).format("DD/MM/YYYY HH:mm").toLowerCase()
+        : "",
+    ];
+
+    // ✅ VERIFICAR SI EL TÉRMINO DE BÚSQUEDA ESTÁ EN ALGÚN CAMPO
+    return searchableFields.some((field) => field.includes(searchTerm));
+  });
+
+  // ✅ FUNCIÓN AUXILIAR PARA RESALTAR TEXTO ENCONTRADO
+  const highlightText = (text, searchTerm) => {
+    if (!searchTerm || !text) return text;
+
+    const regex = new RegExp(`(${searchTerm})`, "gi");
+    const parts = text.split(regex);
+
+    return parts.map((part, index) =>
+      regex.test(part) ? (
+        <span
+          key={index}
+          className="bg-yellow-300 text-black font-bold px-1 rounded"
+        >
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-start bg-[#e3dfde] pb-24 pt-0">
@@ -141,9 +183,10 @@ export default function MisEnvios() {
       <div className="w-full flex-1 flex flex-col items-center justify-start px-2 md:px-0">
         <div className="w-full max-w-5xl mx-auto bg-[#18191A] rounded-2xl shadow-lg mt-6 p-6 flex flex-col">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            {/* ✅ ACTUALIZAR EL INPUT DE BÚSQUEDA */}
             <input
               type="text"
-              placeholder="Buscar en historial (por cualquier campo)"
+              placeholder="Buscar por número de guía, origen, destino, destinatario, estado o fecha..."
               className="w-full md:w-80 px-4 py-2 rounded-lg border border-gray-700 bg-[#23272b] text-white focus:outline-none focus:ring-2 focus:ring-[#41e0b3] placeholder-gray-400 text-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -229,12 +272,19 @@ export default function MisEnvios() {
                         idx % 2 === 0 ? "bg-[#18191A]" : "bg-[#23272b]"
                       } hover:bg-[#23272b]/90`}
                     >
+                      {/* ✅ EN LAS CELDAS DE LA TABLA, REEMPLAZAR: */}
                       <td className="px-3 py-3 text-[#41e0b3] font-mono font-bold">
-                        {envio.NumeroGuia}
+                        {search ? highlightText(envio.NumeroGuia, search) : envio.NumeroGuia}
                       </td>
-                      <td className="px-3 py-3 text-white">{envio.Origen}</td>
-                      <td className="px-3 py-3 text-white">{envio.Destino}</td>
-                      <td className="px-3 py-3 text-white">{envio.Destinatario}</td>
+                      <td className="px-3 py-3 text-white">
+                        {search ? highlightText(envio.Origen, search) : envio.Origen}
+                      </td>
+                      <td className="px-3 py-3 text-white">
+                        {search ? highlightText(envio.Destino, search) : envio.Destino}
+                      </td>
+                      <td className="px-3 py-3 text-white">
+                        {search ? highlightText(envio.Destinatario, search) : envio.Destinatario}
+                      </td>
                       <td className="px-3 py-3">
                         {getStatusDisplay(envio.Estado)}
                       </td>
@@ -249,6 +299,33 @@ export default function MisEnvios() {
               </tbody>
             </table>
             <BottomNav />
+          </div>
+          {/* ✅ AÑADIR BOTONES DE FILTRO RÁPIDO DESPUÉS DEL INPUT */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            <button
+              onClick={() => setSearch('')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                !search ? 'bg-[#41e0b3] text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+              }`}
+            >
+              Todos
+            </button>
+            {Object.entries(STATUS_STYLES).map(([key, val]) => {
+              const count = envios.filter(e => e.Estado === key).length;
+              if (count === 0) return null;
+              
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSearch(val.label)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    search === val.label ? 'bg-[#41e0b3] text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                  }`}
+                >
+                  {val.label} ({count})
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
