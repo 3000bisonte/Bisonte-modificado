@@ -87,7 +87,7 @@ export default function MisEnvios() {
         const perfil = perfiles.find((p) => p.correo === userEmail);
         if (!perfil) return;
 
-        const enviosRes = await fetch(`/api/obtenerenvios/${perfil.id}`);
+        const enviosRes = await fetch("/api/guardarenvio");
         const data = await enviosRes.json();
         console.log("Envíos del usuario:", data);
         setEnvios(data);
