@@ -159,7 +159,7 @@ export default function MisEnvios() {
       )}
 
       {/* Container principal con responsive */}
-      <div className="w-full max-w-[430px] lg:max-w-6xl mx-auto">
+      <div className="w-full max-w-[430px] lg:max-w-7xl xl:max-w-8xl mx-auto">
         
         {/* Header responsive */}
         <div className="pt-4 sm:pt-6">
@@ -222,7 +222,7 @@ export default function MisEnvios() {
               })}
             </div>
 
-            {/* Resumen (solo en desktop o cuando hay envíos) */}
+            {/* Resumen (solo cuando hay envíos) */}
             {filteredEnvios.length > 0 && (
               <div className="mb-4 sm:mb-6 bg-[#23272b] rounded-lg sm:rounded-xl p-3 sm:p-4 shadow">
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-between items-start sm:items-center">
@@ -265,27 +265,27 @@ export default function MisEnvios() {
               </div>
             )}
 
-            {/* Tabla responsive */}
-            <div className="overflow-x-auto rounded-lg sm:rounded-xl shadow-inner -mx-1 sm:mx-0">
+            {/* Tabla responsive - TODAS LAS COLUMNAS SEPARADAS */}
+            <div className="overflow-x-auto rounded-lg sm:rounded-xl shadow-inner">
               <table className="min-w-full text-xs sm:text-sm rounded-xl overflow-hidden">
                 <thead>
                   <tr style={{ background: ELECTRIC_BLUE }}>
-                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm">
+                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm min-w-[100px]">
                       Nº guía
                     </th>
-                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm hidden sm:table-cell">
+                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm min-w-[120px]">
                       Origen
                     </th>
-                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm">
+                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm min-w-[120px]">
                       Destino
                     </th>
-                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm hidden lg:table-cell">
+                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm min-w-[150px]">
                       Destinatario
                     </th>
-                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm">
+                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm min-w-[130px]">
                       Estado
                     </th>
-                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm hidden md:table-cell">
+                    <th className="px-2 sm:px-3 py-2 sm:py-3 text-left text-white font-bold text-xs sm:text-sm min-w-[140px]">
                       Fecha
                     </th>
                   </tr>
@@ -310,36 +310,28 @@ export default function MisEnvios() {
                       >
                         {/* Número de guía */}
                         <td className="px-2 sm:px-3 py-2 sm:py-3 text-[#41e0b3] font-mono font-bold text-xs sm:text-sm">
-                          <div className="truncate max-w-[80px] sm:max-w-none">
+                          <div className="truncate max-w-[80px] sm:max-w-[100px]">
                             {search ? highlightText(envio.NumeroGuia, search) : envio.NumeroGuia}
-                          </div>
-                          {/* Info móvil - mostrar origen abajo del número */}
-                          <div className="sm:hidden text-gray-400 text-xs mt-1 truncate">
-                            {envio.Origen}
                           </div>
                         </td>
                         
-                        {/* Origen - oculto en móvil */}
-                        <td className="px-2 sm:px-3 py-2 sm:py-3 text-white hidden sm:table-cell">
-                          <div className="truncate max-w-[120px] lg:max-w-none">
+                        {/* Origen */}
+                        <td className="px-2 sm:px-3 py-2 sm:py-3 text-white text-xs sm:text-sm">
+                          <div className="truncate max-w-[100px] sm:max-w-[120px]">
                             {search ? highlightText(envio.Origen, search) : envio.Origen}
                           </div>
                         </td>
                         
                         {/* Destino */}
-                        <td className="px-2 sm:px-3 py-2 sm:py-3 text-white">
-                          <div className="truncate max-w-[100px] sm:max-w-[120px] lg:max-w-none">
+                        <td className="px-2 sm:px-3 py-2 sm:py-3 text-white text-xs sm:text-sm">
+                          <div className="truncate max-w-[100px] sm:max-w-[120px]">
                             {search ? highlightText(envio.Destino, search) : envio.Destino}
-                          </div>
-                          {/* Info móvil - mostrar destinatario abajo del destino */}
-                          <div className="lg:hidden text-gray-400 text-xs mt-1 truncate">
-                            {envio.Destinatario}
                           </div>
                         </td>
                         
-                        {/* Destinatario - oculto en tablet y móvil */}
-                        <td className="px-2 sm:px-3 py-2 sm:py-3 text-white hidden lg:table-cell">
-                          <div className="truncate max-w-[150px]">
+                        {/* Destinatario */}
+                        <td className="px-2 sm:px-3 py-2 sm:py-3 text-white text-xs sm:text-sm">
+                          <div className="truncate max-w-[120px] sm:max-w-[150px]">
                             {search ? highlightText(envio.Destinatario, search) : envio.Destinatario}
                           </div>
                         </td>
@@ -347,19 +339,15 @@ export default function MisEnvios() {
                         {/* Estado */}
                         <td className="px-2 sm:px-3 py-2 sm:py-3">
                           {getStatusDisplay(envio.Estado)}
-                          {/* Info móvil - mostrar fecha abajo del estado */}
-                          <div className="md:hidden text-gray-400 text-xs mt-1">
-                            {dayjs(envio.FechaSolicitud).isValid()
-                              ? dayjs(envio.FechaSolicitud).format("DD/MM/YY")
-                              : "N/A"}
-                          </div>
                         </td>
                         
-                        {/* Fecha - oculta en móvil y tablet */}
-                        <td className="px-2 sm:px-3 py-2 sm:py-3 text-gray-300 hidden md:table-cell">
-                          {dayjs(envio.FechaSolicitud).isValid()
-                            ? dayjs(envio.FechaSolicitud).format("DD/MM/YYYY HH:mm")
-                            : "Fecha inválida"}
+                        {/* Fecha */}
+                        <td className="px-2 sm:px-3 py-2 sm:py-3 text-gray-300 text-xs sm:text-sm">
+                          <div className="truncate">
+                            {dayjs(envio.FechaSolicitud).isValid()
+                              ? dayjs(envio.FechaSolicitud).format("DD/MM/YYYY HH:mm")
+                              : "Fecha inválida"}
+                          </div>
                         </td>
                       </tr>
                     ))
