@@ -26,16 +26,21 @@ export async function GET(request) {
 
     console.log('👤 Usuario encontrado:', usuario.id);
 
-    // ✅ STEP 2: Buscar envíos relacionados al usuario (misma lógica que obtenerenvios)
-    const envios = await prisma.historial_envio.findMany({
+    // ✅ STEP 2: Usar HistorialEnvio (con H mayúscula) como está en tu schema
+    const envios = await prisma.HistorialEnvio.findMany({
       where: {
-        OR: [
-          { PerfilId: usuario.id }, // Si el envío está asociado al usuario
-          // Agregar otras condiciones según tu esquema
-        ]
+        usuarioId: usuario.id  // Según tu schema
       },
       orderBy: {
-        FechaSolicitud: 'desc'
+        FechaSolicitud: 'desc'  // PascalCase como en tu schema
+      },
+      include: {
+        usuario: {
+          select: {
+            nombre: true,
+            email: true
+          }
+        }
       }
     });
 
