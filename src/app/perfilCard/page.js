@@ -50,27 +50,31 @@ export default function PerfilCard() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-[#e3dfde] pb-24">
-      <div className="w-full max-w-md mt-8 bg-white rounded-t-lg overflow-hidden shadow">
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gradient-to-br from-[#e3dfde] to-[#f8fafc] pb-24">
+      <div className="w-full max-w-md mt-8 bg-[#f8fafc] rounded-3xl shadow-xl overflow-hidden border-2 border-[#41e0b3]/30">
+        {/* Header principal */}
         <div className="bg-[#41e0b3] py-4 text-center">
           <h2 className="text-white text-xl font-bold">Mi Perfil</h2>
         </div>
-        <div className="bg-[#18191A] py-4 text-center">
+        {/* Subtítulo */}
+        <div className="bg-[#18191A] py-2 text-center">
           <p className="text-white text-base font-semibold">Edita tu perfil</p>
         </div>
+        {/* Mensaje de éxito */}
         {msg && (
-          <div className="bg-green-100 text-green-700 text-center py-2 rounded mb-2">
+          <div className="bg-green-100 text-green-700 text-center py-2 rounded mb-2 mx-4">
             {msg}
           </div>
         )}
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-3">
+        {/* Formulario */}
+        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
           <div>
-            <label className="text-sm font-semibold">Nombre *</label>
+            <label className="text-sm font-semibold text-gray-700">Nombre *</label>
             <input
               type="text"
               name="nombre"
               placeholder="Ej. Juan Pérez"
-              className="w-full mt-1 px-3 py-2 rounded border border-gray-300 focus:outline-none"
+              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
               value={form.nombre}
               onChange={handleChange}
               required
@@ -78,10 +82,12 @@ export default function PerfilCard() {
             {errors.nombre && <span className="text-red-600 text-xs">{errors.nombre}</span>}
           </div>
           <div>
-            <label className="text-sm font-semibold">Tipo de Documento*</label>
+            <label className="text-sm font-semibold text-gray-700">
+              Tipo de Documento*
+            </label>
             <select
               name="tipoDocumento"
-              className="w-full mt-1 px-3 py-2 rounded border border-gray-300 focus:outline-none"
+              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
               value={form.tipoDocumento}
               onChange={handleChange}
               required
@@ -96,12 +102,12 @@ export default function PerfilCard() {
             {errors.tipoDocumento && <span className="text-red-600 text-xs">{errors.tipoDocumento}</span>}
           </div>
           <div>
-            <label className="text-sm font-semibold">Número de Documento*</label>
+            <label className="text-sm font-semibold text-gray-700">Número de Documento*</label>
             <input
               type="text"
               name="numeroDocumento"
               placeholder="Ej. 123456789"
-              className="w-full mt-1 px-3 py-2 rounded border border-gray-300 focus:outline-none"
+              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
               value={form.numeroDocumento}
               onChange={handleChange}
               required
@@ -109,12 +115,12 @@ export default function PerfilCard() {
             {errors.numeroDocumento && <span className="text-red-600 text-xs">{errors.numeroDocumento}</span>}
           </div>
           <div>
-            <label className="text-sm font-semibold">Celular*</label>
+            <label className="text-sm font-semibold text-gray-700">Celular*</label>
             <input
               type="tel"
               name="celular"
               placeholder="+57  Número de celular"
-              className="w-full mt-1 px-3 py-2 rounded border border-gray-300 focus:outline-none"
+              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
               value={form.celular}
               onChange={handleChange}
               required
@@ -122,12 +128,12 @@ export default function PerfilCard() {
             {errors.celular && <span className="text-red-600 text-xs">{errors.celular}</span>}
           </div>
           <div>
-            <label className="text-sm font-semibold">Correo electronico*</label>
+            <label className="text-sm font-semibold text-gray-700">Correo electrónico*</label>
             <input
               type="email"
               name="email"
               placeholder="example@gmail.com"
-              className="w-full mt-1 px-3 py-2 rounded border border-gray-300 focus:outline-none"
+              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
               value={form.email}
               onChange={handleChange}
               required
@@ -135,12 +141,12 @@ export default function PerfilCard() {
             {errors.email && <span className="text-red-600 text-xs">{errors.email}</span>}
           </div>
           <div>
-            <label className="text-sm font-semibold">Dirección de Entrega*</label>
+            <label className="text-sm font-semibold text-gray-700">Dirección de Entrega*</label>
             <input
               type="text"
               name="direccion"
               placeholder="Ej. Calle 123 #45-67"
-              className="w-full mt-1 px-3 py-2 rounded border border-gray-300 focus:outline-none"
+              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
               value={form.direccion}
               onChange={handleChange}
               required
@@ -148,24 +154,26 @@ export default function PerfilCard() {
             {errors.direccion && <span className="text-red-600 text-xs">{errors.direccion}</span>}
           </div>
           <div>
-            <label className="text-sm font-semibold">Apartamento/Torre/Conjunto (opcional)</label>
+            <label className="text-sm font-semibold text-gray-700">
+              Apartamento/Torre/Conjunto (opcional)
+            </label>
             <input
               type="text"
               name="apartamento"
-              placeholder="Ej : Torre 5, Apto 301, Conjunto La Colina"
-              className="w-full mt-1 px-3 py-2 rounded border border-gray-300 focus:outline-none"
+              placeholder="Ej: Torre 5, Apto 301, Conjunto La Colina"
+              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
               value={form.apartamento}
               onChange={handleChange}
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-[#41e0b3] text-white font-bold py-2 rounded mt-2 hover:bg-[#2bbd8c] transition"
+            className="w-full bg-[#41e0b3] text-white font-bold py-2 rounded-lg mt-2 hover:bg-[#2bbd8c] transition"
           >
             Editar
           </button>
-        <BottomNav />
         </form>
+        <BottomNav />
       </div>
     </div>
   );

@@ -229,7 +229,7 @@ const Home = () => {
                   onClick={() => setShowProfileMenu(false)}
                 >
                   <IconPerfil />
-                  <span className="text-sm">Mi Perfil</span>
+                  <span className="text-sm">{session?.user?.email}</span>
                 </Link>
                 <Link
                   href="/politica-datos"

@@ -29,7 +29,7 @@ async function fetchPerfil() {
 }
 
 // --- Constants ---
-const MAX_DECLARED_VALUE = 10000000; // 10 millones COP
+const MAX_DECLARED_VALUE = 3000000; // 3 millones COP
 
 // Validation function
 function validateCotizadorFields(formData, otraDescripcion = "") {
@@ -741,7 +741,7 @@ export default function Cotizador() {
                         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-16 sm:mb-20">
                           <button
                             type="button"
-                            onClick={() => router.push("/cotizador")}
+                            onClick={() => router.push("/home")}
                             className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 sm:py-3 px-4 sm:px-6 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center text-sm sm:text-base"
                           >
                             <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

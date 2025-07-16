@@ -214,7 +214,7 @@ export default function AdminContactos() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 pb-24">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           {/* Header */}
-          <div className="mb-8 sm:mb-10">
+          <div className="mb-8 mt-12 sm:mt-16">
             <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-3">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

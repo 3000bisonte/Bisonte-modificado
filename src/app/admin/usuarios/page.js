@@ -39,7 +39,7 @@ export default function AdminUsuarios() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 mt-12 sm:mt-16">
           <div className="flex items-center space-x-3 mb-2">
             <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
