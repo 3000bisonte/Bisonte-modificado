@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import MegaSaleModal from "./MegaSaleModal";
@@ -32,6 +32,13 @@ export default function Resumen() {
   const [showMegaSale, setShowMegaSale] = useState(false); // ✅ Cambiado a false inicialmente
   const [showDescuento, setShowDescuento] = useState(false);
   const [adState, setAdState] = useState("idle");
+  // Nuevos estados para manejo mejorado de anuncios
+  const [adsAvailable, setAdsAvailable] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [rewardAmount, setRewardAmount] = useState(2013); // Monto por defecto
+  const adStateRef = useRef(null); // Para acceder al estado actual en timeouts
+  const MAX_RETRIES = 3;
+  const adTimeoutRef = useRef(null);
   const [isCreatingShipment, setIsCreatingShipment] = useState(false);
 
   const router = useRouter();
@@ -62,67 +69,152 @@ export default function Resumen() {
     return () => clearInterval(interval);
   }, []);
 
-  // Lógica de anuncios mejorada
+  // ✅ INICIO DEL CÓDIGO REORDENADO
+
+  // Las funciones se mueven aquí, antes de ser usadas.
+  const preloadAd = useCallback(() => {
+    if (window.AndroidInterface && window.AndroidInterface.preloadRewardedAd) {
+      console.log("📺 Precargando anuncio recompensado...");
+      setAdState("preloading");
+      adStateRef.current = "preloading";
+      
+      try {
+        window.AndroidInterface.preloadRewardedAd();
+        
+        // Simular respuesta de disponibilidad (en producción, esto vendría del puente nativo)
+        setTimeout(() => {
+          if (adStateRef.current === "preloading") {
+            console.log("✅ Anuncio precargado y listo");
+            setAdsAvailable(true);
+            setAdState("ready");
+            adStateRef.current = "ready";
+          }
+        }, 2000);
+      } catch (error) {
+        console.error("❌ Error al precargar anuncio:", error);
+        // handleAdError no se puede llamar aquí directamente por la dependencia circular
+        // Se resolverá en el siguiente paso. Por ahora, solo log.
+      }
+    } else {
+      console.log("⚠️ Interfaz de anuncios no disponible");
+      setAdsAvailable(false);
+    }
+  }, []); // Dependencias se ajustarán después
+
+  const handleAdError = useCallback((errorType) => {
+    console.error(`❌ Error de anuncio: ${errorType}`);
+    setAdState("error");
+    adStateRef.current = "error";
+    
+    if (adTimeoutRef.current) {
+      clearTimeout(adTimeoutRef.current);
+      adTimeoutRef.current = null;
+    }
+
+    if (retryCount < MAX_RETRIES) {
+      const delay = Math.pow(2, retryCount) * 1000;
+      console.log(`🔄 Reintentando en ${delay/1000}s (intento ${retryCount + 1}/${MAX_RETRIES})`);
+      
+      adTimeoutRef.current = setTimeout(() => {
+        setRetryCount(prevCount => prevCount + 1);
+        preloadAd();
+      }, delay);
+    } else {
+      console.log("❌ Número máximo de intentos alcanzado");
+    }
+  }, [retryCount, preloadAd]);
+
+  // Ahora el useEffect que las usa.
   useEffect(() => {
     function handleRewardedAdMessage(event) {
       let data = event.data;
       try {
         if (typeof data === "string") data = JSON.parse(data);
       } catch (parseError) {
-        console.log("⚠️ Error parseando mensaje del anuncio:", parseError);
+        console.log("⚠️ Error parseando mensaje:", parseError);
         return;
       }
+      
+      console.log("📬 Mensaje recibido del anuncio:", data);
       
       if (data && data.type === "reward" && data.status === "completed") {
         console.log("🎉 Anuncio completado exitosamente");
         setAdState("done");
+        adStateRef.current = "done";
+        
+        const earnedReward = data.amount || rewardAmount;
+        setRewardAmount(earnedReward);
         
         const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
         if (cotizadorData && typeof cotizadorData.costoTotal === "number") {
-          const descuento = 2013;
-          const nuevoCosto = Math.max(0, cotizadorData.costoTotal - descuento);
+          const nuevoCosto = Math.max(0, cotizadorData.costoTotal - earnedReward);
           cotizadorData.costoTotal = nuevoCosto;
           localStorage.setItem("formCotizador", JSON.stringify(cotizadorData));
           
-          // ✅ Mejor notificación
-          alert(`🎉 ¡Descuento aplicado!\n💰 Descuento: $${descuento.toLocaleString("es-CO")}\n💵 Nuevo costo: $${nuevoCosto.toLocaleString("es-CO")}`);
+          alert(`🎉 ¡Descuento aplicado!\n💰 Descuento: $${earnedReward.toLocaleString("es-CO")}\n💵 Nuevo costo: $${nuevoCosto.toLocaleString("es-CO")}`);
           
           setCotizador({ ...cotizadorData });
           setCostoTotal(nuevoCosto);
-          
-          // ✅ Auto-resetear estado después de éxito
-          setTimeout(() => setAdState("idle"), 2000);
         }
+        
+        setTimeout(() => {
+          setAdState("idle");
+          adStateRef.current = "idle";
+          preloadAd();
+        }, 3000);
       }
       
-      if (data && data.type === "adStatus" && data.status === "error") {
-        console.error("❌ Error en el anuncio");
-        setAdState("error");
-        // ✅ Auto-resetear después de error
-        setTimeout(() => setAdState("idle"), 3000);
-      }
-      
-      // ✅ Manejar estado de anuncio listo
-      if (data && data.type === "adStatus" && data.status === "ready") {
-        console.log("📺 Anuncio listo para mostrar");
+      if (data && data.type === "adStatus") {
+        switch (data.status) {
+          case "loading":
+            setAdState("loading");
+            adStateRef.current = "loading";
+            break;
+          case "ready":
+            setAdState("ready");
+            adStateRef.current = "ready";
+            setAdsAvailable(true);
+            break;
+          case "opened":
+            setAdState("watching");
+            adStateRef.current = "watching";
+            break;
+          case "closed":
+            setAdState("idle");
+            adStateRef.current = "idle";
+            preloadAd();
+            break;
+          case "error":
+            handleAdError(data.errorType || "unknown_error");
+            break;
+          default:
+            console.log(`Estado de anuncio desconocido: ${data.status}`);
+        }
       }
     }
     
     window.addEventListener("message", handleRewardedAdMessage);
     return () => window.removeEventListener("message", handleRewardedAdMessage);
-  }, []);
+  }, [handleAdError, preloadAd, rewardAmount]);
 
-  // Precarga automática de anuncios
-  useEffect(() => {
-    if (window.AndroidInterface && window.AndroidInterface.preloadRewardedAd) {
-      console.log("📺 Precargando anuncio...");
-      window.AndroidInterface.preloadRewardedAd();
-    }
-  }, []);
+  // ✅ FIN DEL CÓDIGO REORDENADO
 
-  // ✅ Mostrar modal automáticamente solo después de cargar datos
+  // Precarga automática de anuncios al inicio
   useEffect(() => {
+    // Precargar solo cuando tenemos los datos necesarios
     if (cotizador && remitente && destinatario && costoTotal !== null) {
+      // Pequeño delay para no congestionar el inicio
+      const timer = setTimeout(() => {
+        preloadAd();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [cotizador, remitente, destinatario, costoTotal, preloadAd]);
+
+  // Mostrar modal después de precargar el anuncio
+  useEffect(() => {
+    if (cotizador && remitente && destinatario && costoTotal > 0 && adState === "ready") {
       // Mostrar modal después de un pequeño delay
       const timer = setTimeout(() => {
         setShowMegaSale(true);
@@ -130,7 +222,7 @@ export default function Resumen() {
       
       return () => clearTimeout(timer);
     }
-  }, [cotizador, remitente, destinatario, costoTotal]);
+  }, [cotizador, remitente, destinatario, costoTotal, adState]);
 
   // **LÓGICA DE ENVÍO GRATUITO**
   const handleFreeShipment = useCallback(async () => {
@@ -268,45 +360,92 @@ export default function Resumen() {
   };
 
   // ✅ Función mejorada para ver anuncios
-  const handleVerAnuncios = () => {
+  const handleVerAnuncios = useCallback(() => {
     // Verificar que hay costo para reducir
     if (costoTotal <= 0) {
       alert("¡Tu envío ya es gratuito! 🎉");
       return;
     }
     
+    // Verificar si los anuncios están disponibles
+    if (!adsAvailable) {
+      // Si no están disponibles, intentar precargarlos
+      setRetryCount(0); // Reiniciar contador de intentos
+      preloadAd();
+      alert("📱 Preparando anuncio. Por favor espera unos segundos...");
+      return;
+    }
+    
+    // Mostrar el anuncio si está disponible
     if (window.AndroidInterface && window.AndroidInterface.showRewardedAd) {
-      console.log("📺 Iniciando anuncio recompensado...");
+      console.log("📺 Mostrando anuncio recompensado...");
       setAdState("loading");
-      window.AndroidInterface.showRewardedAd();
+      adStateRef.current = "loading";
       
-      // ✅ Timeout de seguridad
-      setTimeout(() => {
-        if (adState === "loading") {
-          setAdState("error");
+      try {
+        window.AndroidInterface.showRewardedAd();
+        
+        // Timeout de seguridad mejorado
+        if (adTimeoutRef.current) {
+          clearTimeout(adTimeoutRef.current);
         }
-      }, 10000); // 10 segundos timeout
+        
+        adTimeoutRef.current = setTimeout(() => {
+          if (adStateRef.current === "loading") {
+            handleAdError("timeout");
+          }
+        }, 8000); // 8 segundos timeout
+      } catch (error) {
+        console.error("❌ Error al mostrar anuncio:", error);
+        handleAdError("show_error");
+      }
       
       return;
     }
     
-    // ✅ Mejor mensaje para web
-    alert("📱 Los anuncios solo están disponibles en la app móvil.\n💡 Descarga la app para obtener descuentos.");
-  };
+    // Fallback para web o cuando la interfaz no está disponible
+    alert("📱 Los anuncios solo están disponibles en la app móvil.\n💡 Descarga la app para obtener descuentos en tus envíos.");
+  }, [adsAvailable, costoTotal, handleAdError, preloadAd]);
 
-  const handleVerAnuncio = () => {
-    setShowMegaSale(false);
-    setTimeout(() => setShowDescuento(true), 500); // ✅ Reducido delay
-  };
-
-  // ✅ Función corregida para ver otro anuncio
-  const handleVerOtroAnuncio = () => {
+  // Función para ver otro anuncio (desde el modal de descuento)
+  const handleVerOtroAnuncio = useCallback(() => {
     setShowDescuento(false);
-    // Mostrar directamente el anuncio en lugar de crear bucle
+    
+    // Pequeño delay antes de mostrar otro anuncio
     setTimeout(() => {
-      handleVerAnuncios();
+      // Verificar nuevamente la disponibilidad
+      if (adsAvailable) {
+        handleVerAnuncios();
+      } else {
+        // Si no hay anuncios disponibles, intentar precargar
+        preloadAd();
+        alert("Preparando tu próximo anuncio. Inténtalo nuevamente en unos segundos.");
+      }
     }, 500);
-  };
+  }, [adsAvailable, handleVerAnuncios, preloadAd]);
+
+  // Modificar handleVerAnuncio para el botón del MegaSaleModal
+  const handleVerAnuncio = useCallback(() => {
+    setShowMegaSale(false);
+    
+    // Si los anuncios están disponibles, mostrar el modal de descuento
+    // Si no, intentar precargar y mostrar mensaje
+    if (adsAvailable) {
+      setTimeout(() => setShowDescuento(true), 300);
+    } else {
+      preloadAd();
+      alert("Preparando anuncios. Intenta nuevamente en unos segundos.");
+    }
+  }, [adsAvailable, preloadAd]);
+
+  // Limpiar timeouts al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (adTimeoutRef.current) {
+        clearTimeout(adTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!cotizador || !remitente || !destinatario) {
     return (
@@ -594,12 +733,35 @@ export default function Resumen() {
                 {costoTotal > 0 && (
                   <button
                     onClick={handleVerAnuncios}
-                    className="w-full bg-[#23272b] hover:bg-[#41e0b3]/20 text-[#41e0b3] font-bold py-3 px-6 rounded-2xl shadow transition-all duration-300 flex items-center justify-center gap-2"
+                    disabled={adState === "loading" || adState === "preloading"}
+                    className={`w-full ${
+                      adsAvailable 
+                        ? "bg-gradient-to-r from-purple-500 to-indigo-600"
+                        : "bg-[#23272b]"
+                    } hover:bg-[#41e0b3]/20 text-white font-bold py-3 px-6 rounded-2xl shadow transition-all duration-300 flex items-center justify-center gap-2 ${
+                      (adState === "loading" || adState === "preloading") ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 7.165 6 9.388 6 12v2.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                    </svg>
-                    <span>Reducir costo</span>
+                    {adState === "preloading" || adState === "loading" ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Preparando anuncio...</span>
+                      </>
+                    ) : adsAvailable ? (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Ver anuncio para descuento</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 7.165 6 9.388 6 12v2.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <span>Reducir costo</span>
+                      </>
+                    )}
                   </button>
                 )}
               </div>
@@ -697,7 +859,7 @@ export default function Resumen() {
               <p className="text-sm text-gray-600 mb-4">Intenta de nuevo o verifica tu conexión</p>
               <button
                 className="bg-[#41e0b3] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#2bbd8c] transition-colors"
-                onClick={() => setAdState("idle")}
+                onClick={preloadAd} // <-- CAMBIO: Llama a preloadAd directamente
               >
                 Reintentar
               </button>

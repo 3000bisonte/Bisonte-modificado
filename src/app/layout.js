@@ -1,7 +1,7 @@
 import "./globals.css";
 import { Providers } from "./Providers";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-import BottomNav from "@/components/BottomNav"; // Asegúrate de importar el componente
+import ConnectionHandler from "@/components/ConnectionHandler";
 
 export const metadata = {
   title: "Bisonte",
@@ -22,6 +22,7 @@ export default function RootLayout({ children }) {
       <body>
         <Providers>
           <ServiceWorkerRegister />
+          <ConnectionHandler />
           {children}
         </Providers>
       </body>
