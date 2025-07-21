@@ -22,12 +22,23 @@ export default function AdminEnvios() {
   };
 
   useEffect(() => {
-    if (session?.user?.email !== "3000bisonte@gmail.com") {
+    const ADMIN_EMAILS = [
+      "3000bisonte@gmail.com",
+      "bisonteangela@gmail.com",
+      "bisonteoskar@gmail.com",
+    ];
+
+    if (status === "loading") {
+      return;
+    }
+
+    const userEmail = session?.user?.email;
+    if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
       router.push("/");
     } else {
       loadEnvios();
     }
-  }, [session, router]);
+  }, [session, status, router]);
 
   const loadEnvios = () => {
     setLoading(true);

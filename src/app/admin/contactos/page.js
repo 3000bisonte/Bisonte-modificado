@@ -26,12 +26,23 @@ export default function AdminContactos() {
   const { showConfirmModal } = useConfirmModal();
 
   useEffect(() => {
-    if (session?.user?.email !== "3000bisonte@gmail.com") {
-      router.push("/");
-    } else {
-      loadMensajes();
+    const ADMIN_EMAILS = [
+      "3000bisonte@gmail.com",
+      "bisonteangela@gmail.com",
+      "bisonteoskar@gmail.com",
+    ];
+
+    if (status === "loading") {
+      return; // No hacer nada mientras la sesión carga
     }
-  }, [session, router]);
+
+    const userEmail = session?.user?.email;
+    if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
+      router.push("/"); // Redirigir si no es admin
+    } else {
+      loadMensajes(); // Cargar mensajes si es admin
+    }
+  }, [session, status, router]);
 
   const loadMensajes = () => {
     fetch("/api/contacto")

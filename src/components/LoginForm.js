@@ -87,8 +87,12 @@ const LoginForm = () => {
     }
   };
 
-  const ADMIN_EMAIL = "3000bisonte@gmail.com";
-  const isAdmin = session?.user?.email === ADMIN_EMAIL;
+  const ADMIN_EMAILS = [
+    "3000bisonte@gmail.com",
+    "bisonteangela@gmail.com",
+    "bisonteoskar@gmail.com",
+  ];
+  const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center px-4 py-8 relative">

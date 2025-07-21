@@ -159,8 +159,12 @@ const Home = () => {
     sliderTrackRef.current.style.cursor = "default";
   };
 
-  const ADMIN_EMAIL = "3000bisonte@gmail.com";
-  const isAdmin = session?.user?.email === ADMIN_EMAIL;
+  const ADMIN_EMAILS = [
+    "3000bisonte@gmail.com",
+    "bisonteangela@gmail.com",
+    "bisonteoskar@gmail.com",
+  ];
+  const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -171,7 +175,7 @@ const Home = () => {
           setStats({
             usuarios: data.usuarios,
             envios: data.envios,
-            mensajes: data.mensajes ,
+            mensajes: data.mensajes,
           });
         }
       } catch (err) {
