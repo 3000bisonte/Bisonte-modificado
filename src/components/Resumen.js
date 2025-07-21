@@ -782,21 +782,16 @@ export default function Resumen() {
         </div>
 
         {/* Navegación entre pantallas */}
-        <div className="flex justify-between w-full mt-6">
+        <div className="flex justify-center w-full mt-8 pb-24">
           <button
             type="button"
-            className="bg-gray-300 text-gray-700 px-6 py-2 rounded font-semibold hover:bg-gray-400 transition-colors"
+            className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-8 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
             onClick={() => router.push("/destinatario")}
           >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
             Anterior
-          </button>
-          {/* ✅ Botón "Continuar" corregido */}
-          <button
-            type="button"
-            className="bg-[#41e0b3] text-white px-6 py-2 rounded font-semibold hover:bg-[#2bbd8c] transition-colors"
-            onClick={handlePagar}
-          >
-            Continuar
           </button>
         </div>
 

@@ -649,19 +649,6 @@ export default function FormularioDestinatario({ id }) {
               </div>
             </div>
           )}
-
-          {/* Botón para limpiar datos (solo desarrollo) */}
-          {process.env.NODE_ENV === "development" && (
-            <div className="text-center pt-4 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={clearFormData}
-                className="text-xs text-gray-400 hover:text-gray-600 underline transition-colors"
-              >
-                🔧 Limpiar datos guardados (Dev)
-              </button>
-            </div>
-          )}
         </form>
       </div>
 
