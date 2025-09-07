@@ -3,7 +3,8 @@ import prisma from "@/libs/prisma";
 
 export async function GET() {
   try {
-    const mensajes = await prisma.Contacto.findMany({
+  // Modelo Prisma: Contacto -> cliente: prisma.contacto (camelCase)
+  const mensajes = await prisma.contacto.findMany({
       orderBy: { id: "desc" },
     });
     return NextResponse.json(mensajes);
@@ -34,7 +35,7 @@ export async function POST(request) {
     }
 
     // Crear el registro en la base de datos
-    const nuevoMensaje = await prisma.Contacto.create({
+  const nuevoMensaje = await prisma.contacto.create({
       data: {
         nombre,
         tipo_documento,

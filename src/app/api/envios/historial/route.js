@@ -25,7 +25,8 @@ export async function GET(request) {
     console.log('👤 Usuario encontrado:', usuario.id);
 
     // ✅ STEP 2: Usar HistorialEnvio (con H mayúscula) como está en tu schema
-    const envios = await prisma.HistorialEnvio.findMany({
+  // Modelo Prisma: HistorialEnvio -> cliente: prisma.historialEnvio
+  const envios = await prisma.historialEnvio.findMany({
       where: {
         usuarioId: usuario.id  // Según tu schema
       },
