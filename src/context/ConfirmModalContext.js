@@ -1,9 +1,19 @@
+"use client";
 import { createContext, useContext, useState } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
 
 const ConfirmModalContext = createContext();
 
-export const useConfirmModal = () => useContext(ConfirmModalContext);
+export const useConfirmModal = () => {
+  const context = useContext(ConfirmModalContext);
+  if (!context) {
+    if (typeof window === 'undefined') {
+      return { showConfirmModal: () => {} };
+    }
+    throw new Error('useConfirmModal debe usarse dentro de ConfirmModalProvider');
+  }
+  return context;
+};
 
 export const ConfirmModalProvider = ({ children }) => {
   const [modalConfig, setModalConfig] = useState(null);

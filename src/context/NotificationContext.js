@@ -1,9 +1,19 @@
+"use client";
 import { createContext, useContext, useState } from "react";
 import Notification from "@/components/Notification";
 
 const NotificationContext = createContext();
 
-export const useNotification = () => useContext(NotificationContext);
+export const useNotification = () => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    if (typeof window === 'undefined') {
+      return { showNotification: () => {} };
+    }
+    throw new Error('useNotification debe usarse dentro de NotificationProvider');
+  }
+  return context;
+};
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
