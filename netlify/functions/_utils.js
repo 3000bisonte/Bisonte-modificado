@@ -60,6 +60,22 @@ function verify(token) {
   return data;
 }
 
+// Simple in-memory rate limiter (per key) - resets every process lifecycle
+const __rate = new Map(); // key -> { count, windowEnd }
+function rateLimit(key, limit = 5, windowMs = 60_000) {
+  const now = Date.now();
+  const entry = __rate.get(key);
+  if (!entry || entry.windowEnd < now) {
+    __rate.set(key, { count: 1, windowEnd: now + windowMs });
+    return { allowed: true, remaining: limit - 1 };
+  }
+  if (entry.count >= limit) {
+    return { allowed: false, remaining: 0, retryAfter: Math.ceil((entry.windowEnd - now)/1000) };
+  }
+  entry.count += 1;
+  return { allowed: true, remaining: limit - entry.count };
+}
+
 function withHandler(fn) {
   return async (event, context) => {
     const origin = event.headers?.origin || '';
@@ -79,4 +95,4 @@ function withHandler(fn) {
   };
 }
 
-module.exports = { json, ok, created, badRequest, unauthorized, internalError, preflight, sign, verify, withHandler };
+module.exports = { json, ok, created, badRequest, unauthorized, internalError, preflight, sign, verify, withHandler, rateLimit };
