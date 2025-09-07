@@ -32,7 +32,7 @@ exports.handler = withHandler(async (event, ctx, meta) => {
     const db = getPrisma();
     const user = await db.usuarios.update({
       where: { email: email.toLowerCase() },
-      data: { password: hashed, token: null, tokenFecha: null }
+      data: { password: hashed, token: null, tokenFecha: null, passwordVersion: { increment: 1 } }
     }).catch(err => {
       if (err.code === 'P2025') return null;
       throw err;
