@@ -14,7 +14,9 @@ exports.handler = withHandler(async (event, ctx, meta) => {
 	if (!email || !password) return badRequest('email & password required', meta.origin);
 	const user = users.find(u => u.email === email && u.password === password);
 	if (!user) return unauthorized('Invalid credentials', meta.origin);
-	const access = sign({ sub: user.id, email: user.email, role: user.role, type: 'access' }, 900);
-	const refresh = sign({ sub: user.id, type: 'refresh' }, 60 * 60 * 24 * 7);
+	// Demo users: usar passwordVersion = 0 por ahora
+	const passwordVersion = 0;
+	const access = sign({ sub: user.id, email: user.email, role: user.role, type: 'access', pv: passwordVersion }, 900);
+	const refresh = sign({ sub: user.id, type: 'refresh', pv: passwordVersion }, 60 * 60 * 24 * 7);
 	return ok({ access, refresh, user: { ...user, password: undefined } }, meta.origin);
 });

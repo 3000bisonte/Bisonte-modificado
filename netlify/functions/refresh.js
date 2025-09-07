@@ -9,7 +9,7 @@ exports.handler = withHandler(async (event, ctx, meta) => {
   try {
     const data = verify(refresh);
     if (data.type !== 'refresh') return unauthorized('Wrong token type', meta.origin);
-    const access = sign({ sub: data.sub, type: 'access' }, 900);
+  const access = sign({ sub: data.sub, type: 'access', pv: data.pv }, 900);
     return ok({ access }, meta.origin);
   } catch (e) {
     return unauthorized('Invalid refresh', meta.origin);
