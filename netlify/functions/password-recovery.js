@@ -2,7 +2,7 @@ const { ok, badRequest, withHandler } = require('./_utils');
 const crypto = require('crypto');
 
 // In-memory store (replace with persistent DB later)
-const recoveryStore = new Map(); // email -> { code, exp }
+const recoveryStore = (global.__recoveryStore = global.__recoveryStore || new Map()); // email -> { code, exp }
 
 exports.handler = withHandler(async (event, ctx, meta) => {
 	if (event.httpMethod !== 'POST') return badRequest('Use POST', meta.origin);
@@ -18,3 +18,4 @@ exports.handler = withHandler(async (event, ctx, meta) => {
 });
 
 // (Optional future) add validation endpoint separate file
+module.exports.recoveryStore = recoveryStore;
