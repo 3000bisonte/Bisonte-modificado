@@ -127,9 +127,40 @@ export function useAuthTokens() {
     } catch {}
   }, [refreshToken]);
 
+  const persist = useCallback((a, r) => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (a) sessionStorage.setItem('accessToken', a);
+      if (r) sessionStorage.setItem('refreshToken', r);
+    } catch {}
+  }, []);
+
   const setTokens = useCallback((a, r) => {
     if (a) setAccessToken(a);
     if (r) setRefreshToken(r);
+    persist(a, r);
+  }, [persist]);
+
+  // Load persisted on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const a = sessionStorage.getItem('accessToken');
+      const r = sessionStorage.getItem('refreshToken');
+      if (a) setAccessToken(a);
+      if (r) setRefreshToken(r);
+    } catch {}
+  }, []);
+
+  // Sync across tabs
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = (e) => {
+      if (e.key === 'accessToken' && e.newValue) setAccessToken(e.newValue);
+      if (e.key === 'refreshToken' && e.newValue) setRefreshToken(e.newValue);
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
   }, []);
 
   useEffect(() => { schedule(accessToken); return () => timerRef.current && clearTimeout(timerRef.current); }, [accessToken, schedule]);
