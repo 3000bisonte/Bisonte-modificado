@@ -1,0 +1,25 @@
+[build]
+  publish = "frontend/.next" # Frontend principal desplegado en Vercel (solo fallback local)
+  functions = "netlify/functions" # Ruta nueva estandarizada (Option B)
+  command = "echo 'Skipping frontend build on Netlify (handled by Vercel)'; exit 0"
+
+[build.environment]
+  NODE_ENV = "production"
+  NODE_VERSION = "18"
+
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    # Origin dinamico se gestiona en runtime (_utils.js). Aquí solo valores de seguridad base.
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Request-ID"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Cache-Control = "no-store"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
