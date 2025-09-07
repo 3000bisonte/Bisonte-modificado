@@ -74,17 +74,27 @@ export default function ValidarToken() {
       const data = await res.json();
       console.log('📋 Datos recibidos:', data);
 
-      if (res.ok && data.ok) {
+      if (res.ok && (data.ok || data.reset)) {
         setMsg("¡Contraseña actualizada exitosamente!");
         setTimeout(() => {
           router.push("/recuperar/exito");
         }, 2000);
       } else {
-        console.error('❌ Error del servidor:', data.error);
-        if (data.error && data.error.includes("Usuario no encontrado")) {
-          setError("Ese usuario no está registrado. Usa el mismo correo con el que te registraste.");
-        } else {
-          setError(data.error || "Error al actualizar la contraseña.");
+        console.error('❌ Error del servidor:', data);
+        const code = data?.error || 'error_desconocido';
+        switch (code) {
+          case 'validacion_fallida':
+          case 'code_invalid':
+            setError('Código inválido. Verifica el código enviado a tu correo.');
+            break;
+          case 'code_expired':
+            setError('El código expiró. Solicita uno nuevo.');
+            break;
+          case 'reset_fallido':
+            setError('No se pudo completar el cambio. Intenta nuevamente.');
+            break;
+          default:
+            setError(code.replace(/_/g,' '));
         }
       }
     } catch (err) {
