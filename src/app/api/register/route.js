@@ -1,54 +1,25 @@
-import { NextResponse } from "next/server";
-import { Client } from "pg";
-import bcrypt from "bcryptjs";
+import { NextResponse } from 'next/server';
 
-// Permite registro aunque algunos campos estén vacíos (excepto email y password)
+// Proxy to Netlify function (Option B). Removes direct DB credentials from Next.js layer.
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8888/.netlify/functions';
+
 export async function POST(req) {
-  const { nombre, celular, ciudad, email, password } = await req.json();
-
-  if (!email || !password) {
-    return NextResponse.json({ error: "Email y contraseña son obligatorios" }, { status: 400 });
-  }
-
-  // Conexión a PostgreSQL (ajusta los datos según tu Neon)
-  const client = new Client({
-    host: "ep-twilight-bird-a81mv90h-pooler.eastus2.azure.neon.tech",
-    user: "neondb_owner",
-    password: "npg_J8aQD0kGEOmj",
-    database: "neondb",
-    port: 5432,
-    ssl: { rejectUnauthorized: false },
-  });
-
   try {
-    await client.connect();
-
-    // Verifica si el usuario ya existe
-    const res = await client.query("SELECT id FROM usuarios WHERE email = $1", [email]);
-    if (res.rows.length > 0) {
-      await client.end();
-      return NextResponse.json({ error: "El correo ya está registrado" }, { status: 400 });
+    const body = await req.json();
+    if (!body.email || !body.password) {
+      return NextResponse.json({ error: 'Email y contraseña son obligatorios' }, { status: 400 });
     }
-
-    // Encripta la contraseña
-    const hash = await bcrypt.hash(password, 10);
-
-    // Inserta el usuario, dejando campos vacíos si no se envían
-    await client.query(
-      `INSERT INTO usuarios (nombre, celular, ciudad, email, password)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [
-        nombre || null,
-        celular || null,
-        ciudad || null,
-        email,
-        hash,
-      ]
-    );
-    await client.end();
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Error de conexión con la base de datos", detalle: error.message }, { status: 500 });
+    const upstream = await fetch(`${API_BASE}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const text = await upstream.text();
+    let data; try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
+    return NextResponse.json(data || {}, { status: upstream.status });
+  } catch (e) {
+    return NextResponse.json({ error: 'upstream_error', message: e.message }, { status: 502 });
   }
 }
+
+export function GET() { return NextResponse.json({ error: 'method_not_allowed' }, { status: 405 }); }
