@@ -17,6 +17,7 @@ model usuarios {
   password         String?          @db.VarChar(255) 
   token            String?          @db.VarChar(255)
   tokenFecha       DateTime?
+  passwordVersion  Int              @default(0) // Incrementa en cada cambio de contraseña para invalidar tokens previos
   esAdministrador  Boolean          @default(false)
   esRecolector     Boolean          @default(false)
   envios           HistorialEnvio[] // Relación uno a muchos con HistorialEnvio
