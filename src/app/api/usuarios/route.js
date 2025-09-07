@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+// Usar el singleton central en lugar de instanciar PrismaClient aquí para evitar demasiadas conexiones.
+import prisma from "@/libs/prisma";
 
 export async function GET() {
   try {
@@ -23,7 +22,6 @@ export async function GET() {
     });
     return NextResponse.json(usuarios);
   } catch (error) {
-    // Devuelve un array vacío en caso de error para evitar el crash
     return NextResponse.json([], { status: 500 });
   }
 }

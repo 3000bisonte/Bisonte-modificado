@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/libs/prisma';
 
 export async function GET(request) {
   try {
@@ -60,7 +58,5 @@ export async function GET(request) {
       error: 'Error interno del servidor',
       details: error.message
     }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }

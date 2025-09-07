@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/libs/prisma";
 
 export async function GET() {
   try {
@@ -26,7 +24,5 @@ export async function GET() {
       { error: "Error al obtener envíos", detalle: error.message },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

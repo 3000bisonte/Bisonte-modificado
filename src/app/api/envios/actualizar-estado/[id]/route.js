@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/libs/prisma";
 
 const VALID_STATUSES = [
   "RECOLECCION_PENDIENTE",
@@ -101,7 +99,5 @@ export async function PATCH(request, { params }) {
       { error: "Error interno del servidor", details: error.message },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
