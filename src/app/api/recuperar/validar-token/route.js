@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyRecoveryCode, validatePasswordStrength, checkRateLimit } from "../../../../lib/security";
+import { verifyRecoveryCode, validatePasswordStrength, checkRateLimit, getClientIP } from "../../../../lib/security";
 import { updateUserPasswordByEmail } from "../../../../lib/auth";
 import prisma from "../../../../libs/prisma";
 
@@ -9,20 +9,19 @@ import prisma from "../../../../libs/prisma";
  */
 export async function POST(request) {
   try {
-    const { email, token, newPassword } = await request.json();
+  const { email, code, newPassword } = await request.json();
 
-    if (!email || !token || !newPassword) {
+  if (!email || !code || !newPassword) {
       return NextResponse.json(
-        { ok: false, error: "Email, token y nueva contraseña son requeridos" },
+    { ok: false, error: "Email, código y nueva contraseña son requeridos" },
         { status: 400 }
       );
     }
 
     // Check rate limit
-    const clientIp = request.headers.get("x-forwarded-for") || "unknown";
-    const rateLimitKey = `password_reset_verify:${email}:${clientIp}`;
-    
-    const isAllowed = await checkRateLimit(rateLimitKey, 5, 3600); // 5 attempts per hour
+  const clientIp = getClientIP(request);
+  const identifier = `${email}:${clientIp}`;
+  const isAllowed = await checkRateLimit(identifier, "password_reset_verify", 5, 60 * 60 * 1000);
     if (!isAllowed) {
       return NextResponse.json(
         { ok: false, error: "Demasiados intentos. Intenta más tarde." },
@@ -51,9 +50,9 @@ export async function POST(request) {
       );
     }
 
-    // Verify recovery code (token)
-    const isValidCode = await verifyRecoveryCode(user.id, token);
-    if (!isValidCode) {
+  // Verify recovery code using email + 6-digit code
+  const recovery = await verifyRecoveryCode(email, code);
+  if (!recovery) {
       return NextResponse.json(
         { ok: false, error: "Código de recuperación inválido o expirado" },
         { status: 400 }
@@ -69,7 +68,7 @@ export async function POST(request) {
       );
     }
 
-    // Clean up recovery codes for this user
+  // Clean up recovery codes for this user
     await prisma.passwordReset.deleteMany({
       where: { userId: user.id }
     });

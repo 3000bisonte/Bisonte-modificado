@@ -62,10 +62,10 @@ export default function ValidarToken() {
       const res = await fetch("/api/recuperar/validar-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          email: email.toLowerCase().trim(), 
-          token, 
-          newPassword 
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          code: token,
+          newPassword
         }),
       });
 

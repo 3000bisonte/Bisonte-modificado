@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createPasswordRecovery, checkRateLimit } from "../../../lib/security";
+import { createPasswordRecovery, checkRateLimit, getClientIP, getClientUserAgent } from "../../../lib/security";
 import prisma from "../../../libs/prisma";
 
 /**
@@ -17,11 +17,10 @@ export async function POST(request) {
       );
     }
 
-    // Check rate limit
-    const clientIp = request.headers.get("x-forwarded-for") || "unknown";
-    const rateLimitKey = `password_reset:${email}:${clientIp}`;
-    
-    const isAllowed = await checkRateLimit(rateLimitKey, 3, 3600); // 3 attempts per hour
+  // Check rate limit (3 attempts per hour per email+IP)
+  const clientIp = getClientIP(request);
+  const identifier = `${email}:${clientIp}`;
+  const isAllowed = await checkRateLimit(identifier, "password_reset", 3, 60 * 60 * 1000);
     if (!isAllowed) {
       return NextResponse.json(
         { error: "Demasiados intentos. Intenta más tarde." },
@@ -42,21 +41,26 @@ export async function POST(request) {
       );
     }
 
-    // Create recovery code
-    const recoveryCode = await createPasswordRecovery(user.id);
+  // Create recovery code and token tied to email/IP/UA
+  const userAgent = getClientUserAgent(request);
+  const { code, token, expiresAt } = await createPasswordRecovery(email, clientIp, userAgent);
 
     // Here you would send the recovery code via email
     // For now, we'll return it (remove in production)
-    console.log(`Password recovery code for ${email}: ${recoveryCode}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`Password recovery code for ${email}: ${code}`);
+    }
 
     return NextResponse.json(
-      { 
+      {
         success: true,
         issued: true,
         message: "Si el email existe, se enviará un código de recuperación.",
-        expiresInMinutes: 15,
-        // Remove this in production:
-        recoveryCode: process.env.NODE_ENV === "development" ? recoveryCode : undefined
+        expiresInMinutes: 30,
+        // Exponer solo en desarrollo para facilitar pruebas
+        recoveryCode: process.env.NODE_ENV === "development" ? code : undefined,
+        recoveryToken: process.env.NODE_ENV === "development" ? token : undefined,
+        expiresAt: process.env.NODE_ENV === "development" ? expiresAt : undefined,
       },
       { status: 200 }
     );

@@ -33,13 +33,9 @@ export default function Recuperar() {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.usuarioExiste) {
-          setMsg("Si el correo está registrado, recibirás un mensaje para recuperar tu contraseña.");
-          // Redirige automáticamente
-          router.push("/recuperar/validar-token");
-        } else {
-          setError("No encontramos tu usuario.");
-        }
+        setMsg("Si el correo está registrado, recibirás un mensaje para recuperar tu contraseña.");
+        // Redirige automáticamente
+        router.push("/recuperar/validar-token");
       } else {
         setError("Ocurrió un error. Intenta nuevamente.");
       }
