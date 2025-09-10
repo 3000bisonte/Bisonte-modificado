@@ -32,6 +32,9 @@
   },
   "devDependencies": {
     "@bubblewrap/cli": "^1.23.0",
+  "@types/node": "^20.12.12",
+  "@types/react": "^18.3.3",
+  "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10",
     "esbuild-register": "^3.6.0",
     "eslint": "^8",
