@@ -220,7 +220,13 @@ export const authOptions = {
       try {
         const parsed = new URL(url, baseUrl);
         // Allow same-origin
-        if (parsed.origin === baseUrl) return parsed.toString();
+        if (parsed.origin === baseUrl) {
+          // Allow internal bridge route
+          if (parsed.pathname.startsWith('/auth/bridge')) {
+            return `${baseUrl}/auth/bridge`;
+          }
+          return parsed.toString();
+        }
         // Allow localhost dev callback to :3001/home specifically
         if (parsed.hostname === "localhost" && (parsed.port === "3001" || parsed.port === "3000")) {
           return parsed.toString();

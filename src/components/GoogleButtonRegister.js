@@ -15,9 +15,11 @@ export default function GoogleButtonRegister() {
       // signIn con redirect: true (comportamiento por defecto si no se especifica redirect)
       // no devuelve una promesa que resuelva aquí si la redirección es exitosa.
       // Simplemente navega. Si hay un error ANTES de la redirección, puede devolver un error.
+      const isWebView = typeof window !== 'undefined' && /wv|webview|; wv\)/i.test(navigator.userAgent);
+      const cb = isWebView ? "/auth/bridge" : "/home?showProfileModal=true";
       const result = await signIn("google", {
-        callbackUrl: "/home?showProfileModal=true",
-        redirect: true, // Aseguramos que redirija
+        callbackUrl: cb,
+        redirect: true,
       });
 
       // Este código solo se alcanzaría si signIn falla ANTES de redirigir y redirect:true

@@ -6,9 +6,11 @@ export default function GoogleButton() {
   return (
     <button
       className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-      onClick={() => signIn("google", {
-        callbackUrl: "/home"
-      })}
+      onClick={() => {
+        const isWebView = typeof window !== 'undefined' && /wv|webview|; wv\)/i.test(navigator.userAgent);
+        const cb = isWebView ? "/auth/bridge" : "/home";
+        signIn("google", { callbackUrl: cb });
+      }}
     >
       <svg
         className="w-4 h-4 mr-2"

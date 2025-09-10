@@ -79,7 +79,9 @@ const LoginForm = ({ callbackUrl }) => {
     setIsLoading(true);
     setErrorMessage("");
     try {
-  await signIn("google", { callbackUrl: callbackUrl || "/home" });
+      const isWebView = typeof window !== 'undefined' && /wv|webview|; wv\)/i.test(navigator.userAgent);
+      const cb = isWebView ? "/auth/bridge" : (callbackUrl || "/home");
+      await signIn("google", { callbackUrl: cb });
     } catch (error) {
       console.error("Error con Google:", error);
       setErrorMessage("Error con Google.");
