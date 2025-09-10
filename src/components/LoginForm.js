@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, useSession, getProviders } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -11,6 +11,7 @@ const LoginForm = ({ callbackUrl }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
+  const [googleAvailable, setGoogleAvailable] = useState(true);
   const { data: session } = useSession();
 
   useEffect(() => {
@@ -18,6 +19,16 @@ const LoginForm = ({ callbackUrl }) => {
       const lastUser = localStorage.getItem("lastUser");
       if (lastUser) setEmail(lastUser);
     }
+    // Detect if Google provider is configured in NextAuth
+    (async () => {
+      try {
+        const providers = await getProviders();
+        setGoogleAvailable(!!providers?.google);
+      } catch (e) {
+        // If providers endpoint fails, keep button enabled to let NextAuth surface the error
+        setGoogleAvailable(true);
+      }
+    })();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -251,11 +262,11 @@ const LoginForm = ({ callbackUrl }) => {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={isLoading || String(process.env.NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN).toLowerCase() !== 'true'}
+              disabled={isLoading || !googleAvailable}
               className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium py-3 px-4 rounded-xl hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-sm sm:text-base"
             >
               <img src="/google-logo.png" alt="Google" className="w-5 h-5" />
-              {String(process.env.NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN).toLowerCase() === 'true' ? 'Continuar con Google' : 'Google no disponible'}
+              {googleAvailable ? 'Continuar con Google' : 'Google no disponible'}
             </button>
           </form>
 

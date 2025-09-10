@@ -38,7 +38,8 @@ export const env = cleanEnv(process.env, {
   NEXT_PUBLIC_URL_BRICK_STATUS_SCREEN: str({ default: '', desc: 'URL used by MercadoPago Brick Status Screen' }),
   NEXT_PUBLIC_API_URL: str({ default: '', desc: 'Legacy public API URL key (kept for compatibility)' }),
   FALLBACK_API_BASE_URL: str({ default: '', desc: 'SSR fallback when NEXT_PUBLIC_API_BASE_URL is not present' }),
-  NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN: str({ default: 'false', desc: 'Toggle to show Google login button in UI' }),
+  // Enable Google login button by default if GOOGLE_CLIENT_ID is present
+  NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN: str({ default: process.env.GOOGLE_CLIENT_ID ? 'true' : 'false', desc: 'Toggle to show Google login button in UI' }),
 
   // Security / JWT (legacy helpers)
   JWT_SECRET: str({ default: '', desc: 'Legacy JWT secret for custom tokens (avoid default in prod)' }),
