@@ -251,11 +251,11 @@ const LoginForm = ({ callbackUrl }) => {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={isLoading}
+              disabled={isLoading || String(process.env.NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN).toLowerCase() !== 'true'}
               className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium py-3 px-4 rounded-xl hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-sm sm:text-base"
             >
               <img src="/google-logo.png" alt="Google" className="w-5 h-5" />
-              Continuar con Google
+              {String(process.env.NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN).toLowerCase() === 'true' ? 'Continuar con Google' : 'Google no disponible'}
             </button>
           </form>
 

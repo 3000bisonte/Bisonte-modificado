@@ -38,6 +38,7 @@ export const env = cleanEnv(process.env, {
   NEXT_PUBLIC_URL_BRICK_STATUS_SCREEN: str({ default: '', desc: 'URL used by MercadoPago Brick Status Screen' }),
   NEXT_PUBLIC_API_URL: str({ default: '', desc: 'Legacy public API URL key (kept for compatibility)' }),
   FALLBACK_API_BASE_URL: str({ default: '', desc: 'SSR fallback when NEXT_PUBLIC_API_BASE_URL is not present' }),
+  NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN: str({ default: 'false', desc: 'Toggle to show Google login button in UI' }),
 
   // Security / JWT (legacy helpers)
   JWT_SECRET: str({ default: '', desc: 'Legacy JWT secret for custom tokens (avoid default in prod)' }),
@@ -71,6 +72,7 @@ export const publicEnv = {
   NEXT_PUBLIC_INIT_MERCADOPAGO: env.NEXT_PUBLIC_INIT_MERCADOPAGO,
   NEXT_PUBLIC_API_SERVER_URL: env.NEXT_PUBLIC_API_SERVER_URL,
   NEXT_PUBLIC_URL_BRICK_STATUS_SCREEN: env.NEXT_PUBLIC_URL_BRICK_STATUS_SCREEN,
+  NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN: env.NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN,
   NEXT_PUBLIC_ADMOB_APP_ID: env.NEXT_PUBLIC_ADMOB_APP_ID,
   NEXT_PUBLIC_ADMOB_REWARDED_ID: env.NEXT_PUBLIC_ADMOB_REWARDED_ID,
   NEXT_PUBLIC_ADMOB_BANNER_ID: env.NEXT_PUBLIC_ADMOB_BANNER_ID,

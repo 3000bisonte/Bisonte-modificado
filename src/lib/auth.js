@@ -1,10 +1,36 @@
 // Unified authentication system for NextAuth integration
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { verifyPassword, hashPassword } from "./security";
 import prisma from "../libs/prisma";
 
 export const authOptions = {
   providers: [
+    // Google OAuth provider (enabled only if env vars are present)
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            authorization: {
+              params: {
+                prompt: "consent",
+                access_type: "offline",
+                response_type: "code",
+              },
+            },
+            profile(profile) {
+              return {
+                id: profile.sub,
+                email: profile.email,
+                name: profile.name || profile.email,
+                emailVerified: !!profile.email_verified,
+                role: "user",
+              };
+            },
+          }),
+        ]
+      : []),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -85,6 +111,26 @@ export const authOptions = {
   },
 
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Optional domain restriction for Google accounts
+      if (account?.provider === "google") {
+        try {
+          const allowed = (process.env.ALLOWED_GOOGLE_DOMAINS || "")
+            .split(",")
+            .map((s) => s.trim().toLowerCase())
+            .filter(Boolean);
+          if (allowed.length) {
+            const email = (profile?.email || user?.email || "").toLowerCase();
+            const domain = email.split("@")[1];
+            if (!domain || !allowed.includes(domain)) {
+              // Redirect to error page with a message
+              return "/auth/error?error=AccessDenied";
+            }
+          }
+        } catch (_) {}
+      }
+      return true;
+    },
     async jwt({ token, user, trigger, session }) {
       // Initial sign in
       if (user) {
