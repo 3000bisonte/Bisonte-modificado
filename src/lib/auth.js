@@ -12,6 +12,7 @@ export const authOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            checks: ["pkce"],
             authorization: {
               params: {
                 // Force account chooser and consent
@@ -101,6 +102,18 @@ export const authOptions = {
       }
     })
   ],
+
+  cookies: {
+    state: {
+      name: `__Secure-next-auth.state`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+  },
 
   session: {
     strategy: "jwt",
@@ -213,7 +226,7 @@ export const authOptions = {
           return parsed.toString();
         }
       } catch {}
-      return baseUrl;
+  return `${baseUrl}/home`;
     }
   },
 
