@@ -20,7 +20,46 @@ model usuarios {
   passwordVersion  Int              @default(0) // Incrementa en cada cambio de contraseña para invalidar tokens previos
   esAdministrador  Boolean          @default(false)
   esRecolector     Boolean          @default(false)
+  emailVerified    Boolean          @default(false)
+  lastLoginAt      DateTime?
+  failedLogins     Int              @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
   envios           HistorialEnvio[] // Relación uno a muchos con HistorialEnvio
+  passwordResets   PasswordReset[]
+  userSessions     UserSession[]
+}
+
+// Tabla para códigos de recuperación de contraseña
+model PasswordReset {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  code      String   @db.VarChar(10)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+  
+  user      usuarios @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([code])
+}
+
+// Tabla para sesiones de usuario
+model UserSession {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  sessionToken String   @unique @db.VarChar(255)
+  ipAddress    String?  @db.VarChar(45)
+  userAgent    String?  @db.Text
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  
+  user         usuarios @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
 }
 
 // Tabla de historial de envíos

@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -11,8 +9,8 @@ export async function GET() {
     // Contar envíos (tabla: historialEnvio)
     const envios = await prisma.historialEnvio.count();
 
-    // Contar mensajes de contacto (tabla: contacto)
-    const mensajes = await prisma.Contacto.count();
+  // Contar mensajes de contacto (modelo: contacto)
+  const mensajes = await prisma.contacto.count();
 
     return NextResponse.json({ usuarios, envios, mensajes });
   } catch (error) {

@@ -4,7 +4,7 @@ import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const LoginForm = () => {
+const LoginForm = ({ callbackUrl }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -57,7 +57,7 @@ const LoginForm = () => {
           localStorage.setItem("lastUser", email);
           localStorage.removeItem("passwordRegistro");
         }
-        router.push("/home");
+        router.push(callbackUrl || "/home");
       } else {
         setErrorMessage("Error al iniciar sesión.");
         if (typeof window !== "undefined") {
@@ -79,7 +79,7 @@ const LoginForm = () => {
     setIsLoading(true);
     setErrorMessage("");
     try {
-      await signIn("google", { callbackUrl: "/home" });
+      await signIn("google", { callbackUrl: callbackUrl || "/home" });
     } catch (error) {
       console.error("Error con Google:", error);
       setErrorMessage("Error con Google.");

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/libs/prisma";
+import prisma from "../../../libs/prisma";
 
 export async function GET() {
   try {
@@ -17,12 +17,17 @@ export async function GET() {
     });
 
     console.log("Envíos obtenidos:", envios.length);
-    return NextResponse.json(envios);
+    return NextResponse.json({
+      success: true,
+      data: envios,
+      message: `${envios.length} envíos obtenidos`
+    });
   } catch (error) {
     console.error("Error al obtener envíos:", error);
-    return NextResponse.json(
-      { error: "Error al obtener envíos", detalle: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: "Error al obtener envíos", 
+      details: error.message 
+    }, { status: 500 });
   }
 }

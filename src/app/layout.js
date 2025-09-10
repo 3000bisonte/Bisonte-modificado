@@ -1,7 +1,12 @@
 import "./globals.css";
 import { Providers } from "./Providers";
-import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-import ConnectionHandler from "@/components/ConnectionHandler";
+import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
+import ConnectionHandler from "../components/ConnectionHandler";
+
+// Force dynamic rendering for all routes to avoid static prerender errors
+// when client hooks like usePathname/useRouter are used in shared components
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata = {
   title: "Bisonte",

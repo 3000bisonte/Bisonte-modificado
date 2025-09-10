@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/libs/prisma';
+import { NextResponse } from "next/server";
+// Ensure this route is always dynamic (uses request.url)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+import prisma from '../../../../libs/prisma';
 
 export async function GET(request) {
   try {

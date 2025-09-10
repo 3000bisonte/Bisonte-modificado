@@ -1,0 +1,11 @@
+# Ignore legacy and auxiliary projects from Vercel builds
+frontend/
+backend/
+netlify/
+netlify-bisonte-api/
+api-server/
+apps/
+archive/
+legacy/
+**/*.original.js
+**/*.diag.js

@@ -1,38 +1,58 @@
-import EmailTemplate from "@/components/email-template";
-import { Resend } from "resend";
+import { NextResponse } from "next/server";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Simplified send endpoint for testing
+export async function GET() {
+  try {
+    return NextResponse.json({
+      success: true,
+      message: "Send email/notification endpoint",
+      status: "operational"
+    });
+  } catch (error) {
+    console.error("Error en /send:", error);
+    return NextResponse.json({
+      success: false,
+      error: "Error en endpoint send",
+      details: error.message
+    }, { status: 500 });
+  }
+}
 
 export async function POST(request) {
-  // Extraer los datos del cuerpo de la solicitud
-  const { nombre, apellidos, email, celular, ciudad, servicio, mensaje } =
-    await request.json();
-  console.log(nombre, apellidos, email, celular, ciudad, servicio, mensaje);
-  // Crear un objeto para agrupar todos los datos
-  const emailData = {
-    firstName: nombre,
-    lastName: apellidos,
-    email,
-    phone: celular,
-    city: ciudad,
-    service: servicio,
-    message: mensaje,
-  };
-
   try {
-    const { data, error } = await resend.emails.send({
-      from: "Bisonte <envios@notificaciones.bisonteapp.com>",
-      to: email,
-      subject: "¡Gracias por tu interés en Bisonte! 🌟",
-      react: EmailTemplate(emailData), // Pasar el objeto completo al template
+    // Extraer los datos del cuerpo de la solicitud
+    const { nombre, apellidos, email, celular, ciudad, servicio, mensaje } =
+      await request.json();
+    
+    console.log('Datos recibidos:', { nombre, apellidos, email, celular, ciudad, servicio, mensaje });
+    
+    // Simular envío de email
+    const emailData = {
+      firstName: nombre,
+      lastName: apellidos,
+      email,
+      phone: celular,
+      city: ciudad,
+      service: servicio,
+      message: mensaje,
+    };
+
+    // Simular procesamiento de email
+    console.log('Enviando email simulado a:', email);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Email enviado exitosamente (simulado)',
+      data: emailData,
+      timestamp: new Date().toISOString()
     });
 
-    if (error) {
-      return Response.json({ error }, { status: 500 });
-    }
-
-    return Response.json(data);
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('Error en POST /send:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Error interno del servidor',
+      details: error.message
+    }, { status: 500 });
   }
 }

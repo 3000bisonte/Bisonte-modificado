@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Notification from "@/components/Notification";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -25,6 +25,22 @@ export default function AdminContactos() {
   const { showNotification } = useNotification();
   const { showConfirmModal } = useConfirmModal();
 
+  const loadMensajes = useCallback(() => {
+    fetch("/api/contacto")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("API /api/contacto:", data);
+        setMensajes(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error loading messages:", error);
+        setMensajes([]);
+        setLoading(false);
+        showNotification('❌ Error al cargar mensajes', 'error');
+      });
+  }, [showNotification]);
+
   useEffect(() => {
     const ADMIN_EMAILS = [
       "3000bisonte@gmail.com",
@@ -42,23 +58,7 @@ export default function AdminContactos() {
     } else {
       loadMensajes(); // Cargar mensajes si es admin
     }
-  }, [session, status, router]);
-
-  const loadMensajes = () => {
-    fetch("/api/contacto")
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("API /api/contacto:", data);
-        setMensajes(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error loading messages:", error);
-        setMensajes([]);
-        setLoading(false);
-        showNotification('❌ Error al cargar mensajes', 'error');
-      });
-  };
+  }, [session, status, router, loadMensajes]);
 
   const handleMarcarLeido = async (id) => {
     try {
@@ -496,7 +496,7 @@ export default function AdminContactos() {
 
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-2">📝 Mensaje original de {modalRespuesta.nombre}:</p>
-                <p className="text-gray-800 italic text-sm sm:text-base break-words">"{modalRespuesta.mensaje}"</p>
+                <p className="text-gray-800 italic text-sm sm:text-base break-words">&quot;{modalRespuesta.mensaje}&quot;</p>
                 <div className="mt-3 text-sm text-gray-500 space-y-1">
                   <p className="break-all">📧 {modalRespuesta.correo}</p>
                   {modalRespuesta.celular && <p>📱 {modalRespuesta.celular}</p>}

@@ -1,5 +1,5 @@
 import Home from "@/components/Home";
-import prisma from "@/libs/prisma";
+import prisma from "@/lib/prisma";
 //import PerfilCard from "@/components/PerfilCard";
 // async function loadPerfil() {
 //   const perfil = await prisma.perfil.findMany();

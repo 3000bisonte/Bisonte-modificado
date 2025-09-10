@@ -1,25 +1,87 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { checkRateLimit, validatePasswordStrength } from "../../../lib/security";
+import { createUser } from "../../../lib/auth";
+import prisma from "../../../libs/prisma";
 
-// Proxy to Netlify function (Option B). Removes direct DB credentials from Next.js layer.
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8888/.netlify/functions';
-
-export async function POST(req) {
+/**
+ * Register new user
+ * POST /api/register
+ */
+export async function POST(request) {
   try {
-    const body = await req.json();
-    if (!body.email || !body.password) {
-      return NextResponse.json({ error: 'Email y contraseña son obligatorios' }, { status: 400 });
+    const { email, password, nombre, celular, ciudad } = await request.json();
+
+    if (!email || !password || !nombre) {
+      return NextResponse.json(
+        { error: "Email, contraseña y nombre son requeridos" },
+        { status: 400 }
+      );
     }
-    const upstream = await fetch(`${API_BASE}/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+
+    // Check rate limit
+    const clientIp = request.headers.get("x-forwarded-for") || "unknown";
+    const rateLimitKey = `register:${clientIp}`;
+    
+    const isAllowed = await checkRateLimit(rateLimitKey, 5, 3600); // 5 registrations per hour per IP
+    if (!isAllowed) {
+      return NextResponse.json(
+        { error: "Demasiados intentos de registro. Intenta más tarde." },
+        { status: 429 }
+      );
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      return NextResponse.json(
+        { error: "La contraseña no cumple los requisitos", details: passwordValidation.errors },
+        { status: 400 }
+      );
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.usuarios.findUnique({
+      where: { email: email.toLowerCase() }
     });
-    const text = await upstream.text();
-    let data; try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
-    return NextResponse.json(data || {}, { status: upstream.status });
-  } catch (e) {
-    return NextResponse.json({ error: 'upstream_error', message: e.message }, { status: 502 });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "El usuario ya existe" },
+        { status: 409 }
+      );
+    }
+
+    // Create user
+    const newUser = await createUser({
+      email,
+      password,
+      nombre,
+      celular,
+      ciudad
+    });
+
+    return NextResponse.json(
+      { 
+        success: true,
+        message: "Usuario registrado exitosamente",
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          nombre: newUser.nombre
+        }
+      },
+      { status: 201 }
+    );
+
+  } catch (error) {
+    console.error("Error in user registration:", error);
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    );
   }
 }
 
-export function GET() { return NextResponse.json({ error: 'method_not_allowed' }, { status: 405 }); }
+export function GET() { 
+  return NextResponse.json({ error: "Método no permitido" }, { status: 405 }); 
+}

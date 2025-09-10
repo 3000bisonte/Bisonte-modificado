@@ -1,41 +1,93 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { verifyRecoveryCode, validatePasswordStrength, checkRateLimit } from "../../../../lib/security";
+import { updateUserPasswordByEmail } from "../../../../lib/auth";
+import prisma from "../../../../libs/prisma";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8888/.netlify/functions';
-
-export async function POST(req) {
+/**
+ * Validate recovery token and reset password
+ * POST /api/recuperar/validar-token
+ */
+export async function POST(request) {
   try {
-    const body = await req.json();
-    const { email, token, newPassword } = body || {};
+    const { email, token, newPassword } = await request.json();
+
     if (!email || !token || !newPassword) {
-      return NextResponse.json({ ok: false, error: 'Datos incompletos' }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Email, token y nueva contraseña son requeridos" },
+        { status: 400 }
+      );
     }
 
-    // 1. Validar código
-    const validateRes = await fetch(`${API_BASE}/password-validate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, code: token, newPassword })
+    // Check rate limit
+    const clientIp = request.headers.get("x-forwarded-for") || "unknown";
+    const rateLimitKey = `password_reset_verify:${email}:${clientIp}`;
+    
+    const isAllowed = await checkRateLimit(rateLimitKey, 5, 3600); // 5 attempts per hour
+    if (!isAllowed) {
+      return NextResponse.json(
+        { ok: false, error: "Demasiados intentos. Intenta más tarde." },
+        { status: 429 }
+      );
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePasswordStrength(newPassword);
+    if (!passwordValidation.isValid) {
+      return NextResponse.json(
+        { ok: false, error: "La contraseña no cumple los requisitos", details: passwordValidation.errors },
+        { status: 400 }
+      );
+    }
+
+    // Find user
+    const user = await prisma.usuarios.findUnique({
+      where: { email: email.toLowerCase() }
     });
-    const validateJson = await validateRes.json();
-    if (!validateRes.ok || !validateJson.reset) {
-      return NextResponse.json({ ok: false, error: 'validacion_fallida', detalle: validateJson }, { status: 400 });
+
+    if (!user) {
+      return NextResponse.json(
+        { ok: false, error: "Usuario no encontrado" },
+        { status: 404 }
+      );
     }
 
-    // 2. Reset real (idempotente: si ya se consumió code esta llamada lo actualiza de todos modos)
-    const resetRes = await fetch(`${API_BASE}/password-reset`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, code: token, newPassword })
+    // Verify recovery code (token)
+    const isValidCode = await verifyRecoveryCode(user.id, token);
+    if (!isValidCode) {
+      return NextResponse.json(
+        { ok: false, error: "Código de recuperación inválido o expirado" },
+        { status: 400 }
+      );
+    }
+
+    // Update password
+    const success = await updateUserPasswordByEmail(email, newPassword);
+    if (!success) {
+      return NextResponse.json(
+        { ok: false, error: "Error al actualizar la contraseña" },
+        { status: 500 }
+      );
+    }
+
+    // Clean up recovery codes for this user
+    await prisma.passwordReset.deleteMany({
+      where: { userId: user.id }
     });
-    const resetJson = await resetRes.json();
-    if (!resetRes.ok || !resetJson.reset) {
-      return NextResponse.json({ ok: false, error: 'reset_fallido', detalle: resetJson }, { status: 500 });
-    }
 
-    return NextResponse.json({ ok: true, reset: true });
-  } catch (e) {
-    return NextResponse.json({ ok: false, error: 'upstream_error', message: e.message }, { status: 502 });
+    return NextResponse.json(
+      { ok: true, reset: true, message: "Contraseña actualizada exitosamente" },
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error("Error in password reset validation:", error);
+    return NextResponse.json(
+      { ok: false, error: "Error interno del servidor" },
+      { status: 500 }
+    );
   }
 }
 
-export function GET() { return NextResponse.json({ error: 'method_not_allowed' }, { status: 405 }); }
+export function GET() { 
+  return NextResponse.json({ error: "Método no permitido" }, { status: 405 }); 
+}

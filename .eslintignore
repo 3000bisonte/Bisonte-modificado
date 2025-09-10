@@ -1,0 +1,11 @@
+src/components/Home.original.js
+frontend/
+backend/
+netlify/
+netlify-bisonte-api/
+api-server/
+apps/
+archive/
+legacy/
+**/*.original.js
+**/*.diag.js

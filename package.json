@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
-  "prebuild": "node scripts/prebuild-verify.js",
-  "build": "next build",
+    "prebuild": "node scripts/prebuild-verify.js && node scripts/prebuild-env-check.js",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate"
@@ -17,6 +17,7 @@
     "bcryptjs": "^3.0.2",
     "classnames": "^2.3.2",
     "dayjs": "^1.11.10",
+    "envalid": "^8.1.0",
     "formik": "^2.2.9",
     "mercadopago": "^2.0.4",
     "mysql2": "^3.14.1",
@@ -26,11 +27,13 @@
     "react": "^18",
     "react-dom": "^18",
     "resend": "^4.6.0",
-    "yup": "^1.0.2"
+    "yup": "^1.0.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@bubblewrap/cli": "^1.23.0",
     "autoprefixer": "^10",
+    "esbuild-register": "^3.6.0",
     "eslint": "^8",
     "eslint-config-next": "13.5.6",
     "postcss": "^8",

@@ -1,4 +1,5 @@
-const { PrismaClient } = require("@prisma/client");
+import { PrismaClient } from "@prisma/client";
+import { env } from "@/lib/env";
 
 const prismaClientSingleton = () => {
   return new PrismaClient();
@@ -9,8 +10,8 @@ const globalForPrisma = globalThis || global; // compatibilidad con diferentes e
 
 const prisma = globalForPrisma.prismaGlobal || prismaClientSingleton();
 
-if (process.env.NODE_ENV !== "production") {
+if (env.NODE_ENV !== "production") {
   globalForPrisma.prismaGlobal = prisma;
 }
 
-module.exports = prisma;
+export default prisma;

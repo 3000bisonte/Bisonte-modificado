@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Usar el singleton central en lugar de instanciar PrismaClient aquí para evitar demasiadas conexiones.
-import prisma from "@/libs/prisma";
+import prisma from "../../../libs/prisma";
 
 export async function GET() {
   try {
@@ -20,8 +20,17 @@ export async function GET() {
       },
       orderBy: { id: "desc" },
     });
-    return NextResponse.json(usuarios);
+    return NextResponse.json({
+      success: true,
+      data: usuarios,
+      message: `${usuarios.length} usuarios obtenidos`
+    });
   } catch (error) {
-    return NextResponse.json([], { status: 500 });
+    console.error("Error en GET /usuarios:", error);
+    return NextResponse.json({
+      success: false,
+      error: "Error al obtener usuarios",
+      details: error.message
+    }, { status: 500 });
   }
 }

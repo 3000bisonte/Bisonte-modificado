@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useState } from "react";
-import Notification from "@/components/Notification";
+import Notification from "../components/Notification";
 
 const NotificationContext = createContext();
 
