@@ -79,7 +79,7 @@ const LoginForm = ({ callbackUrl }) => {
     setIsLoading(true);
     setErrorMessage("");
     try {
-      await signIn("google", { callbackUrl: callbackUrl || "/home" });
+  await signIn("google", { callbackUrl: callbackUrl || "/home" });
     } catch (error) {
       console.error("Error con Google:", error);
       setErrorMessage("Error con Google.");

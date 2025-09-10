@@ -14,7 +14,8 @@ export const authOptions = {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             authorization: {
               params: {
-                prompt: "consent",
+                // Force account chooser and consent
+                prompt: "consent select_account",
                 access_type: "offline",
                 response_type: "code",
               },
@@ -131,13 +132,44 @@ export const authOptions = {
       }
       return true;
     },
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, account, trigger, session }) {
       // Initial sign in
       if (user) {
-        token.userId = user.id;
-        token.role = user.role;
-        token.passwordVersion = user.passwordVersion;
-        token.emailVerified = user.emailVerified;
+        try {
+          // If Google login, upsert user in our DB and use DB id in token
+          if (account?.provider === "google" && user?.email) {
+            const dbUser = await prisma.usuarios.upsert({
+              where: { email: user.email.toLowerCase() },
+              update: {
+                nombre: user.name || user.email,
+                emailVerified: true,
+              },
+              create: {
+                email: user.email.toLowerCase(),
+                nombre: user.name || user.email,
+                emailVerified: true,
+                esAdministrador: false,
+                esRecolector: false,
+              },
+            });
+            token.userId = String(dbUser.id);
+            token.role = dbUser.esAdministrador ? 'admin' : dbUser.esRecolector ? 'collector' : 'user';
+            token.passwordVersion = dbUser.passwordVersion ?? 0;
+            token.emailVerified = !!dbUser.emailVerified;
+          } else {
+            // Credentials flow keeps values from authorize
+            token.userId = user.id;
+            token.role = user.role;
+            token.passwordVersion = user.passwordVersion;
+            token.emailVerified = user.emailVerified;
+          }
+        } catch (e) {
+          // If DB is unavailable, still allow login but keep provider id
+          token.userId = user.id;
+          token.role = user.role;
+          token.passwordVersion = user.passwordVersion;
+          token.emailVerified = user.emailVerified;
+        }
       }
 
       // Check if password was changed (invalidate token)
