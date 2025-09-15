@@ -43,10 +43,10 @@ export default function DiagnosticsWidget() {
     } catch (e) { setClient({ error: String(e) }); }
   }, [visible]);
 
-  const serverCheck = async (op?: 'set'|'clear') => {
+  const serverCheck = async (op?: 'set'|'clear', kind?: 'none'|'lax'|'client'|'all') => {
     const u = new URL('/api/diag', window.location.origin);
-    if (op==='set') u.searchParams.set('setcookie','1');
-    if (op==='clear') u.searchParams.set('clear','1');
+    if (op==='set') u.searchParams.set('setcookie', kind || 'none');
+    if (op==='clear') u.searchParams.set('clear', kind ? (kind==='all'?'1':kind==='none'?'diag_server_none':kind==='lax'?'diag_server_lax':'diag_client') : '1');
     const res = await fetch(u.toString(), { credentials: 'include' });
     const data = await res.json();
     setServer(data);
@@ -77,8 +77,10 @@ export default function DiagnosticsWidget() {
             <div className="font-semibold">Servidor</div>
             <div className="flex gap-2 mb-1 flex-wrap">
               <button className="px-2 py-0.5 bg-teal-600 rounded" onClick={()=>serverCheck()}>Check</button>
-              <button className="px-2 py-0.5 bg-sky-600 rounded" onClick={()=>serverCheck('set')}>Set cookie</button>
-              <button className="px-2 py-0.5 bg-rose-600 rounded" onClick={()=>serverCheck('clear')}>Clear cookie</button>
+              <button className="px-2 py-0.5 bg-sky-600 rounded" onClick={()=>serverCheck('set','none')}>Set None</button>
+              <button className="px-2 py-0.5 bg-amber-600 rounded" onClick={()=>serverCheck('set','lax')}>Set Lax</button>
+              <button className="px-2 py-0.5 bg-indigo-600 rounded" onClick={()=>serverCheck('set','client')}>Set Client</button>
+              <button className="px-2 py-0.5 bg-rose-600 rounded" onClick={()=>serverCheck('clear','all')}>Clear all</button>
             </div>
             <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto">{jsonShort(server)}</pre>
           </div>
