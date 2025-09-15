@@ -6,6 +6,17 @@ export function middleware(request) {
 	const host = request.headers.get('host') || url.host;
 	const ua = (request.headers.get('user-agent') || '').toLowerCase();
 	const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
+	const method = request.method || 'GET';
+
+	// In some in-app browsers, a POST ends up on a page route (/, /home, /auth/*) causing 405.
+	// Force method switch by issuing a 303 to the same URL for these page routes only.
+	if (method === 'POST') {
+		const p = url.pathname;
+		const isPageRoute = p === '/' || p === '/home' || p.startsWith('/auth/');
+		if (isPageRoute) {
+			return NextResponse.redirect(url, 303);
+		}
+	}
 
 	// If user lands on API error endpoint, send to UI error page
 	if (url.pathname.startsWith('/api/auth/error')) {
