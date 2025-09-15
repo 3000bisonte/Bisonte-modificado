@@ -109,7 +109,44 @@ export const authOptions = {
       name: `__Secure-next-auth.state`,
       options: {
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: 'none',
+        path: '/',
+        secure: true,
+      },
+    },
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: true,
+      },
+    },
+    callbackUrl: {
+      name: `__Secure-next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: true,
+      },
+    },
+    // In some mobile WebViews, PKCE/nonce cookies can be dropped on redirects unless SameSite=None
+    pkceCodeVerifier: {
+      name: `__Secure-next-auth.pkce.code_verifier`,
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: true,
+      },
+    },
+    nonce: {
+      name: `__Secure-next-auth.nonce`,
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
         path: '/',
         secure: true,
       },
@@ -275,6 +312,14 @@ export const authOptions = {
     },
     async signOut({ session }) {
       console.log(`User signed out: ${session?.user?.email}`);
+    },
+    async error(message) {
+      try {
+        const m = typeof message === 'string' ? message : JSON.stringify(message);
+        console.error('[NextAuth error]', m);
+      } catch (e) {
+        console.error('[NextAuth error]');
+      }
     }
   },
 

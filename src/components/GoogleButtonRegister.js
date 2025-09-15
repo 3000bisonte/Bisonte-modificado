@@ -23,9 +23,11 @@ export default function GoogleButtonRegister() {
       target = '/home?showProfileModal=true';
     }
   } catch {}
-  const cb = isWebViewRuntime() ? buildBridgeCallback(target) : target;
+  const base = isWebViewRuntime() ? buildBridgeCallback(target) : target;
+  const url = new URL(base, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
+  if (isWebViewRuntime()) url.searchParams.set('wv', '1');
       const result = await signIn("google", {
-        callbackUrl: cb,
+        callbackUrl: url.toString(),
         redirect: true,
       });
 

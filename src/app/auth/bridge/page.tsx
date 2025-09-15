@@ -45,11 +45,11 @@ export default function AuthBridge() {
       window.location.replace(target);
     };
 
-    const check = async (attempt = 0) => {
+  const check = async (attempt = 0) => {
       if (cancelled) return;
       if (status === 'loading') {
         // poll a few times in case the session hydrates slowly in webview
-        if (attempt < 10) {
+        if (attempt < 25) {
           setTimeout(() => check(attempt + 1), 200);
         } else {
           // after retries, go to root

@@ -88,7 +88,12 @@ const LoginForm = ({ callbackUrl }) => {
     }
   } catch {}
   const cb = isWebViewRuntime() ? buildBridgeCallback(safeTarget) : safeTarget;
-      await signIn("google", { callbackUrl: cb });
+      // Add wv=1 marker for callbacks that lose UA (some in-app browsers)
+      const url = new URL(cb, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
+      if (isWebViewRuntime()) {
+        url.searchParams.set('wv', '1');
+      }
+      await signIn("google", { callbackUrl: url.toString() });
     } catch (error) {
       console.error("Error con Google:", error);
       setErrorMessage("Error con Google.");
