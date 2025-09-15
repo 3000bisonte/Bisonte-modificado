@@ -7,6 +7,13 @@ export function middleware(request) {
 	const ua = (request.headers.get('user-agent') || '').toLowerCase();
 	const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
 
+	// If user lands on API error endpoint, send to UI error page
+	if (url.pathname.startsWith('/api/auth/error')) {
+		const to = new URL('/auth/error', url);
+		to.search = url.search; // preserve error code
+		return NextResponse.redirect(to, 307);
+	}
+
 	// Force https and canonical www host for bisonteapp.com
 	const isBisonteDomain = host.endsWith('bisonteapp.com');
 	if (isBisonteDomain) {

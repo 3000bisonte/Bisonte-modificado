@@ -225,6 +225,12 @@ export const authOptions = {
 
         const parsed = new URL(url, baseUrl);
 
+        // Normalize API error endpoint to UI error page
+        if (parsed.pathname.startsWith('/api/auth/error')) {
+          const qs = parsed.search || '';
+          return `${baseUrl}/auth/error${qs}`;
+        }
+
         // If already targeting the internal bridge, just allow it through
         if (parsed.origin === baseUrl && parsed.pathname.startsWith('/auth/bridge')) {
           return parsed.toString();
