@@ -7,6 +7,16 @@ const handler = NextAuth(authOptions);
 export async function GET(request, ctx) {
 	try {
 		const path = request.nextUrl?.pathname || "";
+		const isGoogleCb = path.indexOf('/api/auth/callback/google') !== -1;
+		const error = request.nextUrl.searchParams.get('error');
+		const ua = (request.headers.get('user-agent') || '').toLowerCase();
+		const explicitWv = request.nextUrl.searchParams.get('wv') === '1';
+		const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
+		if (isGoogleCb && error === 'OAuthCallback' && (isWebViewUA || explicitWv)) {
+			const url = new URL('/auth/bridge', request.url);
+			url.search = '';
+			return NextResponse.redirect(url, 303);
+		}
 		if (path.endsWith("/_log")) {
 			return NextResponse.json({
 				success: true,
@@ -15,9 +25,8 @@ export async function GET(request, ctx) {
 				timestamp: new Date().toISOString(),
 			});
 		}
-		if (path.includes('/api/auth/callback/google')) {
+		if (isGoogleCb) {
 			try {
-				const ua = request.headers.get('user-agent') || '';
 				const cookie = request.headers.get('cookie') || '';
 				const q = Object.fromEntries(request.nextUrl.searchParams.entries());
 				console.log('[OAuth callback] UA len:', ua.length, 'Cookie len:', cookie.length, 'Query:', q);
