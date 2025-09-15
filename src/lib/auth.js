@@ -13,7 +13,7 @@ export const authOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            checks: ["pkce"],
+            checks: ["pkce", "state"],
             authorization: {
               params: {
                 // Force account chooser and consent
@@ -109,7 +109,7 @@ export const authOptions = {
       name: `__Secure-next-auth.state`,
       options: {
         httpOnly: true,
-        sameSite: 'none',
+  sameSite: 'lax',
         path: '/',
         secure: true,
       },
@@ -325,6 +325,9 @@ export const authOptions = {
   },
 
   debug: process.env.NODE_ENV === "development"
+  ,
+  trustHost: true,
+  useSecureCookies: true
 };
 
 /**
