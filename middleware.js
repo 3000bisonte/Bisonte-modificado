@@ -11,7 +11,7 @@ export function middleware(request) {
 	if (url.pathname.startsWith('/api/auth/error')) {
 		const to = new URL('/auth/error', url);
 		to.search = url.search; // preserve error code
-		return NextResponse.redirect(to, 307);
+		return NextResponse.redirect(to, 303);
 	}
 
 	// Force https and canonical www host for bisonteapp.com
@@ -36,7 +36,7 @@ export function middleware(request) {
 		if ((isWebViewUA || explicitWv) && url.pathname === '/' && url.searchParams.get('error') === 'OAuthCallback') {
 			url.pathname = '/auth/bridge';
 			url.search = '';
-			return NextResponse.redirect(url, 307);
+			return NextResponse.redirect(url, 303);
 		}
 
 	return NextResponse.next();

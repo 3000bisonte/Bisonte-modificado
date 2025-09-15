@@ -274,7 +274,7 @@ export const authOptions = {
         }
 
         // For WebView environments, always route through the bridge so we can notify the host app
-        if (isWebViewUA) {
+  if (isWebViewUA) {
           // Determine a safe in-app target
           let targetPath = '/home';
           if (parsed.origin === baseUrl) {
@@ -284,6 +284,7 @@ export const authOptions = {
               targetPath = p.startsWith('/login') ? '/home' : p;
             }
           }
+          // Return string URL (NextAuth issues a 302); 302/303 both convert POST to GET in practice for browsers
           return `${baseUrl}/auth/bridge?to=${encodeURIComponent(targetPath)}`;
         }
 
@@ -295,7 +296,7 @@ export const authOptions = {
         if (parsed.hostname === 'localhost' && (parsed.port === '3001' || parsed.port === '3000')) {
           return parsed.toString();
         }
-      } catch {}
+  } catch {}
       // Fallback: send to home
       return `${baseUrl}/home`;
     }
