@@ -265,6 +265,10 @@ export const authOptions = {
         // Normalize API error endpoint to UI error page
         if (parsed.pathname.startsWith('/api/auth/error')) {
           const qs = parsed.search || '';
+          // If the error is OAuthCallback and we're in a WebView, send through the bridge to land on home
+          if (isWebViewUA && /[?&]error=OAuthCallback(&|$)/i.test(qs)) {
+            return `${baseUrl}/auth/bridge?to=%2Fhome`;
+          }
           return `${baseUrl}/auth/error${qs}`;
         }
 
@@ -273,7 +277,7 @@ export const authOptions = {
           return parsed.toString();
         }
 
-        // For WebView environments, always route through the bridge so we can notify the host app
+    // For WebView environments, always route through the bridge so we can notify the host app
   if (isWebViewUA) {
           // Determine a safe in-app target
           let targetPath = '/home';
