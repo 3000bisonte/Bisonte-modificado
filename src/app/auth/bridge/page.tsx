@@ -1,19 +1,58 @@
 "use client";
 import { useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 
 export default function AuthBridge() {
-  useEffect(() => {
-    try {
-      // Notify React Native / Capacitor WebView if available
-      (window as any).ReactNativeWebView?.postMessage(
-        JSON.stringify({ type: "auth", status: "success" })
-      );
-    } catch {}
+  const { status } = useSession();
+  const search = useSearchParams();
+  const target = search.get('to') || '/home';
 
-    const target = "/home";
-    // Replace history to avoid showing intermediate route
-    window.location.replace(target);
-  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    const notify = (payload: any) => {
+      try {
+        // React Native WebView
+        (window as any).ReactNativeWebView?.postMessage(JSON.stringify(payload));
+      } catch {}
+      try {
+        // iOS WKWebView bridge example (if implemented)
+        (window as any).webkit?.messageHandlers?.bridge?.postMessage(payload);
+      } catch {}
+      try {
+        // Fallback to parent frame (if embedded)
+        window.parent?.postMessage(payload, '*');
+      } catch {}
+    };
+
+    const finalize = () => {
+      notify({ type: 'auth', status: 'success', target });
+      window.location.replace(target);
+    };
+
+    const check = async (attempt = 0) => {
+      if (cancelled) return;
+      if (status === 'loading') {
+        // poll a few times in case the session hydrates slowly in webview
+        if (attempt < 10) {
+          setTimeout(() => check(attempt + 1), 200);
+        } else {
+          // after retries, go to login
+          window.location.replace('/login');
+        }
+        return;
+      }
+      if (status === 'authenticated') return finalize();
+      if (status === 'unauthenticated') {
+        window.location.replace('/login');
+      }
+    };
+
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, target]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">

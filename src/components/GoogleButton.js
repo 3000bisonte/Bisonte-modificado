@@ -1,14 +1,14 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
 
 export default function GoogleButton() {
   return (
     <button
       className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
       onClick={() => {
-        const isWebView = typeof window !== 'undefined' && /wv|webview|; wv\)/i.test(navigator.userAgent);
-        const cb = isWebView ? "/auth/bridge" : "/home";
+        const cb = isWebViewRuntime() ? buildBridgeCallback('/home') : "/home";
         signIn("google", { callbackUrl: cb });
       }}
     >
@@ -19,7 +19,7 @@ export default function GoogleButton() {
         data-prefix="fab"
         data-icon="google"
         role="img"
-        xmlns="XXXXXXXXXXXXXXXXXXXXXXXXXX"
+        xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 488 512"
       >
         <path

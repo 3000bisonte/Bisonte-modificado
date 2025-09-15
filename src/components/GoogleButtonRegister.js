@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
 
 export default function GoogleButtonRegister() {
   const [isLoading, setIsLoading] = useState(false);
@@ -15,8 +16,8 @@ export default function GoogleButtonRegister() {
       // signIn con redirect: true (comportamiento por defecto si no se especifica redirect)
       // no devuelve una promesa que resuelva aquí si la redirección es exitosa.
       // Simplemente navega. Si hay un error ANTES de la redirección, puede devolver un error.
-      const isWebView = typeof window !== 'undefined' && /wv|webview|; wv\)/i.test(navigator.userAgent);
-      const cb = isWebView ? "/auth/bridge" : "/home?showProfileModal=true";
+  const target = "/home?showProfileModal=true";
+  const cb = isWebViewRuntime() ? buildBridgeCallback(target) : target;
       const result = await signIn("google", {
         callbackUrl: cb,
         redirect: true,

@@ -5,7 +5,7 @@ export function middleware(request) {
 	const url = new URL(request.url);
 	const host = request.headers.get('host') || url.host;
 	const ua = (request.headers.get('user-agent') || '').toLowerCase();
-	const isWebView = /\bwv\b|webview|; wv\)/i.test(ua);
+	const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
 
 	// Redirect apex domain to www
 	if (host === 'bisonteapp.com') {
@@ -14,7 +14,8 @@ export function middleware(request) {
 	}
 
 		// If webview lands on /login with OAuthCallback error, jump to bridge
-		if (isWebView && url.pathname === '/login' && url.searchParams.get('error') === 'OAuthCallback') {
+		const explicitWv = url.searchParams.get('wv') === '1';
+		if ((isWebViewUA || explicitWv) && url.pathname === '/login' && url.searchParams.get('error') === 'OAuthCallback') {
 			url.pathname = '/auth/bridge';
 			url.search = '';
 			return NextResponse.redirect(url, 307);

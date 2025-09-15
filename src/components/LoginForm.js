@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
+import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -79,8 +80,8 @@ const LoginForm = ({ callbackUrl }) => {
     setIsLoading(true);
     setErrorMessage("");
     try {
-      const isWebView = typeof window !== 'undefined' && /wv|webview|; wv\)/i.test(navigator.userAgent);
-      const cb = isWebView ? "/auth/bridge" : (callbackUrl || "/home");
+  const target = callbackUrl || "/home";
+  const cb = isWebViewRuntime() ? buildBridgeCallback(target) : target;
       await signIn("google", { callbackUrl: cb });
     } catch (error) {
       console.error("Error con Google:", error);

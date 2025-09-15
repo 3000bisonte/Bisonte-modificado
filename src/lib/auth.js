@@ -223,7 +223,8 @@ export const authOptions = {
         if (parsed.origin === baseUrl) {
           // Allow internal bridge route
           if (parsed.pathname.startsWith('/auth/bridge')) {
-            return `${baseUrl}/auth/bridge`;
+            // Preserve any query params like ?to=/home
+            return parsed.toString();
           }
           return parsed.toString();
         }
