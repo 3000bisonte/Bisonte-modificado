@@ -1,4 +1,6 @@
 import LoginForm from "@/components/LoginForm";
+import dynamic from "next/dynamic";
+const DiagnosticsWidget = dynamic(() => import("@/components/DiagnosticsWidget"), { ssr: false });
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
@@ -8,5 +10,10 @@ export default async function RootPage() {
   if (session) {
     redirect("/home");
   }
-  return <LoginForm />;
+  return (
+    <>
+      <LoginForm />
+      <DiagnosticsWidget />
+    </>
+  );
 }
