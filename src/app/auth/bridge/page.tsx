@@ -1,12 +1,27 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
 export default function AuthBridge() {
   const { status } = useSession();
   const search = useSearchParams();
-  const target = search.get('to') || '/home';
+  const target = useMemo(() => {
+    const raw = search.get('to') || '/home';
+    try {
+      // Only allow same-origin internal paths that start with a single '/'
+      if (!raw || typeof raw !== 'string') return '/home';
+      if (!raw.startsWith('/')) return '/home';
+      if (raw.startsWith('//')) return '/home';
+      // avoid api/auth/login loops
+      if (raw.startsWith('/api')) return '/home';
+      if (raw.startsWith('/auth')) return '/home';
+      if (raw.startsWith('/login')) return '/home';
+      return raw;
+    } catch {
+      return '/home';
+    }
+  }, [search]);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,14 +52,14 @@ export default function AuthBridge() {
         if (attempt < 10) {
           setTimeout(() => check(attempt + 1), 200);
         } else {
-          // after retries, go to login
-          window.location.replace('/login');
+          // after retries, go to root
+          window.location.replace('/');
         }
         return;
       }
       if (status === 'authenticated') return finalize();
       if (status === 'unauthenticated') {
-        window.location.replace('/login');
+        window.location.replace('/');
       }
     };
 

@@ -7,15 +7,26 @@ export function middleware(request) {
 	const ua = (request.headers.get('user-agent') || '').toLowerCase();
 	const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
 
-	// Redirect apex domain to www
-	if (host === 'bisonteapp.com') {
-		url.hostname = 'www.bisonteapp.com';
-		return NextResponse.redirect(url, 308);
+	// Force https and canonical www host for bisonteapp.com
+	const isBisonteDomain = host.endsWith('bisonteapp.com');
+	if (isBisonteDomain) {
+		let changed = false;
+		if (host === 'bisonteapp.com') {
+			url.hostname = 'www.bisonteapp.com';
+			changed = true;
+		}
+		if (url.protocol !== 'https:') {
+			url.protocol = 'https:';
+			changed = true;
+		}
+		if (changed) {
+			return NextResponse.redirect(url, 308);
+		}
 	}
 
-		// If webview lands on /login with OAuthCallback error, jump to bridge
+		// If webview lands on root with OAuthCallback error, jump to bridge
 		const explicitWv = url.searchParams.get('wv') === '1';
-		if ((isWebViewUA || explicitWv) && url.pathname === '/login' && url.searchParams.get('error') === 'OAuthCallback') {
+		if ((isWebViewUA || explicitWv) && url.pathname === '/' && url.searchParams.get('error') === 'OAuthCallback') {
 			url.pathname = '/auth/bridge';
 			url.search = '';
 			return NextResponse.redirect(url, 307);

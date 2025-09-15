@@ -16,7 +16,13 @@ export default function GoogleButtonRegister() {
       // signIn con redirect: true (comportamiento por defecto si no se especifica redirect)
       // no devuelve una promesa que resuelva aquí si la redirección es exitosa.
       // Simplemente navega. Si hay un error ANTES de la redirección, puede devolver un error.
-  const target = "/home?showProfileModal=true";
+  let target = "/home?showProfileModal=true";
+  try {
+    // basic client-side guard: force internal route
+    if (!target.startsWith('/') || target.startsWith('//') || target.startsWith('/api') || target.startsWith('/auth') || target.startsWith('/login')) {
+      target = '/home?showProfileModal=true';
+    }
+  } catch {}
   const cb = isWebViewRuntime() ? buildBridgeCallback(target) : target;
       const result = await signIn("google", {
         callbackUrl: cb,

@@ -22,8 +22,8 @@ export default function AuthErrorPage({ searchParams }: { searchParams?: { error
         <h1 className="text-2xl font-semibold text-white mb-2">Error de autenticación</h1>
         <p className="text-gray-300 mb-1">{message}</p>
         <p className="text-gray-500 text-sm mb-6">Código: {code}</p>
-        <Link href="/login" className="inline-block bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg">
-          Volver al login
+        <Link href="/" className="inline-block bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg">
+          Ir al inicio
         </Link>
       </div>
     </div>

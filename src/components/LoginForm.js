@@ -80,8 +80,14 @@ const LoginForm = ({ callbackUrl }) => {
     setIsLoading(true);
     setErrorMessage("");
     try {
-  const target = callbackUrl || "/home";
-  const cb = isWebViewRuntime() ? buildBridgeCallback(target) : target;
+  let safeTarget = "/home";
+  try {
+    const raw = callbackUrl || "/home";
+    if (typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/api') && !raw.startsWith('/auth') && !raw.startsWith('/login')) {
+      safeTarget = raw;
+    }
+  } catch {}
+  const cb = isWebViewRuntime() ? buildBridgeCallback(safeTarget) : safeTarget;
       await signIn("google", { callbackUrl: cb });
     } catch (error) {
       console.error("Error con Google:", error);

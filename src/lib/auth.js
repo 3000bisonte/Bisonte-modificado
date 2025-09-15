@@ -1,4 +1,5 @@
 // Unified authentication system for NextAuth integration
+import { headers } from 'next/headers';
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { verifyPassword, hashPassword } from "./security";
@@ -218,27 +219,47 @@ export const authOptions = {
 
     async redirect({ url, baseUrl }) {
       try {
+        const h = headers();
+        const ua = (h.get('user-agent') || '').toLowerCase();
+        const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
+
         const parsed = new URL(url, baseUrl);
-        // Allow same-origin
-        if (parsed.origin === baseUrl) {
-          // Allow internal bridge route
-          if (parsed.pathname.startsWith('/auth/bridge')) {
-            // Preserve any query params like ?to=/home
-            return parsed.toString();
-          }
+
+        // If already targeting the internal bridge, just allow it through
+        if (parsed.origin === baseUrl && parsed.pathname.startsWith('/auth/bridge')) {
           return parsed.toString();
         }
-        // Allow localhost dev callback to :3001/home specifically
-        if (parsed.hostname === "localhost" && (parsed.port === "3001" || parsed.port === "3000")) {
+
+        // For WebView environments, always route through the bridge so we can notify the host app
+        if (isWebViewUA) {
+          // Determine a safe in-app target
+          let targetPath = '/home';
+          if (parsed.origin === baseUrl) {
+            const p = parsed.pathname + parsed.search;
+            if (p && p !== '/' && !p.startsWith('/api')) {
+              // Avoid sending back to login or API paths
+              targetPath = p.startsWith('/login') ? '/home' : p;
+            }
+          }
+          return `${baseUrl}/auth/bridge?to=${encodeURIComponent(targetPath)}`;
+        }
+
+        // Non-WebView: allow same-origin URLs
+        if (parsed.origin === baseUrl) {
+          return parsed.toString();
+        }
+        // Allow localhost dev callbacks
+        if (parsed.hostname === 'localhost' && (parsed.port === '3001' || parsed.port === '3000')) {
           return parsed.toString();
         }
       } catch {}
-  return `${baseUrl}/home`;
+      // Fallback: send to home
+      return `${baseUrl}/home`;
     }
   },
 
   pages: {
-    signIn: "/login",
+    signIn: "/",
     error: "/auth/error"
   },
 
