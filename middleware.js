@@ -1,19 +1,22 @@
 import { NextResponse } from 'next/server';
+import { withAuth } from "next-auth/middleware";
 
-// Enforce canonical host to avoid NextAuth OAuth state cookie mismatches
-export function middleware(request) {
+// Combined middleware: handles auth protection + WebView fixes + canonical host
+function mainMiddleware(request) {
 	const url = new URL(request.url);
 	const host = request.headers.get('host') || url.host;
 	const ua = (request.headers.get('user-agent') || '').toLowerCase();
 	const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
 	const method = request.method || 'GET';
 
-	// In some in-app browsers, a POST ends up on a page route (/, /home, /auth/*) causing 405.
-	// Force method switch by issuing a 303 to the same URL for these page routes only.
+	// CRITICAL: Handle POST→page conversions FIRST before any auth redirects
 	if (method === 'POST') {
 		const p = url.pathname;
-		const isPageRoute = p === '/' || p === '/home' || p.startsWith('/auth/');
+		const isPageRoute = p === '/' || p === '/home' || p.startsWith('/auth/') || 
+			p === '/remitente' || p === '/cotizador' || p === '/destinatario' || 
+			p === '/pagos' || p === '/profile';
 		if (isPageRoute) {
+			console.log(`[405 Fix] Converting POST ${p} to GET via 303`);
 			return NextResponse.redirect(url, 303);
 		}
 	}
@@ -50,18 +53,54 @@ export function middleware(request) {
 		}
 	}
 
-		// If webview lands on root with OAuthCallback error, jump to bridge
-		const explicitWv = url.searchParams.get('wv') === '1';
-		if ((isWebViewUA || explicitWv) && url.pathname === '/' && url.searchParams.get('error') === 'OAuthCallback') {
-			url.pathname = '/auth/bridge';
-			url.search = '';
-			return NextResponse.redirect(url, 303);
-		}
+	// If webview lands on root with OAuthCallback error, jump to bridge
+	const explicitWv = url.searchParams.get('wv') === '1';
+	if ((isWebViewUA || explicitWv) && url.pathname === '/' && url.searchParams.get('error') === 'OAuthCallback') {
+		url.pathname = '/auth/bridge';
+		url.search = '';
+		return NextResponse.redirect(url, 303);
+	}
 
 	return NextResponse.next();
 }
 
+// Auth-protected middleware wrapper
+export default withAuth(
+  async function authMiddleware(req) {
+    // First run the main middleware logic
+    const mainResponse = mainMiddleware(req);
+    if (mainResponse && mainResponse.status !== 200) {
+      return mainResponse; // Return redirects immediately
+    }
+
+    // Then handle auth-specific logic
+    const admins = [
+      "3000bisonte@gmail.com",
+      "bisonteangela@gmail.com", 
+      "bisonteoskar@gmail.com",
+    ];
+    const userEmail = req.nextauth.token?.email;
+
+    if (req.nextUrl.pathname.startsWith("/admin") && (!userEmail || !admins.includes(userEmail))) {
+      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    }
+
+    return NextResponse.next();
+  },
+  {
+    pages: {
+      signIn: "/",
+      signOut: "/auth/signout", 
+      error: "/auth/error",
+      verifyRequest: "/auth/verify-request",
+      newUser: null,
+    },
+  }
+);
+
 export const config = {
-	matcher: '/:path*',
+	matcher: [
+		'/:path*', // Match all paths for main middleware
+	],
 };
 
