@@ -1,9 +1,14 @@
 // Unified authentication system for NextAuth integration
 import { headers } from 'next/headers';
 import CredentialsProvider from "next-auth/providers/credentials";
+import { OAuth2Client } from "google-auth-library";
 import GoogleProvider from "next-auth/providers/google";
 import { verifyPassword, hashPassword } from "./security";
 import prisma from "../libs/prisma";
+
+const googleClient = process.env.GOOGLE_CLIENT_ID
+  ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+  : null;
 
 export const authOptions = {
   providers: [
@@ -38,9 +43,56 @@ export const authOptions = {
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        idToken: { label: "Google ID Token", type: "text" },
       },
       async authorize(credentials) {
+        // Path A: Native Google Sign-In via ID Token (no OAuth redirect, ideal para WebView)
+        if (credentials?.idToken) {
+          if (!googleClient || !process.env.GOOGLE_CLIENT_ID) {
+            throw new Error("Falta GOOGLE_CLIENT_ID para validar idToken");
+          }
+          try {
+            const ticket = await googleClient.verifyIdToken({
+              idToken: credentials.idToken,
+              audience: process.env.GOOGLE_CLIENT_ID,
+            });
+            const payload = ticket.getPayload();
+            if (!payload) throw new Error("ID token inválido");
+            const email = (payload.email || "").toLowerCase();
+            if (!email || payload.email_verified === false) {
+              throw new Error("Email no verificado en Google");
+            }
+            const name = payload.name || email;
+            // Upsert user in DB
+            const dbUser = await prisma.usuarios.upsert({
+              where: { email },
+              update: {
+                nombre: name,
+                emailVerified: true,
+              },
+              create: {
+                email,
+                nombre: name,
+                emailVerified: true,
+                esAdministrador: false,
+                esRecolector: false,
+              },
+            });
+            return {
+              id: String(dbUser.id),
+              email: dbUser.email,
+              name: dbUser.nombre || dbUser.email,
+              role: dbUser.esAdministrador ? 'admin' : dbUser.esRecolector ? 'collector' : 'user',
+              passwordVersion: dbUser.passwordVersion ?? 0,
+              emailVerified: !!dbUser.emailVerified,
+            };
+          } catch (e) {
+            throw new Error("No se pudo validar el ID token de Google");
+          }
+        }
+
+        // Path B: Credenciales clásicas (email/password)
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Email y contraseña son requeridos");
         }
