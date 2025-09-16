@@ -12,7 +12,7 @@ export async function GET(request, ctx) {
 		const ua = (request.headers.get('user-agent') || '').toLowerCase();
 		const explicitWv = request.nextUrl.searchParams.get('wv') === '1';
 		const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
-		if (isGoogleCb && error === 'OAuthCallback' && (isWebViewUA || explicitWv)) {
+		if (isGoogleCb && error === 'OAuthCallback') {
 			const url = new URL('/auth/bridge', request.url);
 			url.search = '';
 			return NextResponse.redirect(url, 303);
@@ -37,5 +37,15 @@ export async function GET(request, ctx) {
 }
 
 export async function POST(request, ctx) {
+	try {
+		const path = request.nextUrl?.pathname || "";
+		const isGoogleCb = path.indexOf('/api/auth/callback/google') !== -1;
+		const error = request.nextUrl.searchParams.get('error');
+		if (isGoogleCb && error === 'OAuthCallback') {
+			const url = new URL('/auth/bridge', request.url);
+			url.search = '';
+			return NextResponse.redirect(url, 303);
+		}
+	} catch {}
 	return handler(request, ctx);
 }

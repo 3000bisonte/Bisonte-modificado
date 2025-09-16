@@ -109,7 +109,7 @@ export const authOptions = {
       name: `__Secure-next-auth.state`,
       options: {
         httpOnly: true,
-  sameSite: 'lax',
+        sameSite: 'none',
         path: '/',
         secure: true,
       },
