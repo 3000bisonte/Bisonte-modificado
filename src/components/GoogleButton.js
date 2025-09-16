@@ -2,17 +2,28 @@
 
 import { signIn } from "next-auth/react";
 import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
+import { requestGoogleIdToken } from "../lib/nativeBridge";
 
 export default function GoogleButton() {
   return (
     <button
       className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-      onClick={() => {
-        const target = '/home'; // fixed safe target for this button
-  const base = isWebViewRuntime() ? buildBridgeCallback(target) : target;
-  const url = new URL(base, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
-  if (isWebViewRuntime()) url.searchParams.set('wv', '1');
-  signIn("google", { callbackUrl: url.toString() });
+      onClick={async () => {
+        const target = '/home';
+        if (isWebViewRuntime()) {
+          const idToken = await requestGoogleIdToken(12000);
+          if (idToken) {
+            const bridge = buildBridgeCallback(target);
+            const url = new URL(bridge, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
+            url.searchParams.set('wv', '1');
+            await signIn("credentials", { redirect: true, idToken, callbackUrl: url.toString() });
+            return;
+          }
+        }
+        const base = isWebViewRuntime() ? buildBridgeCallback(target) : target;
+        const url = new URL(base, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
+        if (isWebViewRuntime()) url.searchParams.set('wv', '1');
+        signIn("google", { callbackUrl: url.toString() });
       }}
     >
       <svg

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
+import { requestGoogleIdToken } from "../lib/nativeBridge";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -87,12 +88,26 @@ const LoginForm = ({ callbackUrl }) => {
       safeTarget = raw;
     }
   } catch {}
-  const cb = isWebViewRuntime() ? buildBridgeCallback(safeTarget) : safeTarget;
-      // Add wv=1 marker for callbacks that lose UA (some in-app browsers)
-      const url = new URL(cb, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
-      if (isWebViewRuntime()) {
-        url.searchParams.set('wv', '1');
+  // Prefer native idToken flow inside WebView
+  if (isWebViewRuntime()) {
+        const idToken = await requestGoogleIdToken(12000);
+        if (idToken) {
+          // Use credentials provider with idToken and send user through bridge target afterwards
+          const bridge = buildBridgeCallback(safeTarget);
+          const url = new URL(bridge, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
+          url.searchParams.set('wv', '1');
+          const res = await signIn("credentials", { redirect: true, idToken, callbackUrl: url.toString() });
+          // If redirect true succeeds, we won't reach here; only handle failure
+          if (res && res.error) {
+            throw new Error(res.error);
+          }
+          return;
+        }
       }
+      // Fallback to OAuth flow
+      const cb = isWebViewRuntime() ? buildBridgeCallback(safeTarget) : safeTarget;
+      const url = new URL(cb, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
+      if (isWebViewRuntime()) url.searchParams.set('wv', '1');
       await signIn("google", { callbackUrl: url.toString() });
     } catch (error) {
       console.error("Error con Google:", error);

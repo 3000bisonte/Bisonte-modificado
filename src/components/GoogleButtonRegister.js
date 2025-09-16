@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
+import { requestGoogleIdToken } from "../lib/nativeBridge";
 
 export default function GoogleButtonRegister() {
   const [isLoading, setIsLoading] = useState(false);
@@ -23,13 +24,20 @@ export default function GoogleButtonRegister() {
       target = '/home?showProfileModal=true';
     }
   } catch {}
-  const base = isWebViewRuntime() ? buildBridgeCallback(target) : target;
-  const url = new URL(base, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
-  if (isWebViewRuntime()) url.searchParams.set('wv', '1');
-      const result = await signIn("google", {
-        callbackUrl: url.toString(),
-        redirect: true,
-      });
+  if (isWebViewRuntime()) {
+        const idToken = await requestGoogleIdToken(15000);
+        if (idToken) {
+          const bridge = buildBridgeCallback(target);
+          const url = new URL(bridge, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
+          url.searchParams.set('wv', '1');
+          await signIn("credentials", { redirect: true, idToken, callbackUrl: url.toString() });
+          return;
+        }
+      }
+      const base = isWebViewRuntime() ? buildBridgeCallback(target) : target;
+      const url = new URL(base, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
+      if (isWebViewRuntime()) url.searchParams.set('wv', '1');
+      const result = await signIn("google", { callbackUrl: url.toString(), redirect: true });
 
       // Este código solo se alcanzaría si signIn falla ANTES de redirigir y redirect:true
       // O si redirect:false (que no es nuestro caso aquí)

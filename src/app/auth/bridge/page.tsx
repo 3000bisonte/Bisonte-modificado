@@ -51,7 +51,7 @@ export default function AuthBridge() {
       if (cancelled) return;
       if (status === 'loading') {
         // poll a few times in case the session hydrates slowly in webview
-        if (attempt < 25) {
+        if (attempt < 40) {
           setTimeout(() => check(attempt + 1), 200);
         } else {
           // after retries, go to root
