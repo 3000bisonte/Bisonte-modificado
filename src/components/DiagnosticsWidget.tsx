@@ -29,6 +29,14 @@ export default function DiagnosticsWidget() {
       const hasRNWebView = !!(window as any).ReactNativeWebView;
       const hasWKBridge = !!((window as any).webkit && (window as any).webkit.messageHandlers);
       const hasCapacitor = !!(window as any).Capacitor;
+      let capPlugins: any = undefined;
+      try {
+        const w: any = window as any;
+        capPlugins = {
+          FirebaseAuthentication: !!(w.Capacitor?.Plugins?.FirebaseAuthentication || w.FirebaseAuthentication),
+          GoogleAuth: !!(w.Capacitor?.Plugins?.GoogleAuth || w.GoogleAuth),
+        };
+      } catch {}
       const hasSW = !!navigator.serviceWorker;
       let cookieEnabled = false;
       try { document.cookie = `diag_widget=1; path=/`; cookieEnabled = document.cookie.includes('diag_widget=1'); } catch {}
@@ -38,6 +46,7 @@ export default function DiagnosticsWidget() {
         userAgent: navigator.userAgent,
         isWebViewRuntime: isWebViewRuntime(),
         hasRNWebView, hasWKBridge, hasCapacitor,
+        capPlugins,
         isStandalone, cookieEnabled, localStorage: ls, sessionStorage: ss, hasServiceWorker: hasSW,
         href: window.location.href,
       });
