@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { isWebViewRuntime, buildBridgeCallback, isCapacitorRuntime } from "../lib/ua";
+import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
 import { requestGoogleIdToken } from "../lib/nativeBridge";
 
 export default function GoogleButtonRegister() {
@@ -33,11 +33,6 @@ export default function GoogleButtonRegister() {
           await signIn("credentials", { redirect: true, idToken, callbackUrl: url.toString() });
           return;
         }
-      }
-      if (isCapacitorRuntime()) {
-        alert("No se pudo obtener el idToken desde la app nativa (Capacitor). Revisa la integración de Google Sign-In.");
-        setIsLoading(false);
-        return;
       }
       const base = isWebViewRuntime() ? buildBridgeCallback(target) : target;
       const url = new URL(base, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');

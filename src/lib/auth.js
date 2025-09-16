@@ -1,6 +1,7 @@
 // Unified authentication system for NextAuth integration
 import { headers } from 'next/headers';
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { OAuth2Client } from "google-auth-library";
 import { verifyPassword, hashPassword } from "./security";
 import prisma from "../libs/prisma";
@@ -11,6 +12,32 @@ const googleClient = process.env.GOOGLE_CLIENT_ID
 
 export const authOptions = {
   providers: [
+    // Google OAuth provider without PKCE (uses state + nonce only)
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            checks: ["state", "nonce"],
+            authorization: {
+              params: {
+                prompt: "consent select_account",
+                access_type: "offline",
+                response_type: "code",
+              },
+            },
+            profile(profile) {
+              return {
+                id: profile.sub,
+                email: profile.email,
+                name: profile.name || profile.email,
+                emailVerified: !!profile.email_verified,
+                role: "user",
+              };
+            },
+          }),
+        ]
+      : []),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -239,7 +266,24 @@ export const authOptions = {
     async redirect({ url, baseUrl }) {
       try {
         const parsed = new URL(url, baseUrl);
-        // Allow internal bridge and same-origin URLs
+        // Normaliza errores
+        if (parsed.pathname.startsWith('/api/auth/error')) {
+          const qs = parsed.search || '';
+          if (/[?&]error=OAuthCallback(&|$)/i.test(qs)) {
+            return `${baseUrl}/auth/bridge?to=%2Fhome`;
+          }
+          return `${baseUrl}/auth/error${qs}`;
+        }
+        // Permite el bridge
+        if (parsed.origin === baseUrl && parsed.pathname.startsWith('/auth/bridge')) {
+          return parsed.toString();
+        }
+        // Redirecciona WebView por bridge si viene con wv=1
+        if (parsed.origin === baseUrl && parsed.searchParams.get('wv') === '1') {
+          const p = parsed.pathname + parsed.search;
+          const target = p && !p.startsWith('/api') ? p : '/home';
+          return `${baseUrl}/auth/bridge?to=${encodeURIComponent(target)}`;
+        }
         if (parsed.origin === baseUrl) return parsed.toString();
       } catch {}
       return `${baseUrl}/home`;
