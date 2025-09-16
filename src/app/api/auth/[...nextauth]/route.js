@@ -9,10 +9,11 @@ export async function GET(request, ctx) {
 		const path = request.nextUrl?.pathname || "";
 		const isGoogleCb = path.indexOf('/api/auth/callback/google') !== -1;
 		const error = request.nextUrl.searchParams.get('error');
+    const message = request.nextUrl.searchParams.get('message')?.toLowerCase() || '';
 		const ua = (request.headers.get('user-agent') || '').toLowerCase();
 		const explicitWv = request.nextUrl.searchParams.get('wv') === '1';
 		const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
-		if (isGoogleCb && error === 'OAuthCallback') {
+		if (isGoogleCb && (error === 'OAuthCallback' || message.includes('pkce'))) {
 			const url = new URL('/auth/bridge', request.url);
 			url.search = '';
 			return NextResponse.redirect(url, 303);

@@ -112,6 +112,7 @@ export const authOptions = {
         sameSite: 'none',
         path: '/',
         secure: true,
+        ...(process.env.NODE_ENV === 'production' ? { domain: '.bisonteapp.com' } : {}),
       },
     },
     sessionToken: {
@@ -121,6 +122,7 @@ export const authOptions = {
         sameSite: 'none',
         path: '/',
         secure: true,
+        ...(process.env.NODE_ENV === 'production' ? { domain: '.bisonteapp.com' } : {}),
       },
     },
     callbackUrl: {
@@ -130,6 +132,7 @@ export const authOptions = {
         sameSite: 'none',
         path: '/',
         secure: true,
+        ...(process.env.NODE_ENV === 'production' ? { domain: '.bisonteapp.com' } : {}),
       },
     },
     // In some mobile WebViews, PKCE/nonce cookies can be dropped on redirects unless SameSite=None
@@ -140,6 +143,7 @@ export const authOptions = {
         sameSite: 'none',
         path: '/',
         secure: true,
+        ...(process.env.NODE_ENV === 'production' ? { domain: '.bisonteapp.com' } : {}),
       },
     },
     nonce: {
@@ -149,6 +153,7 @@ export const authOptions = {
         sameSite: 'none',
         path: '/',
         secure: true,
+        ...(process.env.NODE_ENV === 'production' ? { domain: '.bisonteapp.com' } : {}),
       },
     },
   },
