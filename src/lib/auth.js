@@ -262,11 +262,10 @@ export const authOptions = {
 
         const parsed = new URL(url, baseUrl);
 
-        // Normalize API error endpoint to UI error page
+        // Normalize API error endpoint to UI error page; if OAuthCallback, force bridge to home (unconditional)
         if (parsed.pathname.startsWith('/api/auth/error')) {
           const qs = parsed.search || '';
-          // If the error is OAuthCallback and we're in a WebView, send through the bridge to land on home
-          if (isWebViewUA && /[?&]error=OAuthCallback(&|$)/i.test(qs)) {
+          if (/[?&]error=OAuthCallback(&|$)/i.test(qs)) {
             return `${baseUrl}/auth/bridge?to=%2Fhome`;
           }
           return `${baseUrl}/auth/error${qs}`;
