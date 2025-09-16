@@ -14,6 +14,15 @@ export function isWebViewRuntime(): boolean {
   return isWebViewUA(navigator.userAgent);
 }
 
+export function isCapacitorRuntime(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const w: any = window as any;
+    return !!w.Capacitor || !!w.capacitor || !!w.CapacitorNative;
+  } catch {}
+  return false;
+}
+
 export function buildBridgeCallback(to: string = '/home'): string {
   const target = to || '/home';
   return `/auth/bridge?to=${encodeURIComponent(target)}`;

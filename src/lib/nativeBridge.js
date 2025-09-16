@@ -1,6 +1,6 @@
 "use client";
 
-import { isWebViewRuntime } from "./ua";
+import { isWebViewRuntime, isCapacitorRuntime } from "./ua";
 
 /**
  * Request a Google ID Token from the host app when running inside a WebView.
@@ -13,6 +13,27 @@ import { isWebViewRuntime } from "./ua";
 export async function requestGoogleIdToken(timeoutMs = 12000) {
   if (typeof window === "undefined") return null;
   if (!isWebViewRuntime()) return null;
+
+  // Capacitor: intentamos usar plugins conocidos antes del postMessage
+  try {
+    if (isCapacitorRuntime()) {
+      const w = window;
+      // Capacitor Firebase Authentication plugin
+      const CFA = (w).Capacitor?.Plugins?.FirebaseAuthentication || (w).FirebaseAuthentication;
+      if (CFA && typeof CFA.signInWithGoogle === 'function') {
+        const res = await CFA.signInWithGoogle();
+        const t = res?.credential?.idToken || res?.idToken || res?.accessToken;
+        if (t && typeof t === 'string' && t.split('.').length === 3) return t;
+      }
+      // Capacitor Google Auth plugin (@codetrix-studio/capacitor-google-auth o similar)
+      const CGA = (w).Capacitor?.Plugins?.GoogleAuth || (w).GoogleAuth;
+      if (CGA && typeof CGA.signIn === 'function') {
+        const res = await CGA.signIn();
+        const t = res?.authentication?.idToken || res?.idToken;
+        if (t && typeof t === 'string' && t.split('.').length === 3) return t;
+      }
+    }
+  } catch {}
 
   return await new Promise((resolve) => {
     let settled = false;

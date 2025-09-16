@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
+import { isWebViewRuntime, buildBridgeCallback, isCapacitorRuntime } from "../lib/ua";
 import { requestGoogleIdToken } from "../lib/nativeBridge";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -101,6 +101,12 @@ const LoginForm = ({ callbackUrl }) => {
           if (res && res.error) {
             throw new Error(res.error);
           }
+          return;
+        }
+        // En Capacitor, NO usamos OAuth fallback: mostramos error claro
+        if (isCapacitorRuntime()) {
+          setErrorMessage("No se pudo obtener el idToken desde la app nativa. Verifica la integración de Google Sign-In en Capacitor.");
+          setIsLoading(false);
           return;
         }
       }

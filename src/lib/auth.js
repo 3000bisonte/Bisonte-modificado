@@ -2,7 +2,6 @@
 import { headers } from 'next/headers';
 import CredentialsProvider from "next-auth/providers/credentials";
 import { OAuth2Client } from "google-auth-library";
-import GoogleProvider from "next-auth/providers/google";
 import { verifyPassword, hashPassword } from "./security";
 import prisma from "../libs/prisma";
 
@@ -12,33 +11,6 @@ const googleClient = process.env.GOOGLE_CLIENT_ID
 
 export const authOptions = {
   providers: [
-    // Google OAuth provider (enabled only if env vars are present)
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? [
-          GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            checks: ["pkce"],
-            authorization: {
-              params: {
-                // Force account chooser and consent
-                prompt: "consent select_account",
-                access_type: "offline",
-                response_type: "code",
-              },
-            },
-            profile(profile) {
-              return {
-                id: profile.sub,
-                email: profile.email,
-                name: profile.name || profile.email,
-                emailVerified: !!profile.email_verified,
-                role: "user",
-              };
-            },
-          }),
-        ]
-      : []),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -220,64 +192,17 @@ export const authOptions = {
   },
 
   callbacks: {
-    async signIn({ user, account, profile }) {
-      // Optional domain restriction for Google accounts
-      if (account?.provider === "google") {
-        try {
-          const allowed = (process.env.ALLOWED_GOOGLE_DOMAINS || "")
-            .split(",")
-            .map((s) => s.trim().toLowerCase())
-            .filter(Boolean);
-          if (allowed.length) {
-            const email = (profile?.email || user?.email || "").toLowerCase();
-            const domain = email.split("@")[1];
-            if (!domain || !allowed.includes(domain)) {
-              // Redirect to error page with a message
-              return "/auth/error?error=AccessDenied";
-            }
-          }
-        } catch (_) {}
-      }
+    async signIn() {
       return true;
     },
-    async jwt({ token, user, account, trigger, session }) {
+    async jwt({ token, user, trigger, session }) {
       // Initial sign in
       if (user) {
-        try {
-          // If Google login, upsert user in our DB and use DB id in token
-          if (account?.provider === "google" && user?.email) {
-            const dbUser = await prisma.usuarios.upsert({
-              where: { email: user.email.toLowerCase() },
-              update: {
-                nombre: user.name || user.email,
-                emailVerified: true,
-              },
-              create: {
-                email: user.email.toLowerCase(),
-                nombre: user.name || user.email,
-                emailVerified: true,
-                esAdministrador: false,
-                esRecolector: false,
-              },
-            });
-            token.userId = String(dbUser.id);
-            token.role = dbUser.esAdministrador ? 'admin' : dbUser.esRecolector ? 'collector' : 'user';
-            token.passwordVersion = dbUser.passwordVersion ?? 0;
-            token.emailVerified = !!dbUser.emailVerified;
-          } else {
-            // Credentials flow keeps values from authorize
-            token.userId = user.id;
-            token.role = user.role;
-            token.passwordVersion = user.passwordVersion;
-            token.emailVerified = user.emailVerified;
-          }
-        } catch (e) {
-          // If DB is unavailable, still allow login but keep provider id
-          token.userId = user.id;
-          token.role = user.role;
-          token.passwordVersion = user.passwordVersion;
-          token.emailVerified = user.emailVerified;
-        }
+        // Credentials/idToken flow provides all needed fields
+        token.userId = user.id;
+        token.role = user.role;
+        token.passwordVersion = user.passwordVersion;
+        token.emailVerified = user.emailVerified;
       }
 
       // Check if password was changed (invalidate token)
@@ -313,51 +238,10 @@ export const authOptions = {
 
     async redirect({ url, baseUrl }) {
       try {
-        const h = headers();
-        const ua = (h.get('user-agent') || '').toLowerCase();
-        const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
-
         const parsed = new URL(url, baseUrl);
-
-        // Normalize API error endpoint to UI error page; if OAuthCallback, force bridge to home (unconditional)
-        if (parsed.pathname.startsWith('/api/auth/error')) {
-          const qs = parsed.search || '';
-          if (/[?&]error=OAuthCallback(&|$)/i.test(qs)) {
-            return `${baseUrl}/auth/bridge?to=%2Fhome`;
-          }
-          return `${baseUrl}/auth/error${qs}`;
-        }
-
-        // If already targeting the internal bridge, just allow it through
-        if (parsed.origin === baseUrl && parsed.pathname.startsWith('/auth/bridge')) {
-          return parsed.toString();
-        }
-
-    // For WebView environments, always route through the bridge so we can notify the host app
-  if (isWebViewUA) {
-          // Determine a safe in-app target
-          let targetPath = '/home';
-          if (parsed.origin === baseUrl) {
-            const p = parsed.pathname + parsed.search;
-            if (p && p !== '/' && !p.startsWith('/api')) {
-              // Avoid sending back to login or API paths
-              targetPath = p.startsWith('/login') ? '/home' : p;
-            }
-          }
-          // Return string URL (NextAuth issues a 302); 302/303 both convert POST to GET in practice for browsers
-          return `${baseUrl}/auth/bridge?to=${encodeURIComponent(targetPath)}`;
-        }
-
-        // Non-WebView: allow same-origin URLs
-        if (parsed.origin === baseUrl) {
-          return parsed.toString();
-        }
-        // Allow localhost dev callbacks
-        if (parsed.hostname === 'localhost' && (parsed.port === '3001' || parsed.port === '3000')) {
-          return parsed.toString();
-        }
-  } catch {}
-      // Fallback: send to home
+        // Allow internal bridge and same-origin URLs
+        if (parsed.origin === baseUrl) return parsed.toString();
+      } catch {}
       return `${baseUrl}/home`;
     }
   },

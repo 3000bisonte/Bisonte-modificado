@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withAuth } from "next-auth/middleware";
 
 // Combined middleware: handles auth protection + WebView fixes + canonical host
+// Nota: Para Capacitor, el flujo de Google es SIEMPRE nativo (sin OAuth). Este middleware solo maneja errores genéricos.
 function mainMiddleware(request) {
 	const url = new URL(request.url);
 	const host = request.headers.get('host') || url.host;
