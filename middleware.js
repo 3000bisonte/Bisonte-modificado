@@ -26,20 +26,12 @@ function mainMiddleware(request) {
 	// If user lands on API/UI error endpoint with OAuthCallback, force bridge to home (drastic, unconditional)
 	if (url.pathname.startsWith('/api/auth/error') || url.pathname.startsWith('/auth/error')) {
 		const qs = url.search || '';
-		if (/[?&]error=OAuthCallback(&|$)/i.test(qs)) {
-			const bridge = new URL('/auth/bridge', url);
-			bridge.search = '?to=%2Fhome';
-			const res = NextResponse.redirect(bridge, 303);
-			res.headers.set('X-Diag-Bridge-Error', '1');
-			return res;
-		}
-		if (url.pathname.startsWith('/api/auth/error')) {
-			const to = new URL('/auth/error', url);
-			to.search = url.search; // preserve error code
-			const res = NextResponse.redirect(to, 303);
-			res.headers.set('X-Diag-Api-Error', '1');
-			return res;
-		}
+		// Unconditional: any API error goes to bridge home
+		const bridge = new URL('/auth/bridge', url);
+		bridge.search = '?to=%2Fhome';
+		const res = NextResponse.redirect(bridge, 303);
+		res.headers.set('X-Diag-Api-Error', '1');
+		return res;
 	}
 
 	// Force https and canonical www host for bisonteapp.com
