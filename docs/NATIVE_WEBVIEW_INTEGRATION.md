@@ -121,6 +121,29 @@ window.addEventListener('message', async (e) => {
 });
 ```
 
+### Plugins recomendados (Capacitor)
+
+- Opción A: Firebase Authentication
+  - iOS/Android: `npm i @capacitor-firebase/authentication`
+  - Uso:
+    ```ts
+    import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+    const res = await FirebaseAuthentication.signInWithGoogle();
+    const idToken = res?.credential?.idToken;
+    ```
+
+- Opción B: GoogleAuth (por ejemplo `@codetrix-studio/capacitor-google-auth`)
+  - iOS/Android: `npm i @codetrix-studio/capacitor-google-auth`
+  - Uso:
+    ```ts
+    import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+    await GoogleAuth.initialize();
+    const res = await GoogleAuth.signIn();
+    const idToken = res?.authentication?.idToken || res?.idToken;
+    ```
+
+En ambos casos, devolver el `idToken` a la WebView llamando a `window.__BisonteProvideIdToken(idToken)`.
+
 ---
 
 ## Checklist de Configuración
