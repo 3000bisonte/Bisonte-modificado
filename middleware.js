@@ -16,8 +16,9 @@ function mainMiddleware(request) {
 			p === '/remitente' || p === '/cotizador' || p === '/destinatario' || 
 			p === '/pagos' || p === '/profile';
 		if (isPageRoute) {
-			console.log(`[405 Fix] Converting POST ${p} to GET via 303`);
-			return NextResponse.redirect(url, 303);
+			const res = NextResponse.redirect(url, 303);
+			res.headers.set('X-Diag-Post-Converted', '1');
+			return res;
 		}
 	}
 
@@ -29,11 +30,15 @@ function mainMiddleware(request) {
 		if ((isWebViewUA || explicitWv) && /[?&]error=OAuthCallback(&|$)/i.test(qs)) {
 			const bridge = new URL('/auth/bridge', url);
 			bridge.search = '?to=%2Fhome';
-			return NextResponse.redirect(bridge, 303);
+			const res = NextResponse.redirect(bridge, 303);
+			res.headers.set('X-Diag-Bridge-Error', '1');
+			return res;
 		}
 		const to = new URL('/auth/error', url);
 		to.search = url.search; // preserve error code
-		return NextResponse.redirect(to, 303);
+		const res = NextResponse.redirect(to, 303);
+		res.headers.set('X-Diag-Api-Error', '1');
+		return res;
 	}
 
 	// Force https and canonical www host for bisonteapp.com
@@ -58,7 +63,9 @@ function mainMiddleware(request) {
 	if ((isWebViewUA || explicitWv) && url.pathname === '/' && url.searchParams.get('error') === 'OAuthCallback') {
 		url.pathname = '/auth/bridge';
 		url.search = '';
-		return NextResponse.redirect(url, 303);
+		const res = NextResponse.redirect(url, 303);
+		res.headers.set('X-Diag-Root-Bridge', '1');
+		return res;
 	}
 
 	return NextResponse.next();
@@ -95,6 +102,21 @@ export default withAuth(
       verifyRequest: "/auth/verify-request",
       newUser: null,
     },
+    callbacks: {
+      authorized: ({ token, req }) => {
+        const p = req.nextUrl.pathname;
+        const protectedPaths = [
+          "/remitente",
+          "/home",
+          "/cotizador",
+          "/destinatario",
+          "/pagos",
+          "/profile",
+        ];
+        const isProtected = protectedPaths.some((path) => p === path || p.startsWith(path + "/"));
+        return isProtected ? !!token : true;
+      }
+    }
   }
 );
 
