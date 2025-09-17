@@ -1,5 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+function parseCookies(header: string | null) {
+  const out: Record<string, string> = {};
+  if (!header) return out;
+  const parts = header.split(/;\s*/);
+  for (const p of parts) {
+    const idx = p.indexOf('=');
+    if (idx > 0) {
+      const k = p.slice(0, idx).trim();
+      const v = p.slice(idx + 1).trim();
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const ua = request.headers.get('user-agent') || '';
@@ -9,6 +24,11 @@ export async function GET(request: NextRequest) {
   const qp = Object.fromEntries(url.searchParams.entries());
   const opSet = url.searchParams.get('setcookie'); // 'none' | 'lax' | 'client' | '1' (legacy)
   const opClear = url.searchParams.get('clear'); // name or '1' (all)
+
+  const parsed = parseCookies(cookie);
+  const nextAuthCookies = Object.fromEntries(
+    Object.entries(parsed).filter(([k]) => k.startsWith('__Secure-next-auth') || k.startsWith('next-auth'))
+  );
 
   const res = NextResponse.json({
     ok: true,
@@ -24,6 +44,7 @@ export async function GET(request: NextRequest) {
       diag_server_lax: /diag_server_lax=1/.test(cookie),
       diag_client: /diag_client=1/.test(cookie),
     },
+    nextAuthCookies,
     timestamp: now,
   });
 
