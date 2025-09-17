@@ -12,7 +12,8 @@ class BisonteAuth : Plugin() {
   private var authRequest: AuthorizationRequest? = null
   private var pendingCall: PluginCall? = null
 
-  private val clientId = "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com"
+  // CAMBIO: Usar tu Web Client ID real
+  private val clientId = "108242889910-n3ptem16orktkl0klv8onlttfl83r1ul.apps.googleusercontent.com"
   private val redirectUri = Uri.parse("com.bisonteapp:/oauth2redirect")
   private val authEndpoint = Uri.parse("https://accounts.google.com/o/oauth2/v2/auth")
   private val tokenEndpoint = Uri.parse("https://oauth2.googleapis.com/token")
@@ -33,6 +34,8 @@ class BisonteAuth : Plugin() {
       redirectUri
     )
     builder.setScopes("openid", "email", "profile")
+    // CAMBIO: Agregar nonce para mayor seguridad
+    builder.setNonce(java.util.UUID.randomUUID().toString())
     authRequest = builder.build()
 
     authService = AuthorizationService(bridge.activity)
@@ -45,8 +48,17 @@ class BisonteAuth : Plugin() {
   fun handleAuthResult(result: ActivityResult) {
     val call = pendingCall ?: return
     val data: Intent? = result.data
-    val resp = AuthorizationResponse.fromIntent(data!!)
+    
+    // CAMBIO: Validación más robusta
+    if (data == null) {
+      call.reject("No data received from authorization")
+      pendingCall = null
+      return
+    }
+    
+    val resp = AuthorizationResponse.fromIntent(data)
     val ex = AuthorizationException.fromIntent(data)
+    
     if (resp == null) {
       call.reject(ex?.errorDescription ?: "Authorization failed")
       pendingCall = null
