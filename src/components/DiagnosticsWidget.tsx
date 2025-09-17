@@ -16,6 +16,8 @@ export default function DiagnosticsWidget() {
   const [client, setClient] = useState<any>(null);
   const [server, setServer] = useState<any>(null);
   const [nativeDiag, setNativeDiag] = useState<any>(null);
+  const [lastIdToken, setLastIdToken] = useState<string | null>(null);
+  const [verifyRes, setVerifyRes] = useState<any>(null);
 
   useEffect(() => {
     const hashDiag = typeof window !== 'undefined' && window.location.hash.includes('diag');
@@ -72,6 +74,7 @@ export default function DiagnosticsWidget() {
       alert('No se recibió idToken desde la app nativa. Verifica la integración en Capacitor (plugin Google/FirebaseAuth).');
       return;
     }
+    setLastIdToken(token);
     await signIn('credentials', { idToken: token, redirect: true, callbackUrl: bridge.toString() });
   };
 
@@ -89,6 +92,7 @@ export default function DiagnosticsWidget() {
         alert('El plugin no devolvió idToken.');
         return;
       }
+      setLastIdToken(idToken);
       const bridge = new URL(buildBridgeCallback('/home'), window.location.origin);
       bridge.searchParams.set('wv','1');
       await signIn('credentials', { idToken, redirect: true, callbackUrl: bridge.toString() });
@@ -110,6 +114,7 @@ export default function DiagnosticsWidget() {
           const res = await BA.googleSignInCCT();
           out.BisonteAuth.result = res;
           out.BisonteAuth.idTokenLen = (res?.idToken || res?.token)?.length || 0;
+          if (res?.idToken || res?.token) setLastIdToken(res.idToken || res.token);
         } catch (e:any) {
           out.BisonteAuth.error = e?.message || String(e);
         }
@@ -124,6 +129,7 @@ export default function DiagnosticsWidget() {
           out.FirebaseAuthentication.result = res;
           const t = res?.credential?.idToken || res?.idToken || res?.accessToken;
           out.FirebaseAuthentication.idTokenLen = (t && typeof t === 'string') ? t.length : 0;
+          if (t && typeof t === 'string') setLastIdToken(t);
         } catch (e:any) {
           out.FirebaseAuthentication.error = e?.message || String(e);
         }
@@ -146,12 +152,32 @@ export default function DiagnosticsWidget() {
           out.GoogleAuth.result = res;
           const t = res?.authentication?.idToken || res?.idToken;
           out.GoogleAuth.idTokenLen = (t && typeof t === 'string') ? t.length : 0;
+          if (t && typeof t === 'string') setLastIdToken(t);
         } catch (e:any) {
           out.GoogleAuth.error = e?.message || String(e);
         }
       }
     } catch {}
     setNativeDiag(out);
+  };
+
+  const verifyIdToken = async () => {
+    if (!lastIdToken) {
+      alert('No hay idToken capturado aún. Usa "Test Plugins" o "Nativo (Capacitor)" primero.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/auth/verify-idtoken', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: lastIdToken })
+      });
+      const data = await res.json();
+      setVerifyRes(data);
+      if (!data?.ok) alert('Verificación fallida: ' + (data?.error || 'error'));
+    } catch (e:any) {
+      alert('Error verificando token: ' + (e?.message || e));
+    }
   };
 
   if (!visible) return null;
@@ -183,12 +209,22 @@ export default function DiagnosticsWidget() {
             <button className="px-2 py-0.5 bg-blue-600 rounded" onClick={signInNative}>Nativo (Capacitor)</button>
             <button className="px-2 py-0.5 bg-emerald-600 rounded" onClick={signInCCT}>CCT (Custom Tabs)</button>
             <button className="px-2 py-0.5 bg-fuchsia-700 rounded" onClick={testCapacitorPlugins}>Test Plugins</button>
+            <button className="px-2 py-0.5 bg-amber-700 rounded" onClick={verifyIdToken} disabled={!lastIdToken}>Verificar Token</button>
             <a className="px-2 py-0.5 bg-gray-700 rounded" href="/diagnostic" target="_blank" rel="noreferrer">/diagnostic</a>
           </div>
+          {lastIdToken && (
+            <div className="mt-2 text-[10px] text-gray-300">Token capturado: {lastIdToken.slice(0,16)}… (len {lastIdToken.length})</div>
+          )}
           {nativeDiag && (
             <div className="mt-2">
               <div className="font-semibold">Capacitor Plugins</div>
               <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto">{jsonShort(nativeDiag, 1600)}</pre>
+            </div>
+          )}
+          {verifyRes && (
+            <div className="mt-2">
+              <div className="font-semibold">Verificación de idToken</div>
+              <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto">{jsonShort(verifyRes, 1600)}</pre>
             </div>
           )}
         </div>

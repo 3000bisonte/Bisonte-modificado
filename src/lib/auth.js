@@ -87,6 +87,7 @@ export const authOptions = {
               emailVerified: !!dbUser.emailVerified,
             };
           } catch (e) {
+            try { console.warn('[credentials authorize] idToken verify failed:', e); } catch {}
             throw new Error("No se pudo validar el ID token de Google");
           }
         }
