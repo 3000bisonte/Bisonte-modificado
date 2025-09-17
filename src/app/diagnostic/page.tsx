@@ -61,13 +61,20 @@ export default function DiagnosticPage() {
   };
 
   const testSignInBridge = async () => {
-    const base = isWebViewRuntime() ? buildBridgeCallback('/home') : '/home';
+    if (isWebViewRuntime()) {
+      alert('En WebView deshabilitamos el OAuth web. Usa el botón "Nativo (Capacitor)" del Diag Widget para obtener idToken.');
+      return;
+    }
+    const base = '/home';
     const url = new URL(base, window.location.origin);
-    if (isWebViewRuntime()) url.searchParams.set('wv', '1');
     await signIn('google', { callbackUrl: url.toString(), redirect: true });
   };
 
   const testSignInDirect = async () => {
+    if (isWebViewRuntime()) {
+      alert('En WebView deshabilitamos el OAuth web. Usa el flujo nativo.');
+      return;
+    }
     await signIn('google', { callbackUrl: `${window.location.origin}/home`, redirect: true });
   };
 

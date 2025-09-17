@@ -33,10 +33,12 @@ export default function GoogleButtonRegister() {
           await signIn("credentials", { redirect: true, idToken, callbackUrl: url.toString() });
           return;
         }
+        // En WebView, no permitimos fallback a OAuth: requerimos idToken nativo
+        alert('Dentro de la app (WebView) debes iniciar con el idToken nativo. Verifica el plugin de autenticación.');
+        return;
       }
-      const base = isWebViewRuntime() ? buildBridgeCallback(target) : target;
+      const base = target;
       const url = new URL(base, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
-      if (isWebViewRuntime()) url.searchParams.set('wv', '1');
       const result = await signIn("google", { callbackUrl: url.toString(), redirect: true });
 
       // Este código solo se alcanzaría si signIn falla ANTES de redirigir y redirect:true

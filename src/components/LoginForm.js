@@ -103,11 +103,14 @@ const LoginForm = ({ callbackUrl }) => {
           }
           return;
         }
+        // En WebView, no permitir fallback OAuth
+        alert('Dentro de la app (WebView) debes iniciar con el idToken nativo. Verifica la integración de Capacitor.');
+        setIsLoading(false);
+        return;
       }
-      // Fallback to OAuth flow
-      const cb = isWebViewRuntime() ? buildBridgeCallback(safeTarget) : safeTarget;
+      // En navegador, usar OAuth normal
+      const cb = safeTarget;
       const url = new URL(cb, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
-      if (isWebViewRuntime()) url.searchParams.set('wv', '1');
       await signIn("google", { callbackUrl: url.toString() });
     } catch (error) {
       console.error("Error con Google:", error);

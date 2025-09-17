@@ -19,10 +19,13 @@ export default function GoogleButton() {
             await signIn("credentials", { redirect: true, idToken, callbackUrl: url.toString() });
             return;
           }
+          // En WebView, no usar OAuth: requerimos idToken nativo
+          alert('Dentro de la app (WebView) debes iniciar con el idToken nativo. Verifica el plugin de autenticación.');
+          return;
         }
         const base = isWebViewRuntime() ? buildBridgeCallback(target) : target;
         const url = new URL(base, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
-        if (isWebViewRuntime()) url.searchParams.set('wv', '1');
+        // En navegador normal, permitido OAuth
         signIn("google", { callbackUrl: url.toString() });
       }}
     >

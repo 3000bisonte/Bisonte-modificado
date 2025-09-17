@@ -13,10 +13,7 @@ export default function NativeTestPage() {
     append("Solicitando idToken al host...");
     const token = await requestGoogleIdToken(15000);
     if (!token) {
-      append("No se recibió idToken. Se usará fallback OAuth.");
-      const cb = new URL(buildBridgeCallback("/home"), window.location.origin);
-      cb.searchParams.set("wv", "1");
-      await signIn("google", { callbackUrl: cb.toString() });
+      append("No se recibió idToken. En WebView está deshabilitado el OAuth web. Verifica el plugin nativo.");
       return;
     }
     append(`idToken recibido (${token.length} chars). Iniciando sesión...`);
