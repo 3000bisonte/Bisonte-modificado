@@ -35,6 +35,7 @@ export default function DiagnosticsWidget() {
         capPlugins = {
           FirebaseAuthentication: !!(w.Capacitor?.Plugins?.FirebaseAuthentication || w.FirebaseAuthentication),
           GoogleAuth: !!(w.Capacitor?.Plugins?.GoogleAuth || w.GoogleAuth),
+          BisonteAuth: !!(w.Capacitor?.Plugins?.BisonteAuth || w.BisonteAuth),
         };
       } catch {}
       const hasSW = !!navigator.serviceWorker;
@@ -73,6 +74,28 @@ export default function DiagnosticsWidget() {
     await signIn('credentials', { idToken: token, redirect: true, callbackUrl: bridge.toString() });
   };
 
+  const signInCCT = async () => {
+    try {
+      const w: any = window as any;
+      const BA = w.Capacitor?.Plugins?.BisonteAuth || w.BisonteAuth;
+      if (!BA || typeof BA.googleSignInCCT !== 'function') {
+        alert('Plugin BisonteAuth.googleSignInCCT no disponible.');
+        return;
+      }
+      const res = await BA.googleSignInCCT();
+      const idToken = res?.idToken || res?.token;
+      if (!idToken) {
+        alert('El plugin no devolvió idToken.');
+        return;
+      }
+      const bridge = new URL(buildBridgeCallback('/home'), window.location.origin);
+      bridge.searchParams.set('wv','1');
+      await signIn('credentials', { idToken, redirect: true, callbackUrl: bridge.toString() });
+    } catch (e:any) {
+      alert('Error en CCT: ' + (e?.message || e));
+    }
+  };
+
   if (!visible) return null;
 
   return (
@@ -100,6 +123,7 @@ export default function DiagnosticsWidget() {
           </div>
           <div className="flex gap-2 flex-wrap">
             <button className="px-2 py-0.5 bg-blue-600 rounded" onClick={signInNative}>Nativo (Capacitor)</button>
+            <button className="px-2 py-0.5 bg-emerald-600 rounded" onClick={signInCCT}>CCT (Custom Tabs)</button>
             <a className="px-2 py-0.5 bg-gray-700 rounded" href="/diagnostic" target="_blank" rel="noreferrer">/diagnostic</a>
           </div>
         </div>
