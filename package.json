@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
-    "prebuild": "node scripts/prebuild-verify.js && node scripts/prebuild-env-check.js",
+    "prebuild": "node scripts/prebuild-verify.js && node scripts/prebuild-env-check.js && npm run build:plugin",
     "build": "next build",
+    "build:plugin": "cd native/capacitor-bisonte-auth && npm run build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -52,6 +53,6 @@
     "postcss": "^8",
     "prisma": "^5.21.1",
     "tailwindcss": "^3",
-    "typescript": "5.9.2"
+    "typescript": "^5.9.2"
   }
 }

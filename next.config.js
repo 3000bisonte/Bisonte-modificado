@@ -16,12 +16,28 @@ const nextConfig = {
   },
   // Configuración webpack para resolver módulos locales
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Resolver módulos locales del workspace
+    // Solo configurar alias si no estamos en servidor y el archivo existe
     if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        '@bisonte/capacitor-bisonte-auth': require.resolve('./native/capacitor-bisonte-auth/dist/esm/index.js')
-      };
+      const fs = require('fs');
+      const path = require('path');
+      const pluginPath = path.resolve('./native/capacitor-bisonte-auth/dist/esm/index.js');
+      
+      // Solo añadir alias si el archivo existe (para evitar errores en Vercel)
+      if (fs.existsSync(pluginPath)) {
+        config.resolve.alias = {
+          ...config.resolve.alias,
+          '@bisonte/capacitor-bisonte-auth': pluginPath
+        };
+      } else {
+        // En Vercel, usar el módulo desde node_modules si existe
+        const nodeModulesPath = path.resolve('./node_modules/@bisonte/capacitor-bisonte-auth/dist/esm/index.js');
+        if (fs.existsSync(nodeModulesPath)) {
+          config.resolve.alias = {
+            ...config.resolve.alias,
+            '@bisonte/capacitor-bisonte-auth': nodeModulesPath
+          };
+        }
+      }
     }
     
     return config;
