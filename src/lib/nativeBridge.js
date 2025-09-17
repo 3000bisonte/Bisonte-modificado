@@ -39,6 +39,12 @@ export async function requestGoogleIdToken(timeoutMs = 12000) {
       // Capacitor Google Auth plugin (@codetrix-studio/capacitor-google-auth o similar)
       const CGA = (w).Capacitor?.Plugins?.GoogleAuth || (w).GoogleAuth;
       if (CGA && typeof CGA.signIn === 'function') {
+        try {
+          if (typeof CGA.initialize === 'function') {
+            // Algunas implementaciones requieren initialize antes de signIn
+            await CGA.initialize();
+          }
+        } catch {}
         const res = await CGA.signIn();
         const t = res?.authentication?.idToken || res?.idToken;
         if (t && typeof t === 'string' && t.split('.').length === 3) return t;

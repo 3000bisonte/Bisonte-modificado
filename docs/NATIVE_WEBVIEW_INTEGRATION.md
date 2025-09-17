@@ -146,6 +146,38 @@ En ambos casos, devolver el `idToken` a la WebView llamando a `window.__BisonteP
 
 ---
 
+## Checklist rápido para Capacitor (Android/iOS)
+
+1) Dependencias y build
+- Instala uno de los plugins nativos:
+  - `@capacitor-firebase/authentication` (recomendado) o `@codetrix-studio/capacitor-google-auth`.
+- Ejecuta `npx cap sync` y abre el proyecto nativo para confirmar que compila.
+
+2) Configuración de Google
+- Asegura `GOOGLE_CLIENT_ID` del tipo “Web client” y que coincida con el usado en el backend.
+- Si usas FirebaseAuth: agrega SHA-1/SH-256 del keystore en Firebase Console (Android), y `REVERSED_CLIENT_ID` en iOS si aplica.
+
+3) Capacitor config
+- En Android, habilita `javaScriptEnabled` para el WebView.
+- Si abres OAuth en navegador nativo, prefiere AppAuth con Chrome Custom Tabs en un plugin (p.ej. `BisonteAuth.googleSignInCCT`).
+
+4) Entrega del idToken a la WebView
+- Tras login nativo, llama a `window.__BisonteProvideIdToken(idToken)` con un token JWT (3 segmentos separados por puntos).
+- Alternativa: `window.postMessage({ type: 'ID_TOKEN', idToken }, '*')`.
+
+5) Verificación desde la app web
+- Abre `https://www.bisonteapp.com/#diag` dentro de tu WebView para mostrar el Diagnostic Widget.
+- Pulsa “Test Plugins”: debe mostrar disponibilidad de `FirebaseAuthentication` y/o `GoogleAuth` y si devuelven `idToken`.
+- Pulsa “Nativo (Capacitor)”: si todo está correcto, te logueará y te llevará a `/auth/bridge` y luego `/home`.
+
+6) Si no llega el idToken
+- Revisa permisos/certificados de Google (SHA en Android, Info.plist en iOS).
+- Comprueba que el plugin efectivamente devuelve `idToken` (no solo `accessToken`).
+- Si usas GoogleAuth, ejecuta `initialize()` antes de `signIn()`.
+- Confirma que la WebView no bloquea `postMessage`/JS y que la llamada a `__BisonteProvideIdToken` se ejecuta.
+
+---
+
 ## Checklist de Configuración
 - `NEXTAUTH_URL=https://www.bisonteapp.com`
 - `NEXTAUTH_SECRET` correctamente configurado

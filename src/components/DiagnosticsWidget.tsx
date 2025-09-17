@@ -15,6 +15,7 @@ export default function DiagnosticsWidget() {
   const [visible, setVisible] = useState(false);
   const [client, setClient] = useState<any>(null);
   const [server, setServer] = useState<any>(null);
+  const [nativeDiag, setNativeDiag] = useState<any>(null);
 
   useEffect(() => {
     const hashDiag = typeof window !== 'undefined' && window.location.hash.includes('diag');
@@ -96,6 +97,63 @@ export default function DiagnosticsWidget() {
     }
   };
 
+  const testCapacitorPlugins = async () => {
+    const w: any = window as any;
+    const out: any = { when: new Date().toISOString() };
+    try {
+      const BA = w.Capacitor?.Plugins?.BisonteAuth || w.BisonteAuth;
+      out.BisonteAuth = {
+        available: !!(BA && typeof BA.googleSignInCCT === 'function')
+      };
+      if (out.BisonteAuth.available) {
+        try {
+          const res = await BA.googleSignInCCT();
+          out.BisonteAuth.result = res;
+          out.BisonteAuth.idTokenLen = (res?.idToken || res?.token)?.length || 0;
+        } catch (e:any) {
+          out.BisonteAuth.error = e?.message || String(e);
+        }
+      }
+    } catch {}
+    try {
+      const CFA = w.Capacitor?.Plugins?.FirebaseAuthentication || w.FirebaseAuthentication;
+      out.FirebaseAuthentication = { available: !!(CFA && typeof CFA.signInWithGoogle === 'function') };
+      if (out.FirebaseAuthentication.available) {
+        try {
+          const res = await CFA.signInWithGoogle();
+          out.FirebaseAuthentication.result = res;
+          const t = res?.credential?.idToken || res?.idToken || res?.accessToken;
+          out.FirebaseAuthentication.idTokenLen = (t && typeof t === 'string') ? t.length : 0;
+        } catch (e:any) {
+          out.FirebaseAuthentication.error = e?.message || String(e);
+        }
+      }
+    } catch {}
+    try {
+      const CGA = w.Capacitor?.Plugins?.GoogleAuth || w.GoogleAuth;
+      out.GoogleAuth = { available: !!(CGA && typeof CGA.signIn === 'function') };
+      if (out.GoogleAuth.available) {
+        try {
+          if (typeof CGA.initialize === 'function') {
+            await CGA.initialize();
+            out.GoogleAuth.initialized = true;
+          }
+        } catch (e:any) {
+          out.GoogleAuth.initError = e?.message || String(e);
+        }
+        try {
+          const res = await CGA.signIn();
+          out.GoogleAuth.result = res;
+          const t = res?.authentication?.idToken || res?.idToken;
+          out.GoogleAuth.idTokenLen = (t && typeof t === 'string') ? t.length : 0;
+        } catch (e:any) {
+          out.GoogleAuth.error = e?.message || String(e);
+        }
+      }
+    } catch {}
+    setNativeDiag(out);
+  };
+
   if (!visible) return null;
 
   return (
@@ -124,8 +182,15 @@ export default function DiagnosticsWidget() {
           <div className="flex gap-2 flex-wrap">
             <button className="px-2 py-0.5 bg-blue-600 rounded" onClick={signInNative}>Nativo (Capacitor)</button>
             <button className="px-2 py-0.5 bg-emerald-600 rounded" onClick={signInCCT}>CCT (Custom Tabs)</button>
+            <button className="px-2 py-0.5 bg-fuchsia-700 rounded" onClick={testCapacitorPlugins}>Test Plugins</button>
             <a className="px-2 py-0.5 bg-gray-700 rounded" href="/diagnostic" target="_blank" rel="noreferrer">/diagnostic</a>
           </div>
+          {nativeDiag && (
+            <div className="mt-2">
+              <div className="font-semibold">Capacitor Plugins</div>
+              <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto">{jsonShort(nativeDiag, 1600)}</pre>
+            </div>
+          )}
         </div>
       </div>
     </div>
