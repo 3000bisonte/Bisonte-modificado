@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.bisonte.auth">
+  <application>
+    <!-- The host app must declare intent-filters for com.bisonteapp:/oauth2redirect in its manifest. -->
+  </application>
+</manifest>

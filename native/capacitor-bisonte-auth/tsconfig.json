@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "ESNext",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/esm",
+    "strict": true
+  },
+  "include": ["src/**/*.ts"]
+}
