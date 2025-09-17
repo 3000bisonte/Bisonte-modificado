@@ -160,10 +160,11 @@ export const authOptions = {
       name: `__Secure-next-auth.state`,
       options: {
         httpOnly: true,
-        sameSite: 'none',
+        // For OAuth callback, Lax is recommended (sent on top-level GET navigations)
+        sameSite: 'lax',
         path: '/',
         secure: true,
-        ...(process.env.NODE_ENV === 'production' ? { domain: '.bisonteapp.com' } : {}),
+        // Host-only cookie (no Domain) to avoid cross-subdomain ambiguities
       },
     },
     sessionToken: {
@@ -201,10 +202,11 @@ export const authOptions = {
       name: `__Secure-next-auth.nonce`,
       options: {
         httpOnly: true,
-        sameSite: 'none',
+        // Align with state cookie
+        sameSite: 'lax',
         path: '/',
         secure: true,
-        ...(process.env.NODE_ENV === 'production' ? { domain: '.bisonteapp.com' } : {}),
+        // Host-only cookie (no Domain)
       },
     },
   },
