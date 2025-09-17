@@ -30,7 +30,18 @@ function mainMiddleware(request) {
 		const bridge = new URL('/auth/bridge', url);
 		bridge.search = '?to=%2Fhome';
 		const res = NextResponse.redirect(bridge, 303);
+		res.headers.set('Cache-Control','no-store');
 		res.headers.set('X-Diag-Api-Error', '1');
+		return res;
+	}
+
+	// Global safety net: if any URL carries error=OAuthCallback, route to bridge/home
+	if (url.searchParams.get('error') === 'OAuthCallback') {
+		url.pathname = '/auth/bridge';
+		url.search = '?to=%2Fhome';
+		const res = NextResponse.redirect(url, 303);
+		res.headers.set('Cache-Control','no-store');
+		res.headers.set('X-Diag-Error-Param-Bridge', '1');
 		return res;
 	}
 
