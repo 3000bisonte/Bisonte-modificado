@@ -53,7 +53,8 @@ export default function PluginTestPage() {
         // Verificar BisonteAuth directamente
         if (!results.bisonteAuth.available) {
           try {
-            const { BisonteAuth } = await import('@bisonte/capacitor-bisonte-auth');
+            const bisonteAuthModule = await import('@bisonte/capacitor-bisonte-auth');
+            const BisonteAuth = bisonteAuthModule.BisonteAuth;
             if (BisonteAuth && BisonteAuth.googleSignInCCT) {
               results.bisonteAuth.available = true;
               results.bisonteAuth.source = 'direct import';
@@ -91,8 +92,8 @@ export default function PluginTestPage() {
       
       // Intentar múltiples formas de obtener el plugin
       try {
-        const { BisonteAuth } = await import('@bisonte/capacitor-bisonte-auth');
-        BA = BisonteAuth;
+        const bisonteAuthModule = await import('@bisonte/capacitor-bisonte-auth');
+        BA = bisonteAuthModule.BisonteAuth;
       } catch (error) {
         console.log('Import directo falló, intentando window...');
         const windowAny = window as any;

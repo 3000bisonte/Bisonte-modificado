@@ -21,8 +21,9 @@ async function initializeCapacitorPlugins() {
   try {
     console.log('🔌 Inicializando plugins de Capacitor...');
     
-    // Importar el plugin BisonteAuth explícitamente
-    const { BisonteAuth } = await import('@bisonte/capacitor-bisonte-auth');
+    // Importar el plugin BisonteAuth explícitamente de forma dinámica
+    const bisonteAuthModule = await import('@bisonte/capacitor-bisonte-auth');
+    const BisonteAuth = bisonteAuthModule.BisonteAuth;
     
     // Verificar que el plugin se registró correctamente
     if (BisonteAuth) {
@@ -34,7 +35,8 @@ async function initializeCapacitorPlugins() {
         (window as any).BisonteAuth = BisonteAuth;
         
         // También verificar Capacitor.Plugins
-        const { Capacitor } = await import('@capacitor/core');
+        const capacitorModule = await import('@capacitor/core');
+        const Capacitor = capacitorModule.Capacitor;
         const capacitorAny = Capacitor as any;
         if (capacitorAny.Plugins) {
           console.log('🔍 Plugins registrados en Capacitor:', Object.keys(capacitorAny.Plugins));
