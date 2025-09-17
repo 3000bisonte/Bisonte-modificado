@@ -1,14 +1,36 @@
-DATABASE_URL=
-NEXTAUTH_URL=
-NEXTAUTH_SECRET=
-NEXT_PUBLIC_SITE_URL=
-NEXT_PUBLIC_API_BASE_URL=
+###############################################
+# Vercel (Producción) - Variables de entorno  #
+# NO SUBIR SECRETOS REALES A GIT              #
+###############################################
 
-# Opcionales
-RESEND_API_KEY=
-EMAIL_FROM=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-MP_ACCESS_TOKEN=
-MP_PUBLIC_KEY=
-NEXT_PUBLIC_INIT_MERCADOPAGO=
+# Copia y pega estas claves en Vercel → Project Settings → Environment Variables
+# y coloca los valores REALES solo en Vercel. Este archivo es solo una guía.
+
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require    # PONER EN VERCEL (NO REAL AQUÍ)
+NEXTAUTH_URL=https://www.bisonteapp.com
+NEXTAUTH_SECRET=YOUR_RANDOM_32B_SECRET                              # PONER EN VERCEL (NO REAL AQUÍ)
+NEXT_PUBLIC_SITE_URL=https://www.bisonteapp.com
+NEXT_PUBLIC_API_BASE_URL=https://www.bisonteapp.com/api
+
+# Opcionales (poner en Vercel si aplica)
+RESEND_API_KEY=YOUR_RESEND_KEY                                      # PONER EN VERCEL
+EMAIL_FROM=logistica@notificaciones.bisonteapp.com
+GOOGLE_CLIENT_ID=YOUR_GOOGLE_OAUTH_CLIENT_ID                         # PONER EN VERCEL
+GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_OAUTH_CLIENT_SECRET                 # PONER EN VERCEL
+MP_ACCESS_TOKEN=YOUR_MERCADOPAGO_ACCESS_TOKEN                        # PONER EN VERCEL
+MP_PUBLIC_KEY=YOUR_MERCADOPAGO_PUBLIC_KEY                            # Opcional público
+NEXT_PUBLIC_INIT_MERCADOPAGO=YOUR_MP_PUBLIC_KEY                      # Opcional público
+
+# Otros opcionales
+ALLOWED_ORIGINS=https://www.bisonteapp.com,https://bisonte-modificado.vercel.app
+NEXT_PUBLIC_API_SERVER_URL=https://nimble-vacherin-7a32d0.netlify.app/.netlify/functions
+NEXT_PUBLIC_URL_BRICK_STATUS_SCREEN=https://bisonte-modificado.vercel.app
+NEXT_PUBLIC_ADMOB_BANNER_ID=ca-app-pub-3940256099942544/6300978111
+NEXT_PUBLIC_ADMOB_REWARDED_ID=ca-app-pub-3940256099942544/522435491
+NEXT_PUBLIC_ADMOB_APP_ID=ca-app-pub-3940256099942544~3347511713
+EMAIL_USER=logistica@notificaciones.bisonteapp.com
+EMAIL_PASS=YOUR_EMAIL_APP_PASSWORD                                   # PONER EN VERCEL
+VERCEL_ENV=production
+ENABLE_IDTOKEN_VERIFY_ENDPOINT=0
+RUNTIME_ENV=production
+BASE_URL=https://www.bisonteapp.com/api

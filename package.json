@@ -8,7 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push --schema=prisma/schema.prisma",
+    "db:pull": "prisma db pull --schema=prisma/schema.prisma",
+    "db:reset": "prisma migrate reset --skip-seed --force --schema=prisma/schema.prisma",
+    "db:status": "prisma migrate status --schema=prisma/schema.prisma",
+    "prisma:studio": "prisma studio --schema=prisma/schema.prisma"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^7.3.1",

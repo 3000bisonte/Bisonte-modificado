@@ -10,6 +10,8 @@ const googleClient = process.env.GOOGLE_CLIENT_ID
   ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
   : null;
 
+const isProd = process.env.NODE_ENV === 'production';
+
 export const authOptions = {
   providers: [
     // Google OAuth provider without PKCE (uses state + nonce only)
@@ -158,56 +160,53 @@ export const authOptions = {
 
   cookies: {
     state: {
-      name: `__Secure-next-auth.state`,
+      name: isProd ? '__Secure-next-auth.state' : 'next-auth.state',
       options: {
         httpOnly: true,
-        // For OAuth callback, Lax is recommended (sent on top-level GET navigations)
-        sameSite: 'lax',
+        sameSite: 'lax', // sent on top-level GET navigations
         path: '/',
-        secure: true,
-        // Host-only cookie (no Domain) to avoid cross-subdomain ambiguities
+        secure: isProd,
+        ...(isProd ? {} : {}),
       },
     },
     sessionToken: {
-      name: `__Secure-next-auth.session-token`,
+      name: isProd ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
       options: {
         httpOnly: true,
-        sameSite: 'none',
+        sameSite: isProd ? 'none' : 'lax',
         path: '/',
-        secure: true,
-        ...(process.env.NODE_ENV === 'production' ? { domain: '.bisonteapp.com' } : {}),
+        secure: isProd,
+        ...(isProd ? { domain: '.bisonteapp.com' } : {}),
       },
     },
     callbackUrl: {
-      name: `__Secure-next-auth.callback-url`,
+      name: isProd ? '__Secure-next-auth.callback-url' : 'next-auth.callback-url',
       options: {
         httpOnly: true,
-        sameSite: 'none',
+        sameSite: isProd ? 'none' : 'lax',
         path: '/',
-        secure: true,
-        ...(process.env.NODE_ENV === 'production' ? { domain: '.bisonteapp.com' } : {}),
+        secure: isProd,
+        ...(isProd ? { domain: '.bisonteapp.com' } : {}),
       },
     },
-    // In some mobile WebViews, PKCE/nonce cookies can be dropped on redirects unless SameSite=None
+    // In some mobile WebViews, PKCE/nonce cookies can be dropped on redirects unless SameSite=None (only needed for OAuth)
     pkceCodeVerifier: {
-      name: `__Secure-next-auth.pkce.code_verifier`,
+      name: isProd ? '__Secure-next-auth.pkce.code_verifier' : 'next-auth.pkce.code_verifier',
       options: {
         httpOnly: true,
-        sameSite: 'none',
+        sameSite: isProd ? 'none' : 'lax',
         path: '/',
-        secure: true,
-        ...(process.env.NODE_ENV === 'production' ? { domain: '.bisonteapp.com' } : {}),
+        secure: isProd,
+        ...(isProd ? { domain: '.bisonteapp.com' } : {}),
       },
     },
     nonce: {
-      name: `__Secure-next-auth.nonce`,
+      name: isProd ? '__Secure-next-auth.nonce' : 'next-auth.nonce',
       options: {
         httpOnly: true,
-        // Align with state cookie
         sameSite: 'lax',
         path: '/',
-        secure: true,
-        // Host-only cookie (no Domain)
+        secure: isProd,
       },
     },
   },
@@ -315,10 +314,9 @@ export const authOptions = {
     }
   },
 
-  debug: process.env.NODE_ENV === "development"
-  ,
+  debug: process.env.NODE_ENV === "development",
   trustHost: true,
-  useSecureCookies: true
+  useSecureCookies: isProd
 };
 
 /**
