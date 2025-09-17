@@ -18,6 +18,17 @@ export async function requestGoogleIdToken(timeoutMs = 12000) {
   try {
     if (isCapacitorRuntime()) {
       const w = window;
+      // Prefer a host-provided plugin that performs OAuth via Chrome Custom Tabs (Android) or SFSafariViewController (iOS)
+      // and returns an idToken once completed in the native layer (e.g., using AppAuth). The plugin method should be
+      // implemented in the host app and exposed as Capacitor.Plugins.BisonteAuth.googleSignInCCT().
+      const BA = (w).Capacitor?.Plugins?.BisonteAuth || (w).BisonteAuth;
+      if (BA && typeof BA.googleSignInCCT === 'function') {
+        try {
+          const res = await BA.googleSignInCCT();
+          const t = res?.idToken || res?.token;
+          if (t && typeof t === 'string' && t.split('.').length === 3) return t;
+        } catch {}
+      }
       // Capacitor Firebase Authentication plugin
       const CFA = (w).Capacitor?.Plugins?.FirebaseAuthentication || (w).FirebaseAuthentication;
       if (CFA && typeof CFA.signInWithGoogle === 'function') {
