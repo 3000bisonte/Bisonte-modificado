@@ -1,6 +1,7 @@
 package com.bisonte.auth
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.result.ActivityResult
 import androidx.browser.customtabs.CustomTabsIntent
@@ -23,12 +24,24 @@ class BisonteAuth : Plugin() {
   private var authRequest: AuthorizationRequest? = null
   private var pendingCall: PluginCall? = null
 
-  // CAMBIO: Usar tu Web Client ID real (tipo Web)
-  private val clientId = "108242889910-n3ptem16orktkl0klv8onlttfl83r1ul.apps.googleusercontent.com"
-  // Para Google con AppAuth en Android: el esquema permitido para clientes Web es
-  // com.googleusercontent.apps.<client_id_sin_sufijo>:/oauth2redirect
-  private val clientIdBase = clientId.substring(0, clientId.indexOf(".apps.googleusercontent.com"))
-  private val redirectUri = Uri.parse("com.googleusercontent.apps.$clientIdBase:/oauth2redirect")
+  // Lee Android Client ID y redirect scheme desde meta-data para no hardcodear
+  private fun readMeta(name: String): String? {
+    return try {
+      val appInfo = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+      appInfo.metaData?.getString(name)
+    } catch (e: Exception) {
+      null
+    }
+  }
+
+  private val androidClientId: String? by lazy { readMeta("com.bisonteapp.google.ANDROID_CLIENT_ID") }
+  private val redirectScheme: String by lazy {
+    (readMeta("com.bisonteapp.google.REDIRECT_SCHEME")
+      ?: readMeta("google_redirect_scheme")
+      ?: "com.bisonteapp")
+  }
+  private val clientId = androidClientId ?: ""
+  private val redirectUri = Uri.parse("$redirectScheme:/oauth2redirect")
   private val authEndpoint = Uri.parse("https://accounts.google.com/o/oauth2/v2/auth")
   private val tokenEndpoint = Uri.parse("https://oauth2.googleapis.com/token")
 

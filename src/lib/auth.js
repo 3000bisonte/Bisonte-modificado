@@ -65,9 +65,14 @@ export const authOptions = {
             throw new Error("Falta GOOGLE_CLIENT_ID para validar idToken");
           }
           try {
+            const audiences = [
+              process.env.GOOGLE_CLIENT_ID,
+              process.env.GOOGLE_ANDROID_CLIENT_ID,
+              process.env.GOOGLE_IOS_CLIENT_ID,
+            ].filter(Boolean);
             const ticket = await googleClient.verifyIdToken({
               idToken: credentials.idToken,
-              audience: process.env.GOOGLE_CLIENT_ID,
+              audience: audiences.length ? audiences : undefined,
             });
             const payload = ticket.getPayload();
             if (!payload) throw new Error("ID token inválido");

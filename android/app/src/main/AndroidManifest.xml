@@ -13,6 +13,11 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="${admob_app_id}" />
 
+        <!-- Google OAuth Android Client ID (for native AppAuth) -->
+        <meta-data
+            android:name="com.bisonteapp.google.ANDROID_CLIENT_ID"
+            android:value="${google_android_client_id}" />
+
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
             android:name=".MainActivity"
@@ -35,7 +40,7 @@
 
         </activity>
 
-        <!-- Intent filter for AppAuth redirect using Google-accepted scheme for Web client IDs -->
+        <!-- Intent filter for AppAuth redirect using Google-accepted scheme -->
         <activity
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
             android:exported="true">
@@ -43,8 +48,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- The scheme must be: com.googleusercontent.apps.<clientIdBase> -->
-                <data android:scheme="com.googleusercontent.apps.108242889910-n3ptem16orktkl0klv8onlttfl83r1ul" android:host="oauth2redirect" />
+                <!-- The scheme must be: com.googleusercontent.apps.<clientIdBase> when android client id provided -->
+                <data android:scheme="${google_redirect_scheme}" android:host="oauth2redirect" />
             </intent-filter>
         </activity>
 

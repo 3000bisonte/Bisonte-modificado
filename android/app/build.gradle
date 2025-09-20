@@ -21,9 +21,18 @@ android {
         // Google official test App ID fallback if none provided
         def defaultTestAdmob = 'ca-app-pub-3940256099942544~3347511713'
         def resolvedAdmob = (propAdmob ?: envAdmob) ?: defaultTestAdmob
+
+        // Google OAuth Android Client ID (for native AppAuth flow)
+        def envAndroidClientId = System.getenv('GOOGLE_ANDROID_CLIENT_ID')
+        def propAndroidClientId = project.hasProperty('GOOGLE_ANDROID_CLIENT_ID') ? project.property('GOOGLE_ANDROID_CLIENT_ID') : null
+        def androidClientId = (propAndroidClientId ?: envAndroidClientId) ?: ''
+        def androidClientIdBase = androidClientId ? androidClientId.split('.apps.googleusercontent.com')[0] : ''
+        def googleRedirectScheme = androidClientIdBase ? "com.googleusercontent.apps.${androidClientIdBase}" : 'com.bisonteapp'
         manifestPlaceholders = [
             appAuthRedirectScheme: 'com.bisonteapp',
-            admob_app_id: resolvedAdmob
+            admob_app_id: resolvedAdmob,
+            google_android_client_id: androidClientId,
+            google_redirect_scheme: googleRedirectScheme
         ]
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
