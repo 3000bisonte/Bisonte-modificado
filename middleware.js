@@ -45,14 +45,20 @@ function mainMiddleware(request) {
 		return res;
 	}
 
-	// Force https and canonical www host for bisonteapp.com
-	const isBisonteDomain = host.endsWith('bisonteapp.com');
-	if (isBisonteDomain) {
+	// Canonical host enforcement: always serve on https://www.bisonteapp.com in production
+	const CANONICAL_HOST = 'www.bisonteapp.com';
+	const isProd = process.env.NODE_ENV === 'production';
+	const isLocal = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+	const isVercelPreview = host.endsWith('.vercel.app');
+
+	if (isProd && !isLocal) {
 		let changed = false;
-		if (host === 'bisonteapp.com') {
-			url.hostname = 'www.bisonteapp.com';
+		// Redirect any non-canonical host (except vercel preview domains) to the canonical host
+		if (!isVercelPreview && host !== CANONICAL_HOST) {
+			url.hostname = CANONICAL_HOST;
 			changed = true;
 		}
+		// Enforce https
 		if (url.protocol !== 'https:') {
 			url.protocol = 'https:';
 			changed = true;
