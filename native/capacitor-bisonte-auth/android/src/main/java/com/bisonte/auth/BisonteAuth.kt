@@ -23,9 +23,12 @@ class BisonteAuth : Plugin() {
   private var authRequest: AuthorizationRequest? = null
   private var pendingCall: PluginCall? = null
 
-  // CAMBIO: Usar tu Web Client ID real
+  // CAMBIO: Usar tu Web Client ID real (tipo Web)
   private val clientId = "108242889910-n3ptem16orktkl0klv8onlttfl83r1ul.apps.googleusercontent.com"
-  private val redirectUri = Uri.parse("com.bisonteapp:/oauth2redirect")
+  // Para Google con AppAuth en Android: el esquema permitido para clientes Web es
+  // com.googleusercontent.apps.<client_id_sin_sufijo>:/oauth2redirect
+  private val clientIdBase = clientId.substring(0, clientId.indexOf(".apps.googleusercontent.com"))
+  private val redirectUri = Uri.parse("com.googleusercontent.apps.$clientIdBase:/oauth2redirect")
   private val authEndpoint = Uri.parse("https://accounts.google.com/o/oauth2/v2/auth")
   private val tokenEndpoint = Uri.parse("https://oauth2.googleapis.com/token")
 

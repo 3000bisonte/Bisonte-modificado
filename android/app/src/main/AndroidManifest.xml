@@ -35,6 +35,19 @@
 
         </activity>
 
+        <!-- Intent filter for AppAuth redirect using Google-accepted scheme for Web client IDs -->
+        <activity
+            android:name="net.openid.appauth.RedirectUriReceiverActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- The scheme must be: com.googleusercontent.apps.<clientIdBase> -->
+                <data android:scheme="com.googleusercontent.apps.108242889910-n3ptem16orktkl0klv8onlttfl83r1ul" android:host="oauth2redirect" />
+            </intent-filter>
+        </activity>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
