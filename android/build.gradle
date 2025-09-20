@@ -23,9 +23,36 @@ allprojects {
         google()
         mavenCentral()
     }
+    // Prefer Java 17 for source/target compatibility across modules
     tasks.withType(JavaCompile) {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+// As a compatibility fallback, force ALL Android modules to compile with Java/Kotlin 17
+subprojects { subproj ->
+    subproj.afterEvaluate {
+        def isAndroidModule = subproj.plugins.hasPlugin('com.android.library') || subproj.plugins.hasPlugin('com.android.application')
+        if (isAndroidModule && subproj.hasProperty('android')) {
+            println "Applying Java/Kotlin 17 compileOptions to module: ${subproj.path}"
+            subproj.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+            // Align Kotlin if present
+            try {
+                subproj.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { task ->
+                    if (task.kotlinOptions) {
+                        task.kotlinOptions.jvmTarget = '17'
+                    }
+                }
+            } catch (Throwable ignored) {
+                // Kotlin may not be applied on this module
+            }
+        }
     }
 }
 

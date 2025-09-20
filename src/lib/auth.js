@@ -11,6 +11,17 @@ const googleClient = process.env.GOOGLE_CLIENT_ID
   : null;
 
 const isProd = process.env.NODE_ENV === 'production';
+// Derive cookie domain/secure based on NEXTAUTH_URL to avoid forcing a wrong domain in prod
+const NEXTAUTH_HOST = process.env.NEXTAUTH_URL ? (() => {
+  try { return new URL(process.env.NEXTAUTH_URL).hostname; } catch { return ''; }
+})() : '';
+const NEXTAUTH_SCHEME = process.env.NEXTAUTH_URL ? (() => {
+  try { return new URL(process.env.NEXTAUTH_URL).protocol; } catch { return 'http:'; }
+})() : 'http:';
+// Only set a domain when actually serving on *.bisonteapp.com
+const cookieDomain = (isProd && NEXTAUTH_HOST.endsWith('bisonteapp.com')) ? '.bisonteapp.com' : undefined;
+// Secure cookies only when running over https in prod
+const useSecure = isProd && NEXTAUTH_SCHEME === 'https:';
 
 export const authOptions = {
   providers: [
@@ -165,28 +176,28 @@ export const authOptions = {
         httpOnly: true,
         sameSite: 'lax', // sent on top-level GET navigations
         path: '/',
-        secure: isProd,
-        ...(isProd ? {} : {}),
+        secure: useSecure,
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
       },
     },
     sessionToken: {
       name: isProd ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
       options: {
         httpOnly: true,
-        sameSite: isProd ? 'none' : 'lax',
+        sameSite: useSecure ? 'none' : 'lax',
         path: '/',
-        secure: isProd,
-        ...(isProd ? { domain: '.bisonteapp.com' } : {}),
+        secure: useSecure,
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
       },
     },
     callbackUrl: {
       name: isProd ? '__Secure-next-auth.callback-url' : 'next-auth.callback-url',
       options: {
         httpOnly: true,
-        sameSite: isProd ? 'none' : 'lax',
+        sameSite: useSecure ? 'none' : 'lax',
         path: '/',
-        secure: isProd,
-        ...(isProd ? { domain: '.bisonteapp.com' } : {}),
+        secure: useSecure,
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
       },
     },
     // In some mobile WebViews, PKCE/nonce cookies can be dropped on redirects unless SameSite=None (only needed for OAuth)
@@ -194,10 +205,10 @@ export const authOptions = {
       name: isProd ? '__Secure-next-auth.pkce.code_verifier' : 'next-auth.pkce.code_verifier',
       options: {
         httpOnly: true,
-        sameSite: isProd ? 'none' : 'lax',
+        sameSite: useSecure ? 'none' : 'lax',
         path: '/',
-        secure: isProd,
-        ...(isProd ? { domain: '.bisonteapp.com' } : {}),
+        secure: useSecure,
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
       },
     },
     nonce: {
@@ -206,7 +217,7 @@ export const authOptions = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: isProd,
+        secure: useSecure,
       },
     },
   },
@@ -316,7 +327,7 @@ export const authOptions = {
 
   debug: process.env.NODE_ENV === "development",
   trustHost: true,
-  useSecureCookies: isProd
+  useSecureCookies: useSecure
 };
 
 /**

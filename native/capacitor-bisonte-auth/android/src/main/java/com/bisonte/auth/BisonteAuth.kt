@@ -2,9 +2,20 @@ package com.bisonte.auth
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.result.ActivityResult
 import androidx.browser.customtabs.CustomTabsIntent
-import com.getcapacitor.*
-import net.openid.appauth.*
+import com.getcapacitor.JSObject
+import com.getcapacitor.Plugin
+import com.getcapacitor.PluginCall
+import com.getcapacitor.PluginMethod
+import com.getcapacitor.annotation.ActivityCallback
+import com.getcapacitor.annotation.CapacitorPlugin
+import net.openid.appauth.AuthorizationException
+import net.openid.appauth.AuthorizationRequest
+import net.openid.appauth.AuthorizationResponse
+import net.openid.appauth.AuthorizationService
+import net.openid.appauth.AuthorizationServiceConfiguration
+import net.openid.appauth.ResponseTypeValues
 
 @CapacitorPlugin(name = "BisonteAuth")
 class BisonteAuth : Plugin() {
@@ -38,15 +49,14 @@ class BisonteAuth : Plugin() {
     builder.setNonce(java.util.UUID.randomUUID().toString())
     authRequest = builder.build()
 
-    authService = AuthorizationService(bridge.activity)
+    authService = AuthorizationService(getActivity())
     val customTabsIntent = CustomTabsIntent.Builder().build()
     val authIntent = authService!!.getAuthorizationRequestIntent(authRequest!!, customTabsIntent)
     startActivityForResult(call, authIntent, "handleAuthResult")
   }
 
   @ActivityCallback
-  fun handleAuthResult(result: ActivityResult) {
-    val call = pendingCall ?: return
+  fun handleAuthResult(call: PluginCall, result: ActivityResult) {
     val data: Intent? = result.data
     
     // CAMBIO: Validación más robusta
