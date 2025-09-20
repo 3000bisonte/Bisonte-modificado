@@ -235,7 +235,7 @@ export const authOptions = {
     async signIn() {
       return true;
     },
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger, session, account }) {
       // Initial sign in
       if (user) {
         // Credentials/idToken flow provides all needed fields
@@ -243,6 +243,22 @@ export const authOptions = {
         token.role = user.role;
         token.passwordVersion = user.passwordVersion;
         token.emailVerified = user.emailVerified;
+      }
+
+      // If OAuth account is present (e.g., Google), capture limited metadata for diagnostics
+      // Do NOT expose refresh_token in session; keep only on the token (server-side) if provided
+      if (account) {
+        token.oauth = {
+          provider: account.provider,
+          tokenType: account.token_type || undefined,
+          scope: account.scope || undefined,
+          accessTokenExpires: account.expires_at || undefined,
+        };
+        if (account.refresh_token) {
+          token.hasRefreshToken = true; // boolean only
+          // Store refresh_token internally if you plan to implement token refresh server-side:
+          // token.refreshToken = account.refresh_token; // intentionally not copied to session
+        }
       }
 
       // Check if password was changed (invalidate token)
@@ -272,6 +288,15 @@ export const authOptions = {
         session.user.id = token.userId;
         session.user.role = token.role;
         session.user.emailVerified = token.emailVerified;
+        // Expose only safe OAuth metadata for diagnostics (no actual tokens)
+        if (token.oauth) {
+          session.oauth = {
+            provider: token.oauth.provider,
+            scope: token.oauth.scope,
+            accessTokenExpires: token.oauth.accessTokenExpires,
+            hasRefreshToken: !!token.hasRefreshToken,
+          };
+        }
       }
       return session;
     },
