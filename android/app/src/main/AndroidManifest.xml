@@ -49,7 +49,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <!-- The scheme must be: com.googleusercontent.apps.<clientIdBase> when android client id provided -->
-                <data android:scheme="${google_redirect_scheme}" android:host="oauth2redirect" />
+                <data android:scheme="com.googleusercontent.apps.108242889910-cjl3oa1dvgb6q8ns514pkijn4daf4nig" android:host="oauth2redirect" />
             </intent-filter>
         </activity>
 
