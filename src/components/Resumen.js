@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import MegaSaleModal from "./MegaSaleModal";
 import DescuentoAnunciosModal from "./DescuentoAnunciosModal";
 import BottomNav from "./BottomNav";
+import { useAdMob } from "../services/AdMobService";
 
 // --- Helper Functions ---
 function formatDate(date) {
@@ -46,8 +47,18 @@ export default function Resumen() {
   const [showDestinatario, setShowDestinatario] = useState(false);
   const [showMegaSale, setShowMegaSale] = useState(false);
 
-  // Ad State
-  const [adState, setAdState] = useState("idle"); // idle, preloading, ready, loading, watching, done, error
+  // AdMob Integration
+  const { 
+    isInitialized: adMobInitialized, 
+    isRewardedReady, 
+    isLoading: adMobLoading, 
+    showRewardedAd, 
+    showBanner, 
+    hideBanner 
+  } = useAdMob();
+
+  // Legacy Ad State for backward compatibility
+  const [adState, setAdState] = useState("idle");
   const [retryCount, setRetryCount] = useState(0);
   const adTimeoutRef = useRef(null);
   const MAX_RETRIES = 3;
@@ -77,22 +88,57 @@ export default function Resumen() {
     }
   }, [adState, handleAdError]);
 
-  const showAd = useCallback(() => {
+  const showAd = useCallback(async () => {
     if (costoTotal <= 0) {
       alert("¡Tu envío ya es gratuito! 🎉");
       return;
     }
-    if (adState !== "ready") {
+
+    // Usar nuevo servicio AdMob si está disponible
+    if (adMobInitialized && isRewardedReady) {
+      try {
+        setAdState("loading");
+        console.log("📺 Mostrando anuncio recompensado con AdMob...");
+        
+        const result = await showRewardedAd();
+        
+        if (result?.reward?.amount > 0) {
+          // Aplicar descuento
+          const earnedReward = result.reward.amount || 2013;
+          const currentCotizador = JSON.parse(localStorage.getItem("formCotizador"));
+          
+          if (currentCotizador && typeof currentCotizador.costoTotal === "number") {
+            const nuevoCosto = Math.max(0, currentCotizador.costoTotal - earnedReward);
+            currentCotizador.costoTotal = nuevoCosto;
+            localStorage.setItem("formCotizador", JSON.stringify(currentCotizador));
+            setCotizador(currentCotizador);
+            setCostoTotal(nuevoCosto);
+          }
+          
+          setAdState("done");
+          setTimeout(() => setAdState("idle"), 3000);
+        }
+        
+      } catch (error) {
+        console.error("❌ Error mostrando anuncio AdMob:", error);
+        setAdState("error");
+        setTimeout(() => setAdState("idle"), 3000);
+      }
+      return;
+    }
+
+    // Fallback a interfaz Android legacy
+    if (!isRewardedReady) {
       preloadAd();
       alert("📱 Preparando anuncio. Por favor, espera unos segundos e inténtalo de nuevo.");
       return;
     }
+    
     if (window.AndroidInterface?.showRewardedAd) {
-      console.log("📺 Mostrando anuncio recompensado...");
+      console.log("📺 Mostrando anuncio recompensado (legacy)...");
       setAdState("loading");
       try {
         window.AndroidInterface.showRewardedAd();
-        // Timeout de seguridad por si el anuncio no se muestra
         adTimeoutRef.current = setTimeout(() => {
           if (adState === "loading") handleAdError("show_timeout");
         }, 8000);
@@ -103,7 +149,7 @@ export default function Resumen() {
     } else {
       alert("📱 Los anuncios solo están disponibles en la app móvil.\n💡 Descarga la app para obtener descuentos.");
     }
-  }, [adState, costoTotal, preloadAd, handleAdError]);
+  }, [adState, costoTotal, adMobInitialized, isRewardedReady, showRewardedAd, preloadAd, handleAdError]);
 
   // --- Effects ---
 
@@ -514,15 +560,22 @@ export default function Resumen() {
                 {costoTotal > 0 && (
                   <button
                     onClick={showAd}
-                    disabled={adState === "preloading" || adState === "loading"}
+                    disabled={adMobLoading || adState === "loading" || (!adMobInitialized && !isRewardedReady)}
                     className={`w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-2xl shadow transition-all duration-300 flex items-center justify-center gap-2 ${
-                      (adState === "preloading" || adState === "loading") ? "opacity-50 cursor-not-allowed" : ""
+                      (adMobLoading || adState === "loading" || (!adMobInitialized && !isRewardedReady)) ? "opacity-50 cursor-not-allowed" : ""
                     }`}
                   >
-                    {adState === "preloading" || adState === "loading" ? (
+                    {(adMobLoading || adState === "loading") ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         <span>Preparando...</span>
+                      </>
+                    ) : !adMobInitialized ? (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                        </svg>
+                        <span>Inicializando anuncios...</span>
                       </>
                     ) : (
                       <>

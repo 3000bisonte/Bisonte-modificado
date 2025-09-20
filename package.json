@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@bisonte/capacitor-bisonte-auth": "file:native/capacitor-bisonte-auth",
+    "@capacitor-community/admob": "^7.0.3",
     "@capacitor-firebase/authentication": "^7.3.1",
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
