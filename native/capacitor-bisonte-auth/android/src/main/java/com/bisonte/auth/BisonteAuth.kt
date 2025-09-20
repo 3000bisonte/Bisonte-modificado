@@ -1,6 +1,7 @@
 package com.bisonte.auth
 
 import android.content.Intent
+import android.util.Log
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.result.ActivityResult
@@ -47,8 +48,10 @@ class BisonteAuth : Plugin() {
 
   @PluginMethod
   fun googleSignInCCT(call: PluginCall) {
+    Log.i("BisonteAuth", "googleSignInCCT: Iniciando flujo nativo Google OAuth")
     if (pendingCall != null) {
       call.reject("Another auth in progress")
+      Log.w("BisonteAuth", "googleSignInCCT: Otro flujo de autenticación en progreso")
       return
     }
     pendingCall = call
@@ -68,16 +71,19 @@ class BisonteAuth : Plugin() {
     authService = AuthorizationService(getActivity())
     val customTabsIntent = CustomTabsIntent.Builder().build()
     val authIntent = authService!!.getAuthorizationRequestIntent(authRequest!!, customTabsIntent)
+    Log.i("BisonteAuth", "googleSignInCCT: Lanzando CustomTab con redirectUri=" + redirectUri)
     startActivityForResult(call, authIntent, "handleAuthResult")
   }
 
   @ActivityCallback
   fun handleAuthResult(call: PluginCall, result: ActivityResult) {
+    Log.i("BisonteAuth", "handleAuthResult: Recibido resultado de actividad")
     val data: Intent? = result.data
     
     // CAMBIO: Validación más robusta
     if (data == null) {
       call.reject("No data received from authorization")
+      Log.e("BisonteAuth", "handleAuthResult: No data recibida del intent")
       pendingCall = null
       return
     }
@@ -87,25 +93,31 @@ class BisonteAuth : Plugin() {
     
     if (resp == null) {
       call.reject(ex?.errorDescription ?: "Authorization failed")
+      Log.e("BisonteAuth", "handleAuthResult: AuthorizationResponse es null. Error=" + (ex?.errorDescription ?: "Desconocido"))
       pendingCall = null
       return
     }
 
     val tokenReq = resp.createTokenExchangeRequest()
     authService?.performTokenRequest(tokenReq) { tokenResp, tokenEx ->
+      Log.i("BisonteAuth", "handleAuthResult: Recibiendo respuesta de intercambio de token")
       if (tokenResp != null) {
         val idToken = tokenResp.idToken
         val accessToken = tokenResp.accessToken
+        Log.i("BisonteAuth", "handleAuthResult: idToken=" + (idToken ?: "null") + ", accessToken=" + (accessToken ?: "null"))
         if (!idToken.isNullOrBlank()) {
           val ret = JSObject()
           ret.put("idToken", idToken)
           if (!accessToken.isNullOrBlank()) ret.put("accessToken", accessToken)
           call.resolve(ret)
+          Log.i("BisonteAuth", "handleAuthResult: Autenticación exitosa, idToken entregado")
         } else {
           call.reject("No idToken in token response")
+          Log.e("BisonteAuth", "handleAuthResult: No idToken en la respuesta de token")
         }
       } else {
         call.reject(tokenEx?.errorDescription ?: "Token exchange failed")
+        Log.e("BisonteAuth", "handleAuthResult: Token exchange failed. Error=" + (tokenEx?.errorDescription ?: "Desconocido"))
       }
       pendingCall = null
     }
