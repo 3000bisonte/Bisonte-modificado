@@ -14,8 +14,16 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // Configure manifest placeholders
+        // admob_app_id can be overridden by gradle property ADMOB_APP_ID or ENV ADMOB_APP_ID
+        def envAdmob = System.getenv('ADMOB_APP_ID')
+        def propAdmob = project.hasProperty('ADMOB_APP_ID') ? project.property('ADMOB_APP_ID') : null
+        // Google official test App ID fallback if none provided
+        def defaultTestAdmob = 'ca-app-pub-3940256099942544~3347511713'
+        def resolvedAdmob = (propAdmob ?: envAdmob) ?: defaultTestAdmob
         manifestPlaceholders = [
-            'appAuthRedirectScheme': 'com.bisonteapp'
+            appAuthRedirectScheme: 'com.bisonteapp',
+            admob_app_id: resolvedAdmob
         ]
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
