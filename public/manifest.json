@@ -4,29 +4,29 @@
     "display": "standalone",
     "scope": "/",
     "start_url": "/",
-    "name": "Bisonte logística",
-    "short_name": "Bisonte",
-    "description": "App para envíos en bogotá",
+    "name": "BisonteApp - Logística",
+    "short_name": "BisonteApp",
+    "description": "Aplicación de gestión logística integral",
     "icons": [
         {
-            "src": "/bisonte-logo.png",
+            "src": "/LogoNew.jpg",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/jpeg"
         },
         {
-            "src": "/bisonte-logo.png",
+            "src": "/LogoNew.jpg",
             "sizes": "256x256",
-            "type": "image/png"
+            "type": "image/jpeg"
         },
         {
-            "src": "/bisonte-logo.png",
+            "src": "/LogoNew.jpg",
             "sizes": "384x384",
-            "type": "image/png"
+            "type": "image/jpeg"
         },
         {
-            "src": "/bisonte-logo.png",
+            "src": "/LogoNew.jpg",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/jpeg"
         }
     ]
 }

@@ -10,13 +10,15 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "Bisonte",
-  description: "App para logística",
+  title: "BisonteApp - Logística",
+  description: "Aplicación de gestión logística integral",
   manifest: "/manifest.json",
   icons: {
-    apple: "/icon.png",
+    icon: "/LogoNew.jpg",
+    apple: "/LogoNew.jpg",
+    shortcut: "/LogoNew.jpg",
   },
-  themeColor: "#000000",
+  themeColor: "#41e0b3",
 };
 
 export default function RootLayout({ children }) {
