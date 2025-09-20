@@ -2,6 +2,10 @@
   "appId": "com.bisonteapp",
   "appName": "Bisonte Logística",
   "webDir": "out",
+  "server": {
+    "url": "https://www.bisonteapp.com",
+    "cleartext": false
+  },
   "plugins": {
     "BisonteAuth": {
       "class": "com.bisonte.auth.BisonteAuth"
