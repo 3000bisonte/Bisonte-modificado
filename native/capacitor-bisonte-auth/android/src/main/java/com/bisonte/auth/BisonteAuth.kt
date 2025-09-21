@@ -49,6 +49,14 @@ class BisonteAuth : Plugin() {
   @PluginMethod
   fun googleSignInCCT(call: PluginCall) {
     Log.i("BisonteAuth", "googleSignInCCT: Iniciando flujo nativo Google OAuth")
+    Log.i("BisonteAuth", "googleSignInCCT: clientId='$clientId', redirectUri='$redirectUri'")
+    
+    if (clientId.isBlank()) {
+      call.reject("Android Client ID no configurado. Verifique meta-data en AndroidManifest.xml")
+      Log.e("BisonteAuth", "googleSignInCCT: clientId está vacío")
+      return
+    }
+    
     if (pendingCall != null) {
       call.reject("Another auth in progress")
       Log.w("BisonteAuth", "googleSignInCCT: Otro flujo de autenticación en progreso")

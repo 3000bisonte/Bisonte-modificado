@@ -81,40 +81,73 @@ const LoginForm = ({ callbackUrl }) => {
     setIsLoading(true);
     setErrorMessage("");
     try {
-  let safeTarget = "/home";
-  try {
-    const raw = callbackUrl || "/home";
-    if (typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/api') && !raw.startsWith('/auth') && !raw.startsWith('/login')) {
-      safeTarget = raw;
-    }
-  } catch {}
-  // Prefer native idToken flow inside WebView
-  if (isWebViewRuntime()) {
-        const idToken = await requestGoogleIdToken(12000);
-        if (idToken) {
-          // Use credentials provider with idToken and send user through bridge target afterwards
-          const bridge = buildBridgeCallback(safeTarget);
-          const url = new URL(bridge, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
-          url.searchParams.set('wv', '1');
-          const res = await signIn("credentials", { redirect: true, idToken, callbackUrl: url.toString() });
-          // If redirect true succeeds, we won't reach here; only handle failure
-          if (res && res.error) {
-            throw new Error(res.error);
+      let safeTarget = "/home";
+      try {
+        const raw = callbackUrl || "/home";
+        if (typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/api') && !raw.startsWith('/auth') && !raw.startsWith('/login')) {
+          safeTarget = raw;
+        }
+      } catch {}
+      
+      // Detecta WebView por heurística
+      const ua = (navigator.userAgent || "").toLowerCase();
+      const isWV = /\bwv\b|webview|; wv\)|gsa\//i.test(ua);
+      
+      if (isWV || isWebViewRuntime()) {
+        // Prioriza nuevo plugin BisonteAuth en WebView
+        try {
+          const w = window;
+          const BA = w.Capacitor?.Plugins?.BisonteAuth || w.BisonteAuth;
+          if (BA && typeof BA.googleSignInCCT === "function") {
+            console.log("Usando BisonteAuth plugin para Google Sign-In");
+            const res = await BA.googleSignInCCT();
+            if (res?.idToken) {
+              // Use credentials provider with idToken
+              const bridge = buildBridgeCallback(safeTarget);
+              const url = new URL(bridge, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
+              url.searchParams.set('wv', '1');
+              const authRes = await signIn("credentials", { redirect: true, idToken: res.idToken, callbackUrl: url.toString() });
+              // If redirect true succeeds, we won't reach here; only handle failure
+              if (authRes && authRes.error) {
+                throw new Error(authRes.error);
+              }
+              return;
+            }
+            throw new Error("No se recibió idToken del plugin BisonteAuth");
           }
+          
+          // Fallback al bridge anterior si BisonteAuth no está disponible
+          const idToken = await requestGoogleIdToken(12000);
+          if (idToken) {
+            const bridge = buildBridgeCallback(safeTarget);
+            const url = new URL(bridge, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
+            url.searchParams.set('wv', '1');
+            const res = await signIn("credentials", { redirect: true, idToken, callbackUrl: url.toString() });
+            if (res && res.error) {
+              throw new Error(res.error);
+            }
+            return;
+          }
+        } catch (nativeError) {
+          console.error("Error en flujo nativo:", nativeError);
+          setErrorMessage(`Error en autenticación nativa: ${nativeError.message}`);
+          setIsLoading(false);
           return;
         }
-        // En WebView, no permitir fallback OAuth
-        alert('Dentro de la app (WebView) debes iniciar con el idToken nativo. Verifica la integración de Capacitor.');
+        
+        // En WebView, no permitir fallback OAuth si no hay plugin
+        alert('Dentro de la app (WebView) debes iniciar con el plugin nativo. Verifica la integración de Capacitor.');
         setIsLoading(false);
         return;
       }
+      
       // En navegador, usar OAuth normal
       const cb = safeTarget;
       const url = new URL(cb, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
       await signIn("google", { callbackUrl: url.toString() });
     } catch (error) {
       console.error("Error con Google:", error);
-      setErrorMessage("Error con Google.");
+      setErrorMessage(`Error con Google: ${error.message || error}`);
       setIsLoading(false);
     }
   };
