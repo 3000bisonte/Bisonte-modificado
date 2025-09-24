@@ -1,11 +1,15 @@
 {
 	"appId": "com.bisonteapp",
-	"appName": "Bisonte",
+	"appName": "Bisonte Logística",
 	"webDir": "out",
 	"server": {
-		"androidScheme": "https"
+		"url": "https://www.bisonteapp.com",
+		"cleartext": false
 	},
 	"plugins": {
+		"BisonteAuth": {
+			"class": "com.bisonte.auth.BisonteAuth"
+		},
 		"FirebaseAuthentication": {
 			"skipNativeAuth": false,
 			"providers": [

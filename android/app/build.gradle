@@ -3,10 +3,6 @@ apply plugin: 'com.android.application'
 android {
     namespace "com.bisonteapp"
     compileSdk rootProject.ext.compileSdkVersion
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
     defaultConfig {
         applicationId "com.bisonteapp"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -14,28 +10,6 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        // Configure manifest placeholders
-        // admob_app_id can be overridden by gradle property ADMOB_APP_ID or ENV ADMOB_APP_ID
-        def envAdmob = System.getenv('ADMOB_APP_ID')
-        def propAdmob = project.hasProperty('ADMOB_APP_ID') ? project.property('ADMOB_APP_ID') : null
-        // Google official test App ID fallback if none provided
-        def defaultTestAdmob = 'ca-app-pub-3940256099942544~3347511713'
-        def resolvedAdmob = (propAdmob ?: envAdmob) ?: defaultTestAdmob
-
-        // Google OAuth Android Client ID (for native AppAuth flow)
-        def envAndroidClientId = System.getenv('GOOGLE_ANDROID_CLIENT_ID')
-        def propAndroidClientId = project.hasProperty('GOOGLE_ANDROID_CLIENT_ID') ? project.property('GOOGLE_ANDROID_CLIENT_ID') : null
-        // Usar el client ID hardcodeado como fallback mientras se configura correctamente
-        def fallbackAndroidClientId = '108242889910-cjl3oa1dvgb6q8ns514pkijn4daf4nig.apps.googleusercontent.com'
-        def androidClientId = (propAndroidClientId ?: envAndroidClientId) ?: fallbackAndroidClientId
-        def androidClientIdBase = androidClientId ? androidClientId.split('.apps.googleusercontent.com')[0] : ''
-        def googleRedirectScheme = androidClientIdBase ? "com.googleusercontent.apps.${androidClientIdBase}" : 'com.bisonteapp'
-        manifestPlaceholders = [
-            appAuthRedirectScheme: 'com.bisonteapp',
-            admob_app_id: resolvedAdmob,
-            google_android_client_id: androidClientId,
-            google_redirect_scheme: googleRedirectScheme
-        ]
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
