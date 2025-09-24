@@ -1,0 +1,24 @@
+[
+  { 
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.bisonte_modificado.twa", 
+      "sha256_cert_fingerprints": [
+        "61:0B:EF:96:74:11:7F:A2:9E:8D:5E:22:D1:BB:7B:C8:68:9B:46:45:9D:20:63:ED:38:50:63:A9:E4:49:A6:C8", 
+        "18:B6:CC:7E:AA:7A:9B:97:11:49:14:46:9F:5C:DE:73:C1:1A:4F:50:57:24:F4:4A:60:E4:DC:82:77:3E:E0:40" 
+      ]
+    }
+  },
+  { 
+    "relation": ["delegate_permission/common.use_as_origin"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.bisonte_modificado.twa", 
+      "sha256_cert_fingerprints": [
+        "61:0B:EF:96:74:11:7F:A2:9E:8D:5E:22:D1:BB:7B:C8:68:9B:46:45:9D:20:63:ED:38:50:63:A9:E4:49:A6:C8",
+        "18:B6:CC:7E:AA:7A:9B:97:11:49:14:46:9F:5C:DE:73:C1:1A:4F:50:57:24:F4:4A:60:E4:DC:82:77:3E:E0:40"
+      ]
+    }
+  }
+]
