@@ -1,5 +1,4 @@
 {
-  "extends": "./config/build/tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
