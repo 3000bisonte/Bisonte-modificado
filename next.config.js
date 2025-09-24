@@ -14,6 +14,64 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
+  
+  // 🔒 Security Headers - Críticos para prevenir XSS y otros ataques
+  async headers() {
+    return [
+      {
+        // Aplicar a todas las rutas
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: `
+              default-src 'self';
+              script-src 'self' 'unsafe-eval' 'unsafe-inline' accounts.google.com gstatic.com;
+              style-src 'self' 'unsafe-inline' fonts.googleapis.com;
+              font-src 'self' fonts.gstatic.com;
+              img-src 'self' data: https: blob:;
+              connect-src 'self' accounts.google.com oauth2.googleapis.com www.googleapis.com;
+              frame-src accounts.google.com;
+              object-src 'none';
+              base-uri 'self';
+              form-action 'self';
+              frame-ancestors 'none';
+            `.replace(/\s{2,}/g, ' ').trim()
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(self)'
+          }
+        ],
+      },
+      {
+        // Headers específicos para HTTPS en producción
+        source: '/(.*)',
+        headers: process.env.NODE_ENV === 'production' ? [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload'
+          }
+        ] : [],
+      }
+    ];
+  },
   // Configuración webpack para resolver módulos locales
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
     // Solo configurar alias si no estamos en servidor y el archivo existe

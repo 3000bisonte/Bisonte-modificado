@@ -7,12 +7,12 @@ import prisma from '../libs/prisma';
 const rateLimitStore = new Map();
 
 /**
- * Rate limiting implementation
+ * Enhanced rate limiting with IP and user-based limits
  * @param {string} identifier - IP or user identifier
  * @param {string} action - Action type (login, recovery, etc.)
  * @param {number} maxAttempts - Maximum attempts allowed
  * @param {number} windowMs - Time window in milliseconds
- * @returns {boolean} Whether the request is allowed
+ * @returns {object} Rate limit status and info
  */
 export async function checkRateLimit(identifier, action = 'default', maxAttempts = 5, windowMs = 15 * 60 * 1000) {
   const key = `${action}:${identifier}`;
@@ -23,7 +23,8 @@ export async function checkRateLimit(identifier, action = 'default', maxAttempts
   if (!record || now > record.resetAt) {
     record = {
       count: 0,
-      resetAt: now + windowMs
+      resetAt: now + windowMs,
+      firstAttempt: now
     };
   }
   
@@ -35,7 +36,38 @@ export async function checkRateLimit(identifier, action = 'default', maxAttempts
     cleanupRateLimit();
   }
   
-  return record.count <= maxAttempts;
+  const isAllowed = record.count <= maxAttempts;
+  const resetIn = Math.ceil((record.resetAt - now) / 1000 / 60); // minutes
+  
+  return {
+    allowed: isAllowed,
+    count: record.count,
+    limit: maxAttempts,
+    resetIn,
+    resetAt: record.resetAt
+  };
+}
+
+/**
+ * Advanced rate limiting for login attempts (IP + Email combined)
+ * @param {string} ip - Client IP address
+ * @param {string} email - User email (optional)
+ * @returns {object} Combined rate limit check
+ */
+export async function checkLoginRateLimit(ip, email = null) {
+  const ipLimit = await checkRateLimit(ip, 'login_ip', 20, 15 * 60 * 1000); // 20 per 15min per IP
+  const emailLimit = email ? await checkRateLimit(email, 'login_email', 5, 15 * 60 * 1000) : { allowed: true }; // 5 per 15min per email
+  
+  const isAllowed = ipLimit.allowed && emailLimit.allowed;
+  
+  if (!isAllowed) {
+    const blockReason = !ipLimit.allowed ? 'IP' : 'EMAIL';
+    const resetIn = !ipLimit.allowed ? ipLimit.resetIn : emailLimit.resetIn;
+    
+    throw new Error(`Demasiados intentos desde esta ${blockReason === 'IP' ? 'dirección IP' : 'cuenta'}. Intenta en ${resetIn} minutos.`);
+  }
+  
+  return { ipLimit, emailLimit };
 }
 
 /**
@@ -87,9 +119,9 @@ export async function verifyPassword(password, hash) {
 }
 
 /**
- * Validate password strength
+ * Validate password strength with detailed scoring
  * @param {string} password - Password to validate
- * @returns {object} Validation result
+ * @returns {object} Validation result with strength score
  */
 export function validatePasswordStrength(password) {
   const minLength = 8;
@@ -97,17 +129,37 @@ export function validatePasswordStrength(password) {
   const hasLowerCase = /[a-z]/.test(password);
   const hasNumbers = /\d/.test(password);
   const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const hasNoCommonPatterns = !/(123|abc|password|qwerty|admin)/i.test(password);
+  
+  // Calculate strength score (0-100)
+  let score = 0;
+  if (password.length >= minLength) score += 20;
+  if (password.length >= 12) score += 10;
+  if (hasUpperCase) score += 15;
+  if (hasLowerCase) score += 15;
+  if (hasNumbers) score += 15;
+  if (hasSpecialChar) score += 15;
+  if (hasNoCommonPatterns) score += 10;
   
   const isValid = password.length >= minLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar;
   
+  let strengthText = 'Muy débil';
+  if (score >= 80) strengthText = 'Muy fuerte';
+  else if (score >= 60) strengthText = 'Fuerte';
+  else if (score >= 40) strengthText = 'Moderada';
+  else if (score >= 20) strengthText = 'Débil';
+  
   return {
     isValid,
+    score,
+    strength: strengthText,
     errors: [
       ...(password.length < minLength ? [`Mínimo ${minLength} caracteres`] : []),
       ...(!hasUpperCase ? ['Una letra mayúscula'] : []),
       ...(!hasLowerCase ? ['Una letra minúscula'] : []),
       ...(!hasNumbers ? ['Un número'] : []),
-      ...(!hasSpecialChar ? ['Un carácter especial'] : [])
+      ...(!hasSpecialChar ? ['Un carácter especial'] : []),
+      ...(!hasNoCommonPatterns ? ['Evita patrones comunes'] : [])
     ]
   };
 }

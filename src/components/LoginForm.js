@@ -1,8 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
 import { requestGoogleIdToken } from "../lib/nativeBridge";
+import { validateSchema, loginSchema, ValidationPatterns } from "../lib/validation";
+import { validatePasswordStrength } from "../lib/security";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -12,8 +14,42 @@ const LoginForm = ({ callbackUrl }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [loginAttempts, setLoginAttempts] = useState(0);
   const router = useRouter();
   const { data: session } = useSession();
+
+  // 🔍 Real-time validation
+  const validateField = useCallback((field, value) => {
+    const newErrors = { ...fieldErrors };
+    
+    switch (field) {
+      case 'email':
+        if (!value) {
+          newErrors.email = 'Email es requerido';
+        } else if (!ValidationPatterns.EMAIL.test(value)) {
+          newErrors.email = 'Formato de email inválido';
+        } else {
+          delete newErrors.email;
+        }
+        break;
+        
+      case 'password':
+        if (!value) {
+          newErrors.password = 'Contraseña es requerida';
+        } else if (value.length < 3) {
+          newErrors.password = 'Contraseña muy corta';
+        } else {
+          delete newErrors.password;
+        }
+        break;
+        
+      default:
+        break;
+    }
+    
+    setFieldErrors(newErrors);
+  }, [fieldErrors]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -26,27 +62,50 @@ const LoginForm = ({ callbackUrl }) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage("");
+    setFieldErrors({});
+    
+    // 📋 Client-side validation before submission
+    const validation = validateSchema(loginSchema, { email, password });
+    if (!validation.success) {
+      const newErrors = {};
+      validation.errors.forEach(error => {
+        newErrors[error.field] = error.message;
+      });
+      setFieldErrors(newErrors);
+      setIsLoading(false);
+      return;
+    }
     
     try {
       const res = await signIn("credentials", {
         redirect: false,
-        email,
-        password,
+        email: validation.data.email,
+        password: validation.data.password,
       });
 
       if (res?.error) {
-        if (
-          res.error.toLowerCase().includes("no user") ||
-          res.error.toLowerCase().includes("not found")
-        ) {
+        setLoginAttempts(prev => prev + 1);
+        
+        // 🛡️ Enhanced error handling with specific messages
+        if (res.error.toLowerCase().includes("rate limit") || 
+            res.error.toLowerCase().includes("demasiados intentos")) {
+          setErrorMessage(res.error);
+        } else if (res.error.toLowerCase().includes("cuenta bloqueada") || 
+                   res.error.toLowerCase().includes("locked")) {
+          setErrorMessage("Tu cuenta ha sido temporalmente bloqueada por seguridad. Intenta más tarde.");
+        } else if (res.error.toLowerCase().includes("no user") ||
+                   res.error.toLowerCase().includes("not found")) {
           setErrorMessage(
             "El correo no está registrado. Por favor regístrate o inicia sesión con Google."
           );
+        } else if (res.error.toLowerCase().includes("datos inválidos")) {
+          setErrorMessage("Por favor verifica que el email y contraseña sean correctos.");
         } else {
           setErrorMessage(
             "Correo o contraseña incorrectos. Si no tienes cuenta, regístrate o usa Google."
           );
         }
+        
         setIsLoading(false);
         if (typeof window !== "undefined") {
           localStorage.removeItem("passwordRegistro");
@@ -214,11 +273,30 @@ const LoginForm = ({ callbackUrl }) => {
                 <input
                   type="email"
                   placeholder="tu@email.com"
-                  className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm sm:text-base"
+                  className={`w-full pl-10 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm sm:text-base ${
+                    fieldErrors.email 
+                      ? 'border-red-400 focus:ring-red-400' 
+                      : 'border-white/20 focus:ring-teal-400'
+                  }`}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEmail(value);
+                    validateField('email', value);
+                  }}
+                  onBlur={(e) => validateField('email', e.target.value)}
                   required
+                  aria-invalid={!!fieldErrors.email}
+                  aria-describedby={fieldErrors.email ? "email-error" : undefined}
                 />
+                {fieldErrors.email && (
+                  <div id="email-error" className="text-red-400 text-xs mt-1 flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {fieldErrors.email}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -236,11 +314,30 @@ const LoginForm = ({ callbackUrl }) => {
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm sm:text-base"
+                  className={`w-full pl-10 pr-12 py-3 bg-white/10 border rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm sm:text-base ${
+                    fieldErrors.password 
+                      ? 'border-red-400 focus:ring-red-400' 
+                      : 'border-white/20 focus:ring-teal-400'
+                  }`}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPassword(value);
+                    validateField('password', value);
+                  }}
+                  onBlur={(e) => validateField('password', e.target.value)}
                   required
+                  aria-invalid={!!fieldErrors.password}
+                  aria-describedby={fieldErrors.password ? "password-error" : undefined}
                 />
+                {fieldErrors.password && (
+                  <div id="password-error" className="text-red-400 text-xs mt-1 flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {fieldErrors.password}
+                  </div>
+                )}
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center hover:bg-white/5 rounded-r-xl transition-colors"

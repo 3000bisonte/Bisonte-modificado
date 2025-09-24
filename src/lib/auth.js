@@ -3,7 +3,9 @@ import { headers } from 'next/headers';
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { OAuth2Client } from "google-auth-library";
-import { verifyPassword, hashPassword } from "./security";
+import { verifyPassword, hashPassword, checkLoginRateLimit, getClientIP, getClientUserAgent } from "./security";
+import { validateSchema, loginSchema, googleIdTokenSchema } from "./validation";
+import { logSecurityEvent, SecurityEvents } from "./monitoring";
 import prisma from "../libs/prisma";
 
 const googleClient = process.env.GOOGLE_CLIENT_ID
@@ -58,35 +60,67 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
         idToken: { label: "Google ID Token", type: "text" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
+        // 🛡️ Get client information for security logging
+        const clientIP = req ? getClientIP(req) : 'unknown';
+        const userAgent = req ? getClientUserAgent(req) : 'unknown';
+
         // Path A: Native Google Sign-In via ID Token (no OAuth redirect, ideal para WebView)
         if (credentials?.idToken) {
+          // 📋 Validate Google ID Token structure
+          const validation = validateSchema(googleIdTokenSchema, { idToken: credentials.idToken });
+          if (!validation.success) {
+            console.error('[Auth] Invalid Google ID Token format:', validation.errors);
+            throw new Error("Formato de token inválido");
+          }
+
           if (!googleClient || !process.env.GOOGLE_CLIENT_ID) {
             throw new Error("Falta GOOGLE_CLIENT_ID para validar idToken");
           }
+          
           try {
+            // 🔍 Rate limiting for Google OAuth (more lenient than password login)
+            await checkLoginRateLimit(clientIP);
+            
             const audiences = [
               process.env.GOOGLE_CLIENT_ID,
               process.env.GOOGLE_ANDROID_CLIENT_ID,
               process.env.GOOGLE_IOS_CLIENT_ID,
             ].filter(Boolean);
+            
             const ticket = await googleClient.verifyIdToken({
               idToken: credentials.idToken,
               audience: audiences.length ? audiences : undefined,
             });
+            
             const payload = ticket.getPayload();
             if (!payload) throw new Error("ID token inválido");
+            
             const email = (payload.email || "").toLowerCase();
             if (!email || payload.email_verified === false) {
               throw new Error("Email no verificado en Google");
             }
+            
             const name = payload.name || email;
+            
+            // 📊 Enhanced security logging for OAuth success
+            await logSecurityEvent(SecurityEvents.OAUTH_SUCCESS, {
+              email,
+              ip: clientIP,
+              userAgent,
+              success: true,
+              provider: 'google'
+            });
+            
             // Upsert user in DB
             const dbUser = await prisma.usuarios.upsert({
               where: { email },
               update: {
                 nombre: name,
                 emailVerified: true,
+                lastLoginAt: new Date(),
+                failedLogins: 0, // Reset failed attempts on successful OAuth
+                lockedUntil: null
               },
               create: {
                 email,
@@ -94,6 +128,7 @@ export const authOptions = {
                 emailVerified: true,
                 esAdministrador: false,
                 esRecolector: false,
+                lastLoginAt: new Date()
               },
             });
             return {
@@ -105,30 +140,86 @@ export const authOptions = {
               emailVerified: !!dbUser.emailVerified,
             };
           } catch (e) {
-            try { console.warn('[credentials authorize] idToken verify failed:', e); } catch {}
+            // 📊 Log OAuth failure
+            await logSecurityEvent(SecurityEvents.OAUTH_FAILED, {
+              ip: clientIP,
+              userAgent,
+              success: false,
+              provider: 'google',
+              error: e.message,
+              metadata: { idTokenPresent: !!credentials.idToken }
+            });
+            
+            console.warn('[credentials authorize] idToken verify failed:', e);
             throw new Error("No se pudo validar el ID token de Google");
           }
         }
 
         // Path B: Credenciales clásicas (email/password)
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email y contraseña son requeridos");
+        // 📋 Validate login form data
+        const validation = validateSchema(loginSchema, {
+          email: credentials?.email || "",
+          password: credentials?.password || ""
+        });
+        
+        if (!validation.success) {
+          const errorMessages = validation.errors.map(e => e.message).join(', ');
+          throw new Error(`Datos inválidos: ${errorMessages}`);
+        }
+
+        const { email, password } = validation.data;
+
+        // 🛡️ Enhanced rate limiting (IP + Email)
+        try {
+          await checkLoginRateLimit(clientIP, email);
+        } catch (rateLimitError) {
+          // 📊 Log rate limit exceeded
+          await logSecurityEvent(SecurityEvents.RATE_LIMIT_EXCEEDED, {
+            email,
+            ip: clientIP,
+            userAgent,
+            success: false,
+            error: rateLimitError.message
+          });
+          
+          console.warn(`[Auth] Rate limit exceeded for ${email} from IP: ${clientIP}`);
+          throw rateLimitError;
         }
 
         // Find user in database
         const user = await prisma.usuarios.findUnique({
-          where: {
-            email: credentials.email.toLowerCase()
-          }
+          where: { email }
         });
 
         if (!user || !user.password) {
+          // 📊 Log failed attempt for non-existent user
+          await logSecurityEvent(SecurityEvents.LOGIN_FAILED, {
+            email,
+            ip: clientIP,
+            userAgent,
+            success: false,
+            error: 'User not found or no password',
+            metadata: { userExists: !!user, hasPassword: !!(user?.password) }
+          });
+          
+          console.warn(`[Auth] Failed login attempt for non-existent user: ${email} from IP: ${clientIP}`);
           throw new Error("Credenciales inválidas");
         }
 
         // Check if account is locked
         if (user.lockedUntil && user.lockedUntil > new Date()) {
           const unlockTime = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+          
+          // 📊 Log blocked login attempt
+          await logSecurityEvent(SecurityEvents.LOGIN_BLOCKED, {
+            userId: user.id.toString(),
+            email,
+            ip: clientIP,
+            userAgent,
+            success: false,
+            metadata: { unlockTime, lockedUntil: user.lockedUntil }
+          });
+          
           throw new Error(`Cuenta bloqueada. Intenta en ${unlockTime} minutos.`);
         }
 
@@ -136,21 +227,54 @@ export const authOptions = {
         const isValidPassword = await verifyPassword(credentials.password, user.password);
 
         if (!isValidPassword) {
-          // Increment failed login attempts
+          // Increment failed login attempts with progressive lockout
           const failedLogins = user.failedLogins + 1;
           const shouldLock = failedLogins >= 5;
+          
+          // Progressive lockout: 30 min after 5 attempts, 2 hours after 10
+          const lockDuration = failedLogins >= 10 ? 2 * 60 * 60 * 1000 : 30 * 60 * 1000;
           
           await prisma.usuarios.update({
             where: { id: user.id },
             data: {
               failedLogins,
-              lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null // 30 min lock
+              lockedUntil: shouldLock ? new Date(Date.now() + lockDuration) : null
+            }
+          });
+
+          // 📊 Enhanced security logging for failed password attempts
+          const eventType = shouldLock ? SecurityEvents.ACCOUNT_LOCKED : SecurityEvents.LOGIN_FAILED;
+          await logSecurityEvent(eventType, {
+            userId: user.id.toString(),
+            email,
+            ip: clientIP,
+            userAgent,
+            success: false,
+            attempts: failedLogins,
+            error: 'Invalid password',
+            metadata: { 
+              shouldLock, 
+              lockDuration: shouldLock ? lockDuration : null,
+              previousFailedLogins: user.failedLogins 
             }
           });
 
           throw new Error("Credenciales inválidas");
         }
 
+        // 📊 Enhanced security logging for successful login
+        await logSecurityEvent(SecurityEvents.LOGIN_SUCCESS, {
+          userId: user.id.toString(),
+          email,
+          ip: clientIP,
+          userAgent,
+          success: true,
+          metadata: { 
+            previousFailedLogins: user.failedLogins,
+            wasLocked: !!(user.lockedUntil && user.lockedUntil > new Date())
+          }
+        });
+        
         // Reset failed login attempts and update last login
         await prisma.usuarios.update({
           where: { id: user.id },
