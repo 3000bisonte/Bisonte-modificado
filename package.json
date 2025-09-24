@@ -1,10 +1,18 @@
 {
-  "name": "nextjs-pwa-example",
-  "version": "0.1.0",
+  "name": "bisonte-logistica",
+  "version": "1.0.0",
   "private": true,
+  "description": "Plataforma completa de gestión logística con capacidades móviles y web",
+  "keywords": ["logistics", "nextjs", "capacitor", "mobile", "web"],
+  "author": "Bisonte Logística Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/3000bisonte/bisonte-modificado"
+  },
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
-    "prebuild": "node scripts/prebuild-verify.js && node scripts/prebuild-env-check.js && npm run build:plugin",
+    "prebuild": "node scripts/build/prebuild-verify.js && node scripts/build/prebuild-env-check.js && npm run build:plugin",
     "build": "next build",
     "build:plugin": "cd native/capacitor-bisonte-auth && npm run build",
     "start": "next start",
