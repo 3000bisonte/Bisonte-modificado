@@ -18,7 +18,7 @@
   },
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
-    "prebuild": "node scripts/build/prebuild-verify.js && node scripts/build/prebuild-env-check.js && npm run build:plugin",
+  "prebuild": "node scripts/build/prebuild-verify.js && node scripts/build/prebuild-env-check.js && node scripts/build/build-plugin.js",
     "build": "next build",
     "build:analyze": "ANALYZE=true npm run build",
     "build:plugin": "cd native/capacitor-bisonte-auth && npm run build",
