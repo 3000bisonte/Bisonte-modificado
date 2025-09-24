@@ -60,16 +60,18 @@ const nextConfig = {
           }
         ],
       },
-      {
-        // Headers específicos para HTTPS en producción
-        source: '/(.*)',
-        headers: process.env.NODE_ENV === 'production' ? [
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=31536000; includeSubDomains; preload'
-          }
-        ] : [],
-      }
+      // Headers específicos para HTTPS en producción solo si es producción
+      ...(process.env.NODE_ENV === 'production' ? [
+        {
+          source: '/(.*)',
+          headers: [
+            {
+              key: 'Strict-Transport-Security',
+              value: 'max-age=31536000; includeSubDomains; preload'
+            }
+          ]
+        }
+      ] : [])
     ];
   },
   // Configuración webpack para resolver módulos locales

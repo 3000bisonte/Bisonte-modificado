@@ -1,3 +1,4 @@
+import 'server-only'
 // Security utilities for authentication and rate limiting
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';

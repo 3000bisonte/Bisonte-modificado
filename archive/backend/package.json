@@ -1,0 +1,26 @@
+{
+  "name": "bisonte-logistica-backend",
+  "version": "1.0.0",
+  "description": "Backend services for Bisonte Logística",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "cors": "^2.8.5",
+    "helmet": "^6.0.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.0",
+    "jest": "^29.0.0",
+    "eslint": "^8.0.0"
+  },
+  "keywords": ["logistics", "backend", "api"],
+  "author": "Bisonte Team",
+  "license": "MIT"
+}

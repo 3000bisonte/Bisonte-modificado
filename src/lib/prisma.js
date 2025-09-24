@@ -1,3 +1,4 @@
+import 'server-only'
 import { PrismaClient } from "@prisma/client";
 
 // Global is used here to maintain a cached connection across hot reloads in development

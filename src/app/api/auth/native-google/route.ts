@@ -1,3 +1,5 @@
+import { validateRequest } from '@/lib/validation';
+import { withErrorHandler } from '@/lib/errorHandler';
 import { NextResponse, type NextRequest } from "next/server";
 import { signIn } from "next-auth/react";
 

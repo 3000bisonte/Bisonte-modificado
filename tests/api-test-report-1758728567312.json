@@ -1,0 +1,465 @@
+{
+  "timestamp": "2025-09-24T15:42:47.311Z",
+  "baseUrl": "http://localhost:3000",
+  "results": {
+    "passed": 15,
+    "failed": 4,
+    "skipped": 0,
+    "results": [
+      {
+        "name": "Health Check - Root",
+        "method": "GET",
+        "endpoint": "/",
+        "expectedStatus": 200,
+        "status": "PASSED",
+        "actualStatus": 200,
+        "responseTime": 412,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:37.474Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "text/html"
+          },
+          "data": "OK"
+        }
+      },
+      {
+        "name": "API Health",
+        "method": "GET",
+        "endpoint": "/api/health",
+        "expectedStatus": 200,
+        "status": "PASSED",
+        "actualStatus": 200,
+        "responseTime": 279,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:37.888Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok",
+            "endpoint": "/api/health"
+          }
+        }
+      },
+      {
+        "name": "API Status",
+        "method": "GET",
+        "endpoint": "/api/status",
+        "expectedStatus": 200,
+        "status": "PASSED",
+        "actualStatus": 200,
+        "responseTime": 376,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:38.169Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok",
+            "endpoint": "/api/status"
+          }
+        }
+      },
+      {
+        "name": "Auth Error Handler",
+        "method": "GET",
+        "endpoint": "/api/auth/error",
+        "expectedStatus": 200,
+        "status": "PASSED",
+        "actualStatus": 200,
+        "responseTime": 934,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:38.547Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok"
+          }
+        }
+      },
+      {
+        "name": "Google GIS Auth",
+        "method": "GET",
+        "endpoint": "/api/auth/gis",
+        "expectedStatus": 200,
+        "status": "PASSED",
+        "actualStatus": 200,
+        "responseTime": 515,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:39.483Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok"
+          }
+        }
+      },
+      {
+        "name": "Admin without Auth",
+        "method": "GET",
+        "endpoint": "/api/admin",
+        "expectedStatus": 401,
+        "status": "PASSED",
+        "actualStatus": 401,
+        "responseTime": 184,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:39.999Z",
+        "response": {
+          "statusCode": 401,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "error": "Unauthorized"
+          }
+        }
+      },
+      {
+        "name": "Password Request - No Data",
+        "method": "POST",
+        "endpoint": "/api/auth/password/request",
+        "expectedStatus": 400,
+        "status": "FAILED",
+        "actualStatus": 200,
+        "responseTime": 534,
+        "error": "Expected status 400, got 200",
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:40.183Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok"
+          }
+        }
+      },
+      {
+        "name": "Password Change - No Data",
+        "method": "POST",
+        "endpoint": "/api/auth/password/change",
+        "expectedStatus": 400,
+        "status": "FAILED",
+        "actualStatus": 200,
+        "responseTime": 866,
+        "error": "Expected status 400, got 200",
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:40.718Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok"
+          }
+        }
+      },
+      {
+        "name": "Users List",
+        "method": "GET",
+        "endpoint": "/api/users",
+        "expectedStatus": 200,
+        "status": "PASSED",
+        "actualStatus": 200,
+        "responseTime": 1069,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:41.587Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok",
+            "endpoint": "/api/users"
+          }
+        }
+      },
+      {
+        "name": "Clients List",
+        "method": "GET",
+        "endpoint": "/api/clients",
+        "expectedStatus": 200,
+        "status": "PASSED",
+        "actualStatus": 200,
+        "responseTime": 448,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:42.657Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok",
+            "endpoint": "/api/clients"
+          }
+        }
+      },
+      {
+        "name": "Orders List",
+        "method": "GET",
+        "endpoint": "/api/orders",
+        "expectedStatus": 200,
+        "status": "PASSED",
+        "actualStatus": 200,
+        "responseTime": 191,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:43.107Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok",
+            "endpoint": "/api/orders"
+          }
+        }
+      },
+      {
+        "name": "Deliveries List",
+        "method": "GET",
+        "endpoint": "/api/deliveries",
+        "expectedStatus": 200,
+        "status": "PASSED",
+        "actualStatus": 200,
+        "responseTime": 292,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:43.299Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok",
+            "endpoint": "/api/deliveries"
+          }
+        }
+      },
+      {
+        "name": "Analytics",
+        "method": "GET",
+        "endpoint": "/api/analytics",
+        "expectedStatus": 200,
+        "status": "PASSED",
+        "actualStatus": 200,
+        "responseTime": 1109,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:43.591Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok",
+            "endpoint": "/api/analytics"
+          }
+        }
+      },
+      {
+        "name": "Create User - No Data",
+        "method": "POST",
+        "endpoint": "/api/users",
+        "expectedStatus": 400,
+        "status": "PASSED",
+        "actualStatus": 400,
+        "responseTime": 205,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:44.702Z",
+        "response": {
+          "statusCode": 400,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "error": "Bad Request"
+          }
+        }
+      },
+      {
+        "name": "Create Client - No Data",
+        "method": "POST",
+        "endpoint": "/api/clients",
+        "expectedStatus": 400,
+        "status": "PASSED",
+        "actualStatus": 400,
+        "responseTime": 288,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:44.908Z",
+        "response": {
+          "statusCode": 400,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "error": "Bad Request"
+          }
+        }
+      },
+      {
+        "name": "Create Order - No Data",
+        "method": "POST",
+        "endpoint": "/api/orders",
+        "expectedStatus": 400,
+        "status": "PASSED",
+        "actualStatus": 400,
+        "responseTime": 477,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:45.196Z",
+        "response": {
+          "statusCode": 400,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "error": "Bad Request"
+          }
+        }
+      },
+      {
+        "name": "Non-existent Endpoint",
+        "method": "GET",
+        "endpoint": "/api/non-existent",
+        "expectedStatus": 404,
+        "status": "PASSED",
+        "actualStatus": 404,
+        "responseTime": 805,
+        "error": null,
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:45.676Z",
+        "response": {
+          "statusCode": 404,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "error": "Not Found"
+          }
+        }
+      },
+      {
+        "name": "Invalid Method",
+        "method": "DELETE",
+        "endpoint": "/api/auth/error",
+        "expectedStatus": 405,
+        "status": "FAILED",
+        "actualStatus": 200,
+        "responseTime": 344,
+        "error": "Expected status 405, got 200",
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:46.483Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok"
+          }
+        }
+      },
+      {
+        "name": "Malformed JSON",
+        "method": "POST",
+        "endpoint": "/api/users",
+        "expectedStatus": 400,
+        "status": "FAILED",
+        "actualStatus": 200,
+        "responseTime": 468,
+        "error": "Expected status 400, got 200",
+        "warnings": [
+          "Missing security headers: x-frame-options, x-content-type-options, x-xss-protection"
+        ],
+        "timestamp": "2025-09-24T15:42:46.827Z",
+        "response": {
+          "statusCode": 200,
+          "headers": {
+            "content-type": "application/json"
+          },
+          "data": {
+            "status": "ok",
+            "endpoint": "/api/users"
+          }
+        }
+      }
+    ],
+    "errors": [],
+    "summary": {
+      "total": 19,
+      "successRate": 79,
+      "avgResponseTime": 516,
+      "warningCount": 19
+    }
+  },
+  "environment": {
+    "nodeVersion": "v24.5.0",
+    "platform": "win32"
+  }
+}

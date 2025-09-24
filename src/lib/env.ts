@@ -1,4 +1,5 @@
 // Centralized environment validation using envalid
+import 'server-only'
 // Validates at import time to fail fast in dev, CI, and during build
 import { cleanEnv, str, url, num, bool, email, makeValidator } from 'envalid'
 
@@ -11,8 +12,8 @@ const commaSeparated = makeValidator<string[]>((input) => {
 // Note: NEXT_PUBLIC_* vars are exposed to the client bundle by Next.js
 // Keep secrets server-side only (non NEXT_PUBLIC_)
 export const env = cleanEnv(process.env, {
-  // Node/Build context
-  NODE_ENV: str({ choices: ['development', 'test', 'production'] }),
+  // Node/Build context - NODE_ENV with default for client-side compatibility
+  NODE_ENV: str({ choices: ['development', 'test', 'production'], default: 'development' }),
   APP_VERSION: str({ default: 'dev' }),
 
   // Database (use one of the URLs depending on provider)

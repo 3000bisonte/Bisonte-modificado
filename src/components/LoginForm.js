@@ -4,7 +4,7 @@ import { signIn, useSession } from "next-auth/react";
 import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
 import { requestGoogleIdToken } from "../lib/nativeBridge";
 import { validateSchema, loginSchema, ValidationPatterns } from "../lib/validation";
-import { validatePasswordStrength } from "../lib/security";
+// NOTE: Do not import server-only modules here (like ../lib/security) because it pulls prisma/env into the client bundle
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 

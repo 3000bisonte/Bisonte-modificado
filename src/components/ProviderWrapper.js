@@ -1,8 +1,7 @@
-// components/ProviderWrapper.js
-// "use client"; // Esto indica que este componente solo funciona en el cliente
+"use client";
 
-// import { MessagePortProvider } from "../app/context/MessagePortContext";
+import { MessagePortProvider } from "../app/context/MessagePortContext";
 
-// export function ProviderWrapper({ children }) {
-//   return <MessagePortProvider>{children}</MessagePortProvider>;
-// }
+export function ProviderWrapper({ children }) {
+  return <MessagePortProvider>{children}</MessagePortProvider>;
+}

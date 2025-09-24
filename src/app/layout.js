@@ -1,38 +1,22 @@
-import "./globals.css";
-import { Providers } from "./Providers";
-import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
-import ConnectionHandler from "../components/ConnectionHandler";
-import CapacitorPluginInit from "../components/CapacitorPluginInit";
+import './globals.css';
+import { Inter } from 'next/font/google';
+import { Providers } from './Providers';
 
-// Force dynamic rendering for all routes to avoid static prerender errors
-// when client hooks like usePathname/useRouter are used in shared components
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: "BisonteApp - Logística",
-  description: "Aplicación de gestión logística integral",
-  manifest: "/manifest.json",
-  icons: {
-    icon: "/LogoNew.jpg",
-    apple: "/LogoNew.jpg",
-    shortcut: "/LogoNew.jpg",
-  },
-  themeColor: "#41e0b3",
+  title: 'Bisonte Logística',
+  description: 'Sistema de gestión logística integral',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </head>
-      <body>
+      <body className={inter.className}>
         <Providers>
-          <CapacitorPluginInit />
-          <ServiceWorkerRegister />
-          <ConnectionHandler />
-          {children}
+          <div className="min-h-screen bg-gray-50">
+            {children}
+          </div>
         </Providers>
       </body>
     </html>
