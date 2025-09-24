@@ -10,8 +10,8 @@
     "strict": false,
     "noEmit": true,
     "incremental": true,
-    "module": "esnext",
     "esModuleInterop": true,
+    "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -20,13 +20,7 @@
       {
         "name": "next"
       }
-    ],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": [
-        "src/*"
-      ]
-    }
+    ]
   },
   "include": [
     "next-env.d.ts",
@@ -35,14 +29,6 @@
     "**/*.tsx"
   ],
   "exclude": [
-  "node_modules",
-  "frontend",
-  "backend",
-  "netlify",
-  "netlify-bisonte-api",
-  "api-server",
-  "apps",
-  "archive",
-  "legacy"
+    "node_modules"
   ]
 }
