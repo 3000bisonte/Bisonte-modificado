@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { validateRequest } from '@/lib/validation';
 import { withErrorHandler } from '@/lib/errorHandler';
 import { withAuth } from '@/lib/auth';
 
 
 // GET handler
-export const GET = withErrorHandler(async (request: NextRequest) => {
+export const GET = withErrorHandler(async (request) => {
   
   
   try {
@@ -26,7 +26,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 });
 
 // POST handler
-export const POST = withErrorHandler(async (request: NextRequest) => {
+export const POST = withErrorHandler(async (request) => {
   
   
   try {
