@@ -2,31 +2,100 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@/app/*": ["./src/app/*"],
-      "@/pages/*": ["./src/pages/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/ui/*": ["./src/components/ui/*"],
-      "@/forms/*": ["./src/components/forms/*"],
-      "@/layout/*": ["./src/components/layout/*"],
-      "@/lib/*": ["./src/lib/*"],
-      "@/utils/*": ["./src/lib/utils/*"],
-      "@/hooks/*": ["./src/lib/hooks/*"],
-      "@/services/*": ["./src/lib/services/*"],
-      "@/api/*": ["./src/lib/api/*"],
-      "@/config/*": ["./config/*"],
-      "@/types/*": ["./types/*"],
-      "@/constants/*": ["./src/constants/*"],
-      "@/mobile/*": ["./mobile/*"],
-      "@/native/*": ["./native/*"],
-      "@/capacitor/*": ["./native/capacitor-*"],
-      "@/tests/*": ["./tests/*"],
-      "@/scripts/*": ["./scripts/*"],
-      "@/docs/*": ["./docs/*"],
-      "@/public/*": ["./public/*"],
-      "@/assets/*": ["./public/assets/*"],
-      "@/images/*": ["./public/images/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ],
+      "@/app/*": [
+        "./src/app/*"
+      ],
+      "@/pages/*": [
+        "./src/pages/*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/ui/*": [
+        "./src/components/ui/*"
+      ],
+      "@/forms/*": [
+        "./src/components/forms/*"
+      ],
+      "@/layout/*": [
+        "./src/components/layout/*"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/utils/*": [
+        "./src/lib/utils/*"
+      ],
+      "@/hooks/*": [
+        "./src/lib/hooks/*"
+      ],
+      "@/services/*": [
+        "./src/lib/services/*"
+      ],
+      "@/api/*": [
+        "./src/lib/api/*"
+      ],
+      "@/config/*": [
+        "./config/*"
+      ],
+      "@/types/*": [
+        "./types/*"
+      ],
+      "@/constants/*": [
+        "./src/constants/*"
+      ],
+      "@/mobile/*": [
+        "./mobile/*"
+      ],
+      "@/native/*": [
+        "./native/*"
+      ],
+      "@/capacitor/*": [
+        "./native/capacitor-*"
+      ],
+      "@/tests/*": [
+        "./tests/*"
+      ],
+      "@/scripts/*": [
+        "./scripts/*"
+      ],
+      "@/docs/*": [
+        "./docs/*"
+      ],
+      "@/public/*": [
+        "./public/*"
+      ],
+      "@/assets/*": [
+        "./public/assets/*"
+      ],
+      "@/images/*": [
+        "./public/images/*"
+      ]
+    },
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
     "next-env.d.ts",

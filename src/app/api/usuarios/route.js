@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 // Usar el singleton central en lugar de instanciar PrismaClient aquí para evitar demasiadas conexiones.
 import prisma from "../../../libs/prisma";
 
+// Ensure this route always runs dynamically on Node.js runtime (needed for Prisma)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
 export async function GET() {
   try {
     const usuarios = await prisma.usuarios.findMany({

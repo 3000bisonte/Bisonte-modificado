@@ -1,25 +1,31 @@
 import { NextResponse } from 'next/server';
-import { validateRequest } from '@/lib/validation';
+import prisma from '@/libs/prisma';
+import { validateRequest } from '@/lib/validation.ts';
 import { withErrorHandler } from '@/lib/errorHandler';
-import { withAuth } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 
 
 // GET handler
-export const GET = withErrorHandler(async (request) => {
-  
-  
+export const GET = withErrorHandler(async () => {
   try {
-    // TODO: Implement clients GET logic
-    const data = {
-      message: 'clients GET endpoint',
-      timestamp: new Date().toISOString()
-    };
-
-    return NextResponse.json(data, { status: 200 });
+    const clientes = await prisma.usuarios.findMany({
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        celular: true,
+        ciudad: true,
+      },
+      orderBy: { id: 'desc' },
+    });
+    return NextResponse.json({ success: true, data: clientes }, { status: 200 });
   } catch (error) {
     console.error('clients GET error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Error al obtener clientes', details: error.message },
       { status: 500 }
     );
   }
@@ -27,26 +33,32 @@ export const GET = withErrorHandler(async (request) => {
 
 // POST handler
 export const POST = withErrorHandler(async (request) => {
-  
-  
   try {
     const body = await request.json();
-    
-    // TODO: Add validation schema
-    // const validatedData = await validateRequest(body, clientsSchema);
-    
-    // TODO: Implement clients POST logic
-    const result = {
-      message: 'clients created successfully',
-      data: body,
-      timestamp: new Date().toISOString()
-    };
 
-    return NextResponse.json(result, { status: 201 });
+    // Basic validation using our helper
+    const validated = await validateRequest(body, {
+      nombre: { type: 'string', required: true, min: 2, max: 100 },
+      email: { type: 'string', required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+      celular: { type: 'string', required: false },
+      ciudad: { type: 'string', required: false },
+    });
+
+    const created = await prisma.usuarios.create({
+      data: {
+        nombre: validated.nombre,
+        email: validated.email.toLowerCase(),
+        celular: validated.celular ?? null,
+        ciudad: validated.ciudad ?? null,
+      },
+      select: { id: true, nombre: true, email: true, celular: true, ciudad: true },
+    });
+
+    return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
     console.error('clients POST error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Error al crear cliente', details: error.message },
       { status: 500 }
     );
   }
