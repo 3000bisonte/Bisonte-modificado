@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from "next-auth/middleware";
+// Importar funciones de seguridad
+import { SecurityHeadersService } from './src/lib/securityHeaders.js';
 
 // Combined middleware: handles auth protection + WebView fixes + canonical host
 // Nota: Para Capacitor, el flujo de Google es SIEMPRE nativo (sin OAuth). Este middleware solo maneja errores genéricos.
@@ -81,13 +83,59 @@ function mainMiddleware(request) {
 	return NextResponse.next();
 }
 
-// Auth-protected middleware wrapper
+// Auth-protected middleware wrapper with security enhancements
 export default withAuth(
   async function authMiddleware(req) {
-    // First run the main middleware logic
+    // 🛡️ SECURITY CHECKS FIRST
+    const clientIP = getClientIP(req);
+    const { pathname } = req.nextUrl;
+    
+    // Rate limiting
+    if (isRateLimited(clientIP, pathname)) {
+      return new NextResponse('Too Many Requests', { 
+        status: 429,
+        headers: {
+          'Retry-After': '60',
+          'X-RateLimit-Limit': '100',
+          'X-RateLimit-Remaining': '0'
+        }
+      });
+    }
+    
+    // Bloquear rutas maliciosas
+    if (isBlockedPath(pathname) || hasBlockedPatterns(req)) {
+      console.warn(`[Security] Blocked malicious request: ${pathname} from ${clientIP}`);
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+    
+    // CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new NextResponse(null, { 
+        status: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      });
+    }
+    
+    // Ejecutar la lógica principal del middleware
     const mainResponse = mainMiddleware(req);
     if (mainResponse && mainResponse.status !== 200) {
-      return mainResponse; // Return redirects immediately
+      // Aplicar headers de seguridad a las respuestas
+      const securityHeaders = {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+      };
+      
+      Object.entries(securityHeaders).forEach(([key, value]) => {
+        mainResponse.headers.set(key, value);
+      });
+      
+      return mainResponse; // Return redirects immediately with security headers
     }
 
     // Then handle auth-specific logic
@@ -102,7 +150,23 @@ export default withAuth(
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
 
-    return NextResponse.next();
+    // Si llegamos aquí, aplicar headers de seguridad y continuar
+    const response = NextResponse.next();
+    
+    // Aplicar headers de seguridad a todas las respuestas
+    const securityHeaders = {
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY', 
+      'X-XSS-Protection': '1; mode=block',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+    };
+    
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+    
+    return response;
   },
   {
     pages: {
@@ -129,6 +193,87 @@ export default withAuth(
     }
   }
 );
+
+/**
+ * 🛡️ Funciones de seguridad adicionales
+ */
+
+// Rate limiting simple en memoria
+const rateLimitStore = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minuto
+const RATE_LIMIT_MAX_REQUESTS = 100; // 100 requests por minuto por IP
+
+function getClientIP(request) {
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+         request.headers.get('x-real-ip') ||
+         request.headers.get('cf-connecting-ip') ||
+         request.ip ||
+         'unknown';
+}
+
+function isRateLimited(ip, pathname) {
+  const now = Date.now();
+  const key = `${ip}:${pathname}`;
+  
+  // Limpiar entradas antiguas
+  for (const [storeKey, data] of rateLimitStore.entries()) {
+    if (now - data.firstRequest > RATE_LIMIT_WINDOW) {
+      rateLimitStore.delete(storeKey);
+    }
+  }
+  
+  const existing = rateLimitStore.get(key);
+  
+  if (!existing) {
+    rateLimitStore.set(key, {
+      count: 1,
+      firstRequest: now
+    });
+    return false;
+  }
+  
+  if (now - existing.firstRequest < RATE_LIMIT_WINDOW) {
+    existing.count++;
+    return existing.count > RATE_LIMIT_MAX_REQUESTS;
+  } else {
+    rateLimitStore.set(key, {
+      count: 1,
+      firstRequest: now
+    });
+    return false;
+  }
+}
+
+function isBlockedPath(pathname) {
+  const blockedPaths = [
+    '/admin/phpmyadmin',
+    '/.env',
+    '/wp-admin',
+    '/wp-login.php',
+    '/.git',
+    '/config.php',
+    '/install.php'
+  ];
+
+  return blockedPaths.some(blocked => pathname.startsWith(blocked));
+}
+
+function hasBlockedPatterns(request) {
+  const { pathname, search } = request.nextUrl;
+  const userAgent = request.headers.get('user-agent') || '';
+  
+  const maliciousPatterns = [
+    /(\bUNION\b|\bSELECT\b|\bINSERT\b|\bDROP\b|\bDELETE\b)/i,
+    /<script|javascript:/i,
+    /\.\.\/|%2e%2e%2f/i,
+    /(\||\;|\&|\$\(|\`)/
+  ];
+
+  const fullUrl = pathname + search;
+  return maliciousPatterns.some(pattern => pattern.test(fullUrl));
+}
+
+
 
 export const config = {
 	matcher: [

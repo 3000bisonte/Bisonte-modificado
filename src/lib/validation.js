@@ -1,5 +1,6 @@
-// 📋 Schema validation for authentication forms and APIs
+// �️ Sistema robusto de validación con Zod - Seguridad mejorada
 import { z } from 'zod';
+import validator from 'validator';
 
 /**
  * 🔐 Login form validation schema
@@ -191,3 +192,218 @@ export const ValidationPatterns = {
   LETTERS_ONLY: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/,
   ALPHANUMERIC: /^[a-zA-Z0-9]+$/
 };
+
+/**
+ * 🛡️ Clase para manejo centralizado de validaciones con seguridad mejorada
+ */
+export class ValidationService {
+  /**
+   * Validar datos contra un schema con manejo de errores robusto
+   */
+  static validate(schema, data, options = {}) {
+    const { 
+      stripUnknown = true, 
+      errorMessage = 'Datos inválidos',
+      sanitize = true 
+    } = options;
+
+    try {
+      const result = schema.safeParse(data);
+      
+      if (!result.success) {
+        const errors = result.error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message,
+          code: err.code
+        }));
+
+        return {
+          success: false,
+          errors,
+          message: errorMessage,
+          details: this.formatErrorMessage(errors)
+        };
+      }
+
+      // Sanitizar datos si está habilitado
+      const finalData = sanitize ? this.sanitizeObject(result.data) : result.data;
+
+      return {
+        success: true,
+        data: finalData
+      };
+    } catch (error) {
+      console.error('[ValidationService] Validation error:', error);
+      
+      return {
+        success: false,
+        errors: [{ field: 'general', message: 'Error de validación interno' }],
+        message: 'Error interno de validación'
+      };
+    }
+  }
+
+  /**
+   * Formatear mensaje de error para el usuario
+   */
+  static formatErrorMessage(errors) {
+    if (errors.length === 1) {
+      return errors[0].message;
+    }
+
+    return `Se encontraron ${errors.length} errores: ${errors.map(e => e.message).join(', ')}`;
+  }
+
+  /**
+   * Validar y sanitizar datos de entrada para APIs
+   */
+  static async validateApiInput(req, schema, options = {}) {
+    try {
+      const body = await req.json();
+      return this.validate(schema, body, options);
+    } catch (error) {
+      return {
+        success: false,
+        errors: [{ field: 'body', message: 'JSON inválido' }],
+        message: 'Formato de datos incorrecto'
+      };
+    }
+  }
+
+  /**
+   * Sanitizar cadenas para prevenir XSS
+   */
+  static sanitizeString(str) {
+    if (typeof str !== 'string') return str;
+    
+    // Escapar HTML y trim
+    return validator.escape(str.trim());
+  }
+
+  /**
+   * Validar y sanitizar múltiples campos recursivamente
+   */
+  static sanitizeObject(obj) {
+    if (obj === null || obj === undefined) return obj;
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.sanitizeObject(item));
+    }
+    
+    if (typeof obj === 'object') {
+      const sanitized = {};
+      
+      for (const [key, value] of Object.entries(obj)) {
+        if (typeof value === 'string') {
+          sanitized[key] = this.sanitizeString(value);
+        } else if (typeof value === 'object' && value !== null) {
+          sanitized[key] = this.sanitizeObject(value);
+        } else {
+          sanitized[key] = value;
+        }
+      }
+      
+      return sanitized;
+    }
+    
+    return obj;
+  }
+
+  /**
+   * Validar parámetros de consulta
+   */
+  static validateQuery(searchParams, schema, options = {}) {
+    const queryObject = {};
+    
+    for (const [key, value] of searchParams.entries()) {
+      queryObject[key] = value;
+    }
+
+    return this.validate(schema, queryObject, options);
+  }
+
+  /**
+   * Validar archivos subidos
+   */
+  static validateFile(file, allowedTypes = ['image/jpeg', 'image/png'], maxSize = 5 * 1024 * 1024) {
+    const errors = [];
+
+    if (!file) {
+      errors.push({ field: 'file', message: 'Archivo requerido' });
+      return { success: false, errors };
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      errors.push({ 
+        field: 'file', 
+        message: `Tipo de archivo no permitido. Permitidos: ${allowedTypes.join(', ')}` 
+      });
+    }
+
+    if (file.size > maxSize) {
+      errors.push({ 
+        field: 'file', 
+        message: `Archivo muy grande. Máximo: ${Math.round(maxSize / 1024 / 1024)}MB` 
+      });
+    }
+
+    return errors.length > 0 ? { success: false, errors } : { success: true };
+  }
+}
+
+// Middleware de validación mejorado para API routes
+export function withValidation(schema, options = {}) {
+  return function(handler) {
+    return async function(req, ...args) {
+      // Validar datos de entrada
+      const validation = await ValidationService.validateApiInput(req, schema, options);
+      
+      if (!validation.success) {
+        return Response.json(
+          { 
+            error: validation.message,
+            details: validation.errors,
+            code: 'VALIDATION_ERROR'
+          },
+          { status: 400 }
+        );
+      }
+
+      // Añadir datos validados al request
+      req.validatedData = validation.data;
+      
+      return handler(req, ...args);
+    };
+  };
+}
+
+// Esquemas adicionales para seguridad mejorada
+
+// Esquema para paginación segura
+export const paginationSchema = z.object({
+  page: z.string()
+    .optional()
+    .transform(val => val ? parseInt(val) : 1)
+    .refine(val => val > 0, 'Página debe ser mayor a 0'),
+  limit: z.string()
+    .optional()
+    .transform(val => val ? parseInt(val) : 10)
+    .refine(val => val > 0 && val <= 100, 'Límite debe estar entre 1 y 100'),
+  sortBy: z.string().optional().max(50),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc')
+});
+
+// Esquema para filtros de búsqueda
+export const searchFilterSchema = z.object({
+  search: z.string().optional().max(100).transform(val => val ? validator.escape(val.trim()) : undefined),
+  estado: z.string().optional().max(20),
+  fechaDesde: z.string().datetime().optional(),
+  fechaHasta: z.string().datetime().optional()
+});
+
+// Esquema para IDs seguros
+export const idSchema = z.object({
+  id: z.string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, 'ID debe ser un número positivo')
+});

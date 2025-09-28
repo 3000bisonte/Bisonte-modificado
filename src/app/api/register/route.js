@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkRateLimit, validatePasswordStrength } from "../../../lib/security";
-import { createUser } from "../../../lib/auth";
-import prisma from "../../../libs/prisma";
+import { handleEmailAuth } from "../../../lib/userManager";
+import prisma from "../../../lib/prisma";
 
 /**
  * Register new user
@@ -39,39 +39,40 @@ export async function POST(request) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.usuarios.findUnique({
-      where: { email: email.toLowerCase() }
-    });
+    try {
+      // Use improved user management (handles duplicates automatically)
+      const userResult = await handleEmailAuth(email, password, {
+        nombre,
+        celular,
+        ciudad
+      });
 
-    if (existingUser) {
       return NextResponse.json(
-        { error: "El usuario ya existe" },
-        { status: 409 }
+        { 
+          success: true,
+          message: "Usuario registrado exitosamente",
+          user: {
+            id: userResult.id,
+            email: userResult.email,
+            name: userResult.name,
+            method: userResult.method
+          }
+        },
+        { status: 201 }
       );
+      
+    } catch (userError) {
+      // Handle specific user creation errors
+      if (userError.message.includes('Ya existe un usuario')) {
+        return NextResponse.json(
+          { error: "El usuario ya existe" },
+          { status: 409 }
+        );
+      }
+      
+      console.error('[Registration] User creation error:', userError);
+      throw userError; // Re-throw to be caught by outer catch
     }
-
-    // Create user
-    const newUser = await createUser({
-      email,
-      password,
-      nombre,
-      celular,
-      ciudad
-    });
-
-    return NextResponse.json(
-      { 
-        success: true,
-        message: "Usuario registrado exitosamente",
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          nombre: newUser.nombre
-        }
-      },
-      { status: 201 }
-    );
 
   } catch (error) {
     console.error("Error in user registration:", error);

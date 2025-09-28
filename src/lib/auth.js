@@ -112,32 +112,22 @@ export const authOptions = {
               provider: 'google'
             });
             
-            // Upsert user in DB
-            const dbUser = await prisma.usuarios.upsert({
-              where: { email },
-              update: {
-                nombre: name,
-                emailVerified: true,
-                lastLoginAt: new Date(),
-                failedLogins: 0, // Reset failed attempts on successful OAuth
-                lockedUntil: null
-              },
-              create: {
-                email,
-                nombre: name,
-                emailVerified: true,
-                esAdministrador: false,
-                esRecolector: false,
-                lastLoginAt: new Date()
-              },
+            // Use improved user management
+            const { handleGoogleAuth } = await import('./userManager.js');
+            const userResult = await handleGoogleAuth({
+              email,
+              name,
+              picture: user.image,
+              email_verified: user.email_verified ?? true
             });
+            
             return {
-              id: String(dbUser.id),
-              email: dbUser.email,
-              name: dbUser.nombre || dbUser.email,
-              role: dbUser.esAdministrador ? 'admin' : dbUser.esRecolector ? 'collector' : 'user',
-              passwordVersion: dbUser.passwordVersion ?? 0,
-              emailVerified: !!dbUser.emailVerified,
+              id: userResult.id,
+              email: userResult.email,
+              name: userResult.name,
+              role: userResult.role,
+              passwordVersion: 0, // Google users don't have password versions
+              emailVerified: userResult.emailVerified,
             };
           } catch (e) {
             // 📊 Log OAuth failure
