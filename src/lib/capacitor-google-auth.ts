@@ -2,7 +2,22 @@
 // Uses @capacitor-firebase/authentication (compatible with Capacitor v7)
 
 import type { CapacitorGlobal } from '@capacitor/core';
-import { FirebaseAuthentication, type FirebaseAuthenticationPlugin } from '@capacitor-firebase/authentication';
+
+// Dynamic import to avoid server-side bundling issues
+let FirebaseAuthentication: any = null;
+
+// Only import on client side
+if (typeof window !== 'undefined') {
+  try {
+    import('@capacitor-firebase/authentication').then((module) => {
+      FirebaseAuthentication = module.FirebaseAuthentication;
+    }).catch(() => {
+      // Ignore import errors in web environment
+    });
+  } catch {
+    // Ignore import errors
+  }
+}
 
 export interface GoogleAuthResult {
   success: boolean;
@@ -19,12 +34,12 @@ export interface GoogleAuthResult {
 interface CapacitorWindow extends Window {
   Capacitor?: (CapacitorGlobal & {
     Plugins?: {
-      FirebaseAuthentication?: FirebaseAuthenticationPlugin;
-      firebaseAuthentication?: FirebaseAuthenticationPlugin;
+      FirebaseAuthentication?: any;
+      firebaseAuthentication?: any;
     };
   }) | null;
-  FirebaseAuthentication?: FirebaseAuthenticationPlugin;
-  firebaseAuthentication?: FirebaseAuthenticationPlugin;
+  FirebaseAuthentication?: any;
+  firebaseAuthentication?: any;
 }
 
 export class CapacitorGoogleAuth {
@@ -110,7 +125,7 @@ export class CapacitorGoogleAuth {
    * Ensures the native Google Sign-In client is fully signed out so the account selector shows up again.
    */
   private static async clearNativeGoogleAccount(): Promise<void> {
-    if (!this.isCapacitor()) {
+    if (!this.isCapacitor() || !FirebaseAuthentication) {
       return;
     }
 
@@ -140,7 +155,7 @@ export class CapacitorGoogleAuth {
   static async signIn(): Promise<GoogleAuthResult> {
     try {
       // Check if running in Capacitor environment
-      if (!this.isCapacitor()) {
+      if (!this.isCapacitor() || !FirebaseAuthentication) {
         return {
           success: false,
           error: 'Google Auth only available in mobile app'
@@ -190,7 +205,7 @@ export class CapacitorGoogleAuth {
    */
   static async signOut(): Promise<boolean> {
     try {
-      if (this.isCapacitor()) {
+      if (this.isCapacitor() && FirebaseAuthentication) {
         // First attempt: normal sign out
         await this.clearNativeGoogleAccount();
 
@@ -255,7 +270,7 @@ export class CapacitorGoogleAuth {
    */
   static async getCurrentUser(): Promise<GoogleAuthResult> {
     try {
-      if (!this.isCapacitor()) {
+      if (!this.isCapacitor() || !FirebaseAuthentication) {
         return {
           success: false,
           error: 'Not in Capacitor environment'

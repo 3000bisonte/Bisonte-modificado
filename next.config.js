@@ -76,6 +76,16 @@ const nextConfig = {
   },
   // Configuración webpack para resolver módulos locales
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Excluir Firebase y Capacitor del bundle del servidor
+    if (isServer) {
+      config.externals = [
+        ...(config.externals || []),
+        'firebase/auth',
+        '@capacitor-firebase/authentication',
+        '@capacitor/core'
+      ];
+    }
+
     // Solo configurar alias si no estamos en servidor y el archivo existe
     if (!isServer) {
       const fs = require('fs');

@@ -61,6 +61,7 @@
     "dotenv": "^17.2.2",
     "encoding": "^0.1.13",
     "envalid": "^8.1.0",
+    "firebase": "^10.14.1",
     "formik": "^2.2.9",
     "google-auth-library": "^9.14.1",
     "jsonwebtoken": "^9.0.2",
