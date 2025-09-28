@@ -1,18 +1,23 @@
-// src/app/api/perfil/route.js
+import { NextResponse } from "next/server";
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const correo = searchParams.get("correo");
 
-  let perfil;
-  if (correo) {
-    // Si se proporciona un correo, busca por correo específico
-    perfil = await prisma.perfil.findMany({
-      where: { correo },
-    });
-  } else {
-    // De lo contrario, obtiene todos los perfiles
-    perfil = await prisma.perfil.findMany();
-  }
+  const perfilesSimulados = [
+    {
+      id: 1,
+      nombre: "Perfil QA",
+      correo: "qa.perfil@bisonte.test",
+      ciudad: "Bogotá",
+      celular: "3111111111",
+      creadoEn: new Date().toISOString()
+    }
+  ];
 
-  return NextResponse.json(perfil);
+  const resultado = correo
+    ? perfilesSimulados.filter((perfil) => perfil.correo.toLowerCase() === correo.toLowerCase())
+    : perfilesSimulados;
+
+  return NextResponse.json({ success: true, data: resultado, total: resultado.length });
 }

@@ -22,10 +22,13 @@ export async function POST(request) {
     const clientIp = request.headers.get("x-forwarded-for") || "unknown";
     const rateLimitKey = `password_reset_verify:${email}:${clientIp}`;
     
-    const isAllowed = await checkRateLimit(rateLimitKey, 5, 3600); // 5 attempts per hour
-    if (!isAllowed) {
+    const rateLimit = await checkRateLimit(rateLimitKey, "password_reset_verify", 5, 60 * 60 * 1000); // 5 attempts per hour
+    if (!rateLimit?.allowed) {
       return NextResponse.json(
-        { error: "Demasiados intentos. Intenta más tarde." },
+        {
+          error: "Demasiados intentos. Intenta más tarde.",
+          retryInMinutes: rateLimit?.resetIn ?? null
+        },
         { status: 429 }
       );
     }
@@ -52,8 +55,8 @@ export async function POST(request) {
     }
 
     // Verify recovery code
-    const isValidCode = await verifyRecoveryCode(user.id, code);
-    if (!isValidCode) {
+    const recovery = await verifyRecoveryCode(email, code);
+    if (!recovery) {
       return NextResponse.json(
         { error: "Código de recuperación inválido o expirado" },
         { status: 400 }

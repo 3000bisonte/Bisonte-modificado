@@ -1,21 +1,16 @@
-import prisma from "../../../../../libs/prisma";
 import { NextResponse } from "next/server";
 
-export async function GET(request, { params }) {
-    console.log("params",params)
-  const correo = params.id; // O el valor que corresponda en tu caso
+export async function GET(_request, { params }) {
+  const correo = decodeURIComponent(params.id);
 
-  console.log("Buscando perfil por correo:", correo);
+  const perfilSimulado = {
+    id: 101,
+    nombre: "Perfil Simulado",
+    correo,
+    ciudad: "Bogotá",
+    celular: "3000000000",
+    creadoEn: new Date().toISOString()
+  };
 
-  const perfil = await prisma.perfil.findUnique({
-    where: { correo },
-  });
-
-  if (perfil) {
-    console.log("Perfil encontrado:", perfil);
-  } else {
-    console.log("No se encontró un perfil con ese correo.");
-  }
-
-  return NextResponse.json(perfil);
+  return NextResponse.json({ success: true, perfil: perfilSimulado });
 }

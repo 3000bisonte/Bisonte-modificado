@@ -21,10 +21,14 @@ export async function POST(request) {
     // Check rate limit
   const clientIp = getClientIP(request);
   const identifier = `${email}:${clientIp}`;
-  const isAllowed = await checkRateLimit(identifier, "password_reset_verify", 5, 60 * 60 * 1000);
-    if (!isAllowed) {
+  const rateLimit = await checkRateLimit(identifier, "password_reset_verify", 5, 60 * 60 * 1000);
+    if (!rateLimit?.allowed) {
       return NextResponse.json(
-        { ok: false, error: "Demasiados intentos. Intenta más tarde." },
+        {
+          ok: false,
+          error: "Demasiados intentos. Intenta más tarde.",
+          retryInMinutes: rateLimit?.resetIn ?? null
+        },
         { status: 429 }
       );
     }

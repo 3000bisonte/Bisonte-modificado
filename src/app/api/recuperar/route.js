@@ -20,10 +20,13 @@ export async function POST(request) {
   // Check rate limit (3 attempts per hour per email+IP)
   const clientIp = getClientIP(request);
   const identifier = `${email}:${clientIp}`;
-  const isAllowed = await checkRateLimit(identifier, "password_reset", 3, 60 * 60 * 1000);
-    if (!isAllowed) {
+  const rateLimit = await checkRateLimit(identifier, "password_reset", 3, 60 * 60 * 1000);
+    if (!rateLimit?.allowed) {
       return NextResponse.json(
-        { error: "Demasiados intentos. Intenta más tarde." },
+        {
+          error: "Demasiados intentos. Intenta más tarde.",
+          retryInMinutes: rateLimit?.resetIn ?? null
+        },
         { status: 429 }
       );
     }

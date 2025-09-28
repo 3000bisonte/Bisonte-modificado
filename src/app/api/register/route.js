@@ -4,6 +4,19 @@ import { handleEmailAuth } from "../../../lib/userManager";
 import prisma from "../../../lib/prisma";
 
 /**
+ * Get register endpoint info
+ * GET /api/register
+ */
+export async function GET() {
+  return NextResponse.json({
+    message: "Endpoint de registro de usuarios",
+    method: "POST",
+    requiredFields: ["email", "password", "nombre"],
+    optionalFields: ["celular", "ciudad"]
+  });
+}
+
+/**
  * Register new user
  * POST /api/register
  */
@@ -22,10 +35,13 @@ export async function POST(request) {
     const clientIp = request.headers.get("x-forwarded-for") || "unknown";
     const rateLimitKey = `register:${clientIp}`;
     
-    const isAllowed = await checkRateLimit(rateLimitKey, 5, 3600); // 5 registrations per hour per IP
-    if (!isAllowed) {
+    const rateLimit = await checkRateLimit(rateLimitKey, 'register', 5, 60 * 60 * 1000); // 5 registrations per hour per IP
+    if (!rateLimit?.allowed) {
       return NextResponse.json(
-        { error: "Demasiados intentos de registro. Intenta más tarde." },
+        {
+          error: "Demasiados intentos de registro. Intenta más tarde.",
+          retryInMinutes: rateLimit?.resetIn ?? null
+        },
         { status: 429 }
       );
     }
@@ -81,8 +97,4 @@ export async function POST(request) {
       { status: 500 }
     );
   }
-}
-
-export function GET() { 
-  return NextResponse.json({ error: "Método no permitido" }, { status: 405 }); 
 }

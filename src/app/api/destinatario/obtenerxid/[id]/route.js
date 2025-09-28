@@ -1,24 +1,25 @@
-import prisma from "../../../../../libs/prisma";
 import { NextResponse } from "next/server";
 
-export async function GET(request, { params }) {
+export async function GET(_request, { params }) {
   const destinatarioId = Number(params.id);
 
-  // Validar que el ID sea un número válido
-  if (isNaN(destinatarioId)) {
+  if (Number.isNaN(destinatarioId)) {
     return NextResponse.json(
-      { error: "El ID proporcionado no es válido." },
+      { success: false, error: "El ID proporcionado no es válido." },
       { status: 400 }
     );
   }
 
-  const destinatario = await prisma.destinatario.findUnique({
-    where: {
-      id: destinatarioId,
-    },
-  });
+  const destinatarioSimulado = {
+    id: destinatarioId,
+    nombre: "Destinatario Simulado",
+    ciudad: "Medellín",
+    telefono: "3010000000",
+    direccion: "Calle 123 #45-67",
+    documento: "0000000000",
+    email: `destinatario.${destinatarioId}@bisonte.test`,
+    actualizadoEn: new Date().toISOString()
+  };
 
-  console.log("destinatario encontrado:", destinatario);
-
-  return NextResponse.json(destinatario);
+  return NextResponse.json({ success: true, destinatario: destinatarioSimulado });
 }

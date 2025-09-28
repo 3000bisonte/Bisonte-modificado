@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createPasswordRecovery, verifyRecoveryCode, checkRateLimit } from "@/lib/security";
-import { updateUserPasswordByEmail } from "@/lib/auth";
+import { createPasswordRecovery, checkRateLimit } from "@/lib/security";
 import prisma from "@/lib/prisma";
 
 /**
@@ -20,12 +19,16 @@ export async function POST(request) {
 
     // Check rate limit
     const clientIp = request.headers.get("x-forwarded-for") || "unknown";
+    const userAgent = request.headers.get("user-agent") || "unknown";
     const rateLimitKey = `password_reset:${email}:${clientIp}`;
-    
-    const isAllowed = await checkRateLimit(rateLimitKey, 3, 3600); // 3 attempts per hour
-    if (!isAllowed) {
+
+    const rateLimit = await checkRateLimit(rateLimitKey, "password_reset", 3, 60 * 60 * 1000); // 3 attempts per hour
+    if (!rateLimit?.allowed) {
       return NextResponse.json(
-        { error: "Demasiados intentos. Intenta más tarde." },
+        {
+          error: "Demasiados intentos. Intenta más tarde.",
+          retryInMinutes: rateLimit?.resetIn ?? null
+        },
         { status: 429 }
       );
     }
@@ -44,17 +47,19 @@ export async function POST(request) {
     }
 
     // Create recovery code
-    const recoveryCode = await createPasswordRecovery(user.id);
+  const recoveryData = await createPasswordRecovery(email, clientIp, userAgent);
 
     // Here you would send the recovery code via email
     // For now, we'll return it (remove in production)
-    console.log(`Password recovery code for ${email}: ${recoveryCode}`);
+    console.log(`Password recovery code for ${email}: ${recoveryData.code}`);
 
     return NextResponse.json(
       { 
         message: "Si el email existe, se enviará un código de recuperación.",
         // Remove this in production:
-        recoveryCode: process.env.NODE_ENV === "development" ? recoveryCode : undefined
+        recoveryCode: process.env.NODE_ENV === "development" ? recoveryData.code : undefined,
+        recoveryToken: process.env.NODE_ENV === "development" ? recoveryData.token : undefined,
+        expiresAt: process.env.NODE_ENV === "development" ? recoveryData.expiresAt : undefined
       },
       { status: 200 }
     );
