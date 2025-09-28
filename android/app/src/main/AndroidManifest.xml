@@ -49,6 +49,12 @@
             android:name="com.google.firebase.project_id"
             android:value="@string/firebase_project_id" />
 
+        <!-- AdMob / Google Mobile Ads App ID -->
+        <!-- Sustituir el valor placeholder en strings.xml por tu verdadero AdMob App ID (formato ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="@string/admob_app_id" />
+
     </application>
 
     <!-- Permissions -->

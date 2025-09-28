@@ -14,28 +14,32 @@
       },
       "oauth_client": [
         {
-          "client_id": "ANDROID_CLIENT_ID_PLACEHOLDER",
-          "client_type": 1
+          "client_id": "814463004364-1pj3amqos1f59ju94uca5t6r9s18ek2m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bisonteapp",
+            "certificate_hash": "eb3a1010bccfc7f8132b7ee4fb7ec82d8a43a297"
+          }
         },
         {
-          "client_id": "WEB_CLIENT_ID_PLACEHOLDER",
+          "client_id": "814463004364-kla2sr8s45pgu3gckkkamqlrequ5566e.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "API_KEY_PLACEHOLDER"
+          "current_key": "AIzaSyCvJy7I3nZb9y0-I_iJTvFyRPJ7YJXfrq4"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "WEB_CLIENT_ID_PLACEHOLDER",
+              "client_id": "814463004364-kla2sr8s45pgu3gckkkamqlrequ5566e.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "ANDROID_CLIENT_ID_PLACEHOLDER",
+              "client_id": "814463004364-1pj3amqos1f59ju94uca5t6r9s18ek2m.apps.googleusercontent.com",
               "client_type": 1
             }
           ]

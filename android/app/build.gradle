@@ -7,8 +7,9 @@ android {
         applicationId "com.bisonteapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Incrementa versionCode para evitar conflictos de instalación / caché en el dispositivo
+        versionCode 2
+        versionName "1.0.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +17,33 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Firma condicional: si existen variables de entorno se aplica firma release, sino queda unsigned
+    def keystorePath = System.getenv("BISONTE_KEYSTORE_PATH")
+    def keystorePass = System.getenv("BISONTE_KEYSTORE_PASS")
+    def keyAlias     = System.getenv("BISONTE_KEY_ALIAS")
+    def keyPass      = System.getenv("BISONTE_KEY_PASS")
+
+    signingConfigs {
+        if (keystorePath && new File(keystorePath).exists()) {
+            release {
+                storeFile file(keystorePath)
+                storePassword keystorePass
+                keyAlias keyAlias
+                keyPassword keyPass
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (signingConfigs.findByName('release')) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            // Mantener firma debug automática
         }
     }
 }
@@ -36,6 +60,10 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    
+    // Google Play Services Auth - Requerido para Firebase Authentication con Google Sign-In
+    implementation 'com.google.android.gms:play-services-auth:21.2.0'
+    
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

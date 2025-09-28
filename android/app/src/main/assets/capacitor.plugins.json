@@ -1,9 +1,5 @@
 [
 	{
-		"pkg": "@bisonte/capacitor-bisonte-auth",
-		"classpath": "com.bisonte.auth.BisonteAuth"
-	},
-	{
 		"pkg": "@capacitor-community/admob",
 		"classpath": "com.getcapacitor.community.admob.AdMob"
 	},

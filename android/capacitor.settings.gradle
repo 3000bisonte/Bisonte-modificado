@@ -2,9 +2,6 @@
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
 
-include ':bisonte-capacitor-bisonte-auth'
-project(':bisonte-capacitor-bisonte-auth').projectDir = new File('../native/capacitor-bisonte-auth/android')
-
 include ':capacitor-community-admob'
 project(':capacitor-community-admob').projectDir = new File('../node_modules/@capacitor-community/admob/android')
 
