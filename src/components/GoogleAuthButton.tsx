@@ -1,162 +1,100 @@
 'use client';
 
-import React from 'react';
-import { useGoogleAuth } from '@/hooks/useGoogleAuth';
+import React, { useState, useEffect } from 'react';
+import { signIn } from 'next-auth/react';
 
 /**
  * Google Auth Button Component for Capacitor
  * Shows different UI based on platform (web vs mobile)
  */
 export function GoogleAuthButton() {
-  const { 
-    isSignedIn, 
-    user, 
-    isLoading, 
-    signIn, 
-    signOut, 
-    isCapacitor 
-  } = useGoogleAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCapacitor, setIsCapacitor] = useState(false);
+
+  useEffect(() => {
+    // Check if we're in Capacitor environment
+    setIsCapacitor(typeof window !== 'undefined' && !!(window as any).Capacitor);
+  }, []);
 
   const handleSignIn = async () => {
     console.log('GoogleAuthButton: Starting sign-in process...');
+    setIsLoading(true);
     
     try {
-      const result = await signIn();
-      console.log('GoogleAuthButton: Sign-in result:', result);
-      
-      if (result.success && result.user) {
-        console.log('GoogleAuthButton: User authenticated, sending to backend...');
-        
-        // Test the backend endpoint first
-        try {
-          console.log('GoogleAuthButton: Testing backend connection...');
-          const testResponse = await fetch('/api/test-google-auth', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              test: true,
-              timestamp: new Date().toISOString()
-            }),
-          });
-          
-          const testData = await testResponse.json();
-          console.log('GoogleAuthButton: Test response:', testData);
-        } catch (testError) {
-          console.error('GoogleAuthButton: Test endpoint failed:', testError);
-        }
+      if (!isCapacitor) {
+        // Web fallback - use NextAuth Google provider
+        const result = await signIn('google', { callbackUrl: '/home' });
+        console.log('GoogleAuthButton: Web sign-in result:', result);
+        return;
+      }
 
-        // Send the authentication data to your backend
-        try {
-          console.log('GoogleAuthButton: Sending auth data to backend...');
+      // Capacitor/Mobile flow
+      try {
+        // Dynamic import to avoid build issues
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+        
+        const result = await FirebaseAuthentication.signInWithGoogle();
+        console.log('GoogleAuthButton: Capacitor sign-in result:', result);
+        
+        if (result?.user) {
+          console.log('GoogleAuthButton: User authenticated, sending to backend...');
+          
+          // Send auth data to backend
           const response = await fetch('/api/auth/capacitor-google', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              idToken: result.user.idToken,
-              user: result.user
+              idToken: result.credential?.idToken,
+              user: {
+                uid: result.user.uid,
+                email: result.user.email,
+                name: result.user.displayName,
+                picture: result.user.photoUrl,
+                idToken: result.credential?.idToken
+              }
             }),
           });
 
-          console.log('GoogleAuthButton: Backend response status:', response.status);
           const data = await response.json();
-          console.log('GoogleAuthButton: Backend response data:', data);
+          console.log('GoogleAuthButton: Backend response:', data);
           
           if (data.success) {
-            console.log('Backend authentication successful:', data);
-            
-            // Wait a bit for cookie to be set
+            // Wait for cookie to be set
             setTimeout(() => {
-              // Redirect to home or dashboard
-              if (data.redirectUrl) {
-                console.log('GoogleAuthButton: Redirecting to:', data.redirectUrl);
-                window.location.href = data.redirectUrl;
-              } else {
-                console.log('GoogleAuthButton: Redirecting to /home');
-                window.location.href = '/home';
-              }
+              window.location.href = data.redirectUrl || '/home';
             }, 1000);
           } else {
-            console.error('Backend authentication failed:', data.error);
-            alert('Authentication failed: ' + data.error);
+            throw new Error(data.error || 'Backend authentication failed');
           }
-        } catch (error) {
-          console.error('Failed to authenticate with backend:', error);
-          alert('Network error during authentication: ' + error.message);
+        } else {
+          throw new Error('No user data received from Google');
         }
-      } else {
-        console.error('Google sign-in failed:', result.error);
-        alert('Google sign-in failed: ' + result.error);
+      } catch (capacitorError) {
+        console.error('GoogleAuthButton: Capacitor error:', capacitorError);
+        alert('Error en autenticación móvil: ' + capacitorError.message);
       }
     } catch (error) {
       console.error('GoogleAuthButton: Unexpected error:', error);
-      alert('Unexpected error: ' + error.message);
+      alert('Error inesperado: ' + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  const handleSignOut = async () => {
-    const success = await signOut();
-    if (success) {
-      console.log('Signed out successfully');
-      // You might want to also sign out from your backend session
-    }
-  };
-
-  // Show different UI for web vs mobile
-  if (!isCapacitor) {
-    return (
-      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <p className="text-yellow-800">
-          Google Authentication is only available in the mobile app.
-        </p>
-        <p className="text-sm text-yellow-600 mt-2">
-          Use the regular login form on web, or install the mobile app.
-        </p>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
       <button 
         disabled 
-        className="w-full px-4 py-2 bg-gray-300 text-gray-500 rounded-lg flex items-center justify-center"
+        className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium py-3 px-4 rounded-xl opacity-70 cursor-not-allowed flex items-center justify-center gap-3 text-sm sm:text-base"
       >
-        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg className="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        Loading...
+        <span>Iniciando sesión...</span>
       </button>
-    );
-  }
-
-  if (isSignedIn && user) {
-    return (
-      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-        <div className="flex items-center space-x-3">
-          {user.picture && (
-            <img 
-              src={user.picture} 
-              alt={user.name}
-              className="w-10 h-10 rounded-full"
-            />
-          )}
-          <div className="flex-1">
-            <p className="text-green-800 font-medium">{user.name}</p>
-            <p className="text-green-600 text-sm">{user.email}</p>
-          </div>
-        </div>
-        <button
-          onClick={handleSignOut}
-          className="mt-3 w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-        >
-          Sign Out
-        </button>
-      </div>
     );
   }
 
