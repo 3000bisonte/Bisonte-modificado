@@ -1,16 +1,6 @@
 import Home from "@/components/Home";
-import prisma from "@/lib/prisma";
-//import PerfilCard from "@/components/PerfilCard";
-// async function loadPerfil() {
-//   const perfil = await prisma.perfil.findMany();
-//   //console.log(perfil);
-//   return perfil;
-// }
 
-async function HomePage() {
-  // const miperfil = await loadPerfil();
-  // console.log(miperfil);
-
+function HomePage() {
   return (
     <>
       <Home />
@@ -21,5 +11,4 @@ async function HomePage() {
     </>
   );
 }
-
 export default HomePage;

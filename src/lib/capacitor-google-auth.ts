@@ -1,7 +1,8 @@
 // Capacitor Google Authentication integration
 // Uses @capacitor-firebase/authentication (compatible with Capacitor v7)
 
-import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import type { CapacitorGlobal } from '@capacitor/core';
+import { FirebaseAuthentication, type FirebaseAuthenticationPlugin } from '@capacitor-firebase/authentication';
 
 export interface GoogleAuthResult {
   success: boolean;
@@ -13,6 +14,17 @@ export interface GoogleAuthResult {
     idToken: string;
   };
   error?: string;
+}
+
+interface CapacitorWindow extends Window {
+  Capacitor?: (CapacitorGlobal & {
+    Plugins?: {
+      FirebaseAuthentication?: FirebaseAuthenticationPlugin;
+      firebaseAuthentication?: FirebaseAuthenticationPlugin;
+    };
+  }) | null;
+  FirebaseAuthentication?: FirebaseAuthenticationPlugin;
+  firebaseAuthentication?: FirebaseAuthenticationPlugin;
 }
 
 export class CapacitorGoogleAuth {
@@ -27,6 +39,7 @@ export class CapacitorGoogleAuth {
 
   /**
    * Clears any stored auth/session data from browser storage to avoid silent re-login
+   * This ensures that the next login will show account selection dialog
    */
   static clearStoredSessionData(): void {
     if (typeof window === 'undefined') {
@@ -34,32 +47,63 @@ export class CapacitorGoogleAuth {
     }
 
     const storageKeys = [
+      // Bisonte specific
       'bisonte_mobile_session',
       'google_auth_data',
-      'google_auth_code',
+      'google_auth_code', 
       'google_auth_success',
       'session_data',
       'authToken',
       'refreshToken',
       'google_id_token',
       'lastUser',
-      'user'
+      'user',
+      
+      // Firebase specific 
+      'firebase:authUser',
+      'firebase:host',
+      'firebase_auth_token',
+      'firebaseui::rememberedAccounts',
+      'firebaseui::pendingEmailCredential',
+      
+      // Google Auth specific
+      'gapi.auth2.data',
+      'google_auth_state',
+      'google_signin_data',
+      
+      // NextAuth related
+      'next-auth.session-token',
+      'next-auth.csrf-token',
+      'next-auth.callback-url',
+      
+      // Capacitor related
+      'capacitor_session',
+      'capacitor_auth_data'
     ];
 
     storageKeys.forEach((key) => {
       try {
         window.localStorage.removeItem(key);
-      } catch (error) {
+      } catch (error: unknown) {
         console.warn('CapacitorGoogleAuth: Failed to remove localStorage key', key, error);
       }
     });
 
-    try {
-      window.sessionStorage.removeItem('authToken');
-    } catch (error) {
-      // Ignore sessionStorage issues silently
-      console.warn('CapacitorGoogleAuth: Failed to clear sessionStorage authToken', error);
-    }
+    // Also clear sessionStorage
+    const sessionStorageKeys = [
+      'authToken',
+      'google_auth_data',
+      'firebase:authUser',
+      'capacitor_session'
+    ];
+
+    sessionStorageKeys.forEach((key) => {
+      try {
+        window.sessionStorage.removeItem(key);
+      } catch (error: unknown) {
+        console.warn('CapacitorGoogleAuth: Failed to clear sessionStorage key', key, error);
+      }
+    });
   }
 
   /**
@@ -72,7 +116,7 @@ export class CapacitorGoogleAuth {
 
     try {
       await FirebaseAuthentication.signOut();
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('CapacitorGoogleAuth: native signOut threw an error (ignored)', error);
     }
 
@@ -82,13 +126,10 @@ export class CapacitorGoogleAuth {
   /**
    * Initialize Firebase Authentication
    */
-  static async initialize() {
+  static initialize(): boolean {
     try {
-      // Configure Firebase if needed
-      console.log('Firebase Authentication initialized');
       return true;
-    } catch (error) {
-      console.error('Failed to initialize Firebase Auth:', error);
+    } catch {
       return false;
     }
   }
@@ -109,7 +150,9 @@ export class CapacitorGoogleAuth {
       await this.clearNativeGoogleAccount();
 
       const result = await FirebaseAuthentication.signInWithGoogle({
-        scopes: ['profile', 'email']
+        scopes: ['profile', 'email'],
+        // Force account selection to prevent auto-login with previous account
+        mode: 'popup'
       });
 
       if (result.user) {
@@ -133,41 +176,77 @@ export class CapacitorGoogleAuth {
         error: 'No user data received'
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Google sign-in failed:', error);
       return {
         success: false,
-        error: error.message || 'Authentication failed'
+        error: this.extractErrorMessage(error, 'Authentication failed')
       };
     }
   }
 
   /**
-   * Sign out
+   * Sign out completely - clears Firebase auth and forces account selection on next login
    */
   static async signOut(): Promise<boolean> {
     try {
       if (this.isCapacitor()) {
+        // First attempt: normal sign out
         await this.clearNativeGoogleAccount();
 
+        // Wait for native operations to complete
+        await this.delay(500);
+
+        // Verify sign out was successful
         try {
           const currentUser = await FirebaseAuthentication.getCurrentUser();
           if (currentUser?.user) {
-            console.warn('CapacitorGoogleAuth: user still present after signOut; retrying once');
-            await FirebaseAuthentication.signOut();
-            await this.delay(250);
+            console.warn('CapacitorGoogleAuth: user still present after signOut; forcing complete logout');
+            
+            // Force complete sign out multiple times if needed
+            for (let i = 0; i < 3; i++) {
+              await FirebaseAuthentication.signOut();
+              await this.delay(300);
+              
+              const checkUser = await FirebaseAuthentication.getCurrentUser();
+              if (!checkUser?.user) {
+                break;
+              }
+            }
           }
-        } catch (verificationError) {
+        } catch (verificationError: unknown) {
           console.warn('CapacitorGoogleAuth: Unable to verify sign-out state (ignored)', verificationError);
+        }
+
+        // Additional cleanup to ensure complete logout
+        try {
+          // Clear any cached credentials
+          await this.delay(200);
+        } catch (cleanupError: unknown) {
+          console.warn('CapacitorGoogleAuth: Cleanup error (ignored)', cleanupError);
         }
       }
 
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Sign out failed:', error);
       return false;
     } finally {
+      // Always clear stored session data
       this.clearStoredSessionData();
+      
+      // Clear additional storage that might cache auth state
+      if (typeof window !== 'undefined') {
+        try {
+          // Clear various auth-related storage
+          ['firebase:authUser', 'firebase:host', 'authUser'].forEach(key => {
+            window.localStorage.removeItem(key);
+            window.sessionStorage.removeItem(key);
+          });
+        } catch (storageError: unknown) {
+          console.warn('CapacitorGoogleAuth: Storage cleanup error (ignored)', storageError);
+        }
+      }
     }
   }
 
@@ -205,10 +284,10 @@ export class CapacitorGoogleAuth {
         error: 'No authenticated user'
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message || 'Failed to get current user'
+        error: this.extractErrorMessage(error, 'Failed to get current user')
       };
     }
   }
@@ -217,9 +296,21 @@ export class CapacitorGoogleAuth {
    * Check if running in Capacitor environment
    */
   static isCapacitor(): boolean {
-    return typeof window !== 'undefined' && 
-           !!(window as any).Capacitor &&
-           (window as any).Capacitor.isNativePlatform();
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    const capacitorGlobal = (window as CapacitorWindow).Capacitor;
+    if (!capacitorGlobal || typeof capacitorGlobal.isNativePlatform !== 'function') {
+      return false;
+    }
+
+    try {
+      return capacitorGlobal.isNativePlatform();
+    } catch (error: unknown) {
+      console.warn('CapacitorGoogleAuth: isNativePlatform check failed', error);
+      return false;
+    }
   }
 
   /**
@@ -232,6 +323,18 @@ export class CapacitorGoogleAuth {
     } catch {
       return false;
     }
+  }
+
+  private static extractErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    if (typeof error === 'string' && error.trim().length > 0) {
+      return error;
+    }
+
+    return fallback;
   }
 }
 

@@ -1,6 +1,7 @@
 "use client";
-import React, { useEffect, useMemo, useState } from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
+import React, { useEffect, useState } from 'react';
+
 import CapacitorGoogleAuth from '@/lib/capacitor-google-auth';
 
 function useIsWebView() {
@@ -23,6 +24,22 @@ export default function AuthDiagnosticsPage() {
 
   const isAuthed = !!session?.user;
 
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'unknown';
+    }
+  };
+
   const doGoogle = async () => {
     try {
       push('Starting Google sign-in...');
@@ -30,8 +47,8 @@ export default function AuthDiagnosticsPage() {
       // If native plugin is injected in the page, you could call it here.
       // As a fallback use NextAuth Google provider (OAuth redirect).
       await signIn('google', { callbackUrl: '/home', wv: isWV ? '1' : undefined });
-    } catch (e:any) {
-      push('Google sign-in error: ' + (e?.message || 'unknown'));
+    } catch (error: unknown) {
+      push('Google sign-in error: ' + getErrorMessage(error));
     }
   };
 
@@ -43,10 +60,13 @@ export default function AuthDiagnosticsPage() {
         password,
         redirect: false,
       });
-      if (res?.error) push('Credentials error: ' + res.error);
-      else push('Credentials sign-in ok');
-    } catch (e:any) {
-      push('Credentials sign-in error: ' + (e?.message || 'unknown'));
+      if (res?.error) {
+        push('Credentials error: ' + res.error);
+      } else {
+        push('Credentials sign-in ok');
+      }
+    } catch (error: unknown) {
+      push('Credentials sign-in error: ' + getErrorMessage(error));
     }
   };
 
@@ -55,8 +75,8 @@ export default function AuthDiagnosticsPage() {
     try {
       await CapacitorGoogleAuth.signOut();
       push('Native Google sign-out completed');
-    } catch (error: any) {
-      push('Native sign-out error: ' + (error?.message || 'unknown'));
+    } catch (error: unknown) {
+      push('Native sign-out error: ' + getErrorMessage(error));
     }
 
     try {
@@ -66,8 +86,8 @@ export default function AuthDiagnosticsPage() {
         headers: { 'Content-Type': 'application/json' },
       });
       push('API logout endpoint called');
-    } catch (error: any) {
-      push('API logout error: ' + (error?.message || 'unknown'));
+    } catch (error: unknown) {
+      push('API logout error: ' + getErrorMessage(error));
     }
 
     await signOut({ callbackUrl: '/' });
@@ -80,7 +100,14 @@ export default function AuthDiagnosticsPage() {
 
       <section className="space-y-2">
         <h2 className="font-semibold">OAuth (Google) Flow</h2>
-        <button className="px-3 py-2 bg-blue-600 text-white rounded" onClick={doGoogle}>Sign in with Google</button>
+        <button
+          className="px-3 py-2 bg-blue-600 text-white rounded"
+          onClick={() => {
+            void doGoogle();
+          }}
+        >
+          Sign in with Google
+        </button>
         {session?.oauth && (
           <div className="text-xs mt-2">
             <div>Provider: {session.oauth.provider}</div>
@@ -94,9 +121,16 @@ export default function AuthDiagnosticsPage() {
       <section className="space-y-2">
         <h2 className="font-semibold">Credentials Flow</h2>
         <div className="flex flex-col gap-2 max-w-sm">
-          <input className="border p-2" placeholder="email" value={email} onChange={e=>setEmail(e.target.value)} />
-          <input className="border p-2" type="password" placeholder="password" value={password} onChange={e=>setPassword(e.target.value)} />
-          <button className="px-3 py-2 bg-emerald-600 text-white rounded" onClick={doCreds}>Sign in</button>
+          <input className="border p-2" placeholder="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+          <input className="border p-2" type="password" placeholder="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          <button
+            className="px-3 py-2 bg-emerald-600 text-white rounded"
+            onClick={() => {
+              void doCreds();
+            }}
+          >
+            Sign in
+          </button>
         </div>
       </section>
 
@@ -104,14 +138,23 @@ export default function AuthDiagnosticsPage() {
         <h2 className="font-semibold">Session</h2>
         <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-64">{JSON.stringify(session, null, 2)}</pre>
         {isAuthed && (
-          <button className="px-3 py-2 bg-red-600 text-white rounded" onClick={doLogout}>Logout</button>
+          <button
+            className="px-3 py-2 bg-red-600 text-white rounded"
+            onClick={() => {
+              void doLogout();
+            }}
+          >
+            Logout
+          </button>
         )}
       </section>
 
       <section className="space-y-2">
         <h2 className="font-semibold">Logs</h2>
         <ul className="text-xs space-y-1">
-          {log.map((l, i)=> <li key={i}>{l}</li>)}
+          {log.map((entry, index) => (
+            <li key={index}>{entry}</li>
+          ))}
         </ul>
       </section>
     </div>

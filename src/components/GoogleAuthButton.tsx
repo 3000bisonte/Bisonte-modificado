@@ -1,7 +1,57 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import type { CapacitorGlobal } from '@capacitor/core';
+import type { FirebaseAuthenticationPlugin } from '@capacitor-firebase/authentication';
+import React, { useEffect, useState } from 'react';
+
 import CapacitorGoogleAuth from '@/lib/capacitor-google-auth';
+
+interface CapacitorWindow extends Window {
+  Capacitor?: (CapacitorGlobal & {
+    Plugins?: {
+      FirebaseAuthentication?: FirebaseAuthenticationPlugin;
+      firebaseAuthentication?: FirebaseAuthenticationPlugin;
+    };
+  }) | null;
+  FirebaseAuthentication?: FirebaseAuthenticationPlugin;
+  firebaseAuthentication?: FirebaseAuthenticationPlugin;
+}
+
+const getCapacitorWindow = (): CapacitorWindow | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window as CapacitorWindow;
+};
+
+const getFirebasePlugin = (): FirebaseAuthenticationPlugin | null => {
+  const capacitorWindow = getCapacitorWindow();
+  if (!capacitorWindow) {
+    return null;
+  }
+
+  const capacitor = capacitorWindow.Capacitor;
+  return (
+    capacitor?.Plugins?.FirebaseAuthentication ??
+    capacitor?.Plugins?.firebaseAuthentication ??
+    capacitorWindow.FirebaseAuthentication ??
+    capacitorWindow.firebaseAuthentication ??
+    null
+  );
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return error;
+  }
+
+  return 'Error desconocido';
+};
 
 /**
  * Google Auth Button Component
@@ -12,27 +62,18 @@ export function GoogleAuthButton() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCapacitor, setIsCapacitor] = useState(false);
 
-  const getFirebasePlugin = () => {
-    if (typeof window === 'undefined') return null;
-
-    const capacitor = (window as any).Capacitor ?? {};
-
-    return (
-      capacitor.Plugins?.FirebaseAuthentication ||
-      capacitor.FirebaseAuthentication ||
-      capacitor.Plugins?.firebaseAuthentication ||
-      capacitor.firebaseAuthentication ||
-      null
-    );
-  };
-
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
 
-    const capacitor = (window as any).Capacitor ?? {};
-    const isNative = Boolean(capacitor.isNativePlatform?.());
+    const capacitorWindow = getCapacitorWindow();
+    const capacitorGlobal = capacitorWindow?.Capacitor;
+    const isNative = Boolean(
+      capacitorGlobal &&
+      typeof capacitorGlobal.isNativePlatform === 'function' &&
+      capacitorGlobal.isNativePlatform()
+    );
     const firebasePlugin = getFirebasePlugin();
 
     setIsCapacitor(Boolean(firebasePlugin) && isNative);
@@ -49,18 +90,7 @@ export function GoogleAuthButton() {
       throw new Error('Firebase Authentication plugin no disponible en el entorno actual');
     }
 
-    if (typeof plugin.signInWithGoogle !== 'function') {
-      throw new Error('El plugin de Firebase no expone signInWithGoogle');
-    }
-
-    if (typeof plugin.getIdToken !== 'function') {
-      throw new Error('El plugin de Firebase no expone getIdToken');
-    }
-
-    console.log('GoogleAuthButton: Iniciando login con Firebase (móvil)...');
-
     const authResult = await CapacitorGoogleAuth.signIn();
-    console.log('GoogleAuthButton: Resultado signIn:', authResult);
 
     if (!authResult.success || !authResult.user?.idToken) {
       throw new Error(authResult.error || 'No se pudo iniciar sesión con Google');
@@ -77,31 +107,29 @@ export function GoogleAuthButton() {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('GoogleAuthButton: Error en backend:', errorText);
-      throw new Error('No se pudo crear la sesión');
+      throw new Error(errorText || 'No se pudo crear la sesión');
     }
 
-    console.log('GoogleAuthButton: Sesión creada correctamente');
     window.location.href = '/home';
   };
 
-  const handleSignIn = async () => {
+  const handleSignInClick = (): void => {
     if (!isCapacitor) {
-      alert('El inicio de sesión con Google está disponible únicamente dentro de la app móvil.');
+      window.alert('El inicio de sesión con Google está disponible únicamente dentro de la app móvil.');
       return;
     }
 
-    console.log('GoogleAuthButton: iniciando proceso de login en móvil...');
     setIsLoading(true);
 
-    try {
-      await handleMobileSignIn();
-    } catch (error) {
-      console.error('GoogleAuthButton: Error:', error);
-      alert('Error al iniciar sesión: ' + (error?.message || 'Error desconocido'));
-    } finally {
-      setIsLoading(false);
-    }
+    void (async () => {
+      try {
+        await handleMobileSignIn();
+      } catch (error: unknown) {
+        window.alert(`Error al iniciar sesión: ${getErrorMessage(error)}`);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   };
 
   if (isLoading) {
@@ -123,7 +151,7 @@ export function GoogleAuthButton() {
 
   return (
     <button
-      onClick={handleSignIn}
+      onClick={handleSignInClick}
       disabled={isLoading || !isCapacitor}
       className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium py-3 px-4 rounded-xl hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-sm sm:text-base"
     >

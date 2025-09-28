@@ -102,6 +102,8 @@
     ".next/types/**/*.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx",
     "types/**/*.ts",
     "scripts/**/*.ts"
   ],
