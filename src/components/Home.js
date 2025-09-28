@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BottomNav from "./BottomNav";
+import CapacitorGoogleAuth from "@/lib/capacitor-google-auth";
 
 // Iconos SVG
 const IconUser = () => (
@@ -127,6 +128,22 @@ const Home = () => {
 
   const handleLogout = async () => {
     setShowProfileMenu(false);
+    try {
+      await CapacitorGoogleAuth.signOut();
+    } catch (error) {
+      console.warn('Home: Error during native Google sign-out', error);
+    }
+
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (error) {
+      console.warn('Home: Failed to call /api/auth/logout', error);
+    }
+
     await signOut({ redirect: false });
     router.push("/"); // Redirige SIEMPRE al home después de salir
   };

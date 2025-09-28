@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useState } from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
+import CapacitorGoogleAuth from '@/lib/capacitor-google-auth';
 
 function useIsWebView() {
   const [isWV, set] = useState(false);
@@ -51,6 +52,24 @@ export default function AuthDiagnosticsPage() {
 
   const doLogout = async () => {
     push('Signing out...');
+    try {
+      await CapacitorGoogleAuth.signOut();
+      push('Native Google sign-out completed');
+    } catch (error: any) {
+      push('Native sign-out error: ' + (error?.message || 'unknown'));
+    }
+
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      push('API logout endpoint called');
+    } catch (error: any) {
+      push('API logout error: ' + (error?.message || 'unknown'));
+    }
+
     await signOut({ callbackUrl: '/' });
   };
 

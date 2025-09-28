@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import CapacitorGoogleAuth from '@/lib/capacitor-google-auth';
 
 /**
  * Google Auth Button Component
@@ -52,31 +53,25 @@ export function GoogleAuthButton() {
       throw new Error('El plugin de Firebase no expone signInWithGoogle');
     }
 
-    console.log('GoogleAuthButton: Iniciando login con Firebase (móvil)...');
-
-    const signInResult = await plugin.signInWithGoogle({
-      scopes: ['profile', 'email'],
-      serverClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-    });
-    console.log('GoogleAuthButton: Resultado signInWithGoogle:', signInResult);
-
     if (typeof plugin.getIdToken !== 'function') {
       throw new Error('El plugin de Firebase no expone getIdToken');
     }
 
-    const idTokenResult = await plugin.getIdToken({ forceRefresh: true });
-    console.log('GoogleAuthButton: Token obtenido:', idTokenResult);
+    console.log('GoogleAuthButton: Iniciando login con Firebase (móvil)...');
 
-    if (!idTokenResult?.token) {
-      throw new Error('No se recibió el token de Firebase');
+    const authResult = await CapacitorGoogleAuth.signIn();
+    console.log('GoogleAuthButton: Resultado signIn:', authResult);
+
+    if (!authResult.success || !authResult.user?.idToken) {
+      throw new Error(authResult.error || 'No se pudo iniciar sesión con Google');
     }
 
     const response = await fetch('/api/auth/capacitor-google', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        idToken: idTokenResult.token,
-        user: signInResult?.user ?? null,
+        idToken: authResult.user.idToken,
+        user: authResult.user,
       }),
     });
 
