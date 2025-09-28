@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';  // Comentado para compatibilidad con export build
 export const runtime = 'nodejs';
 
 /**

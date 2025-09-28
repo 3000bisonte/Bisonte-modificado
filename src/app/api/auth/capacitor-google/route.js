@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { encode } from 'next-auth/jwt';
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+// export const dynamic = 'force-dynamic';  // Comentado para compatibilidad con export build
+// export const runtime = 'nodejs';
 
 /**
  * Handle Google authentication from Capacitor app

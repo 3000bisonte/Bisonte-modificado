@@ -1,52 +1,106 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { signIn } from 'next-auth/react';
 
 /**
  * Google Auth Button Component
- * Uses NextAuth Google provider for web, Firebase for Capacitor mobile
- * Firebase imports only loaded in mobile environment to avoid build issues
+ * Exclusivo para móvil: usa Firebase Authentication nativo mediante Capacitor
+ * En web el botón queda deshabilitado para evitar rutas incompatibles
  */
 export function GoogleAuthButton() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCapacitor, setIsCapacitor] = useState(false);
 
+  const getFirebasePlugin = () => {
+    if (typeof window === 'undefined') return null;
+
+    const capacitor = (window as any).Capacitor ?? {};
+
+    return (
+      capacitor.Plugins?.FirebaseAuthentication ||
+      capacitor.FirebaseAuthentication ||
+      capacitor.Plugins?.firebaseAuthentication ||
+      capacitor.firebaseAuthentication ||
+      null
+    );
+  };
+
   useEffect(() => {
-    // Check if we're in Capacitor environment
-    setIsCapacitor(typeof window !== 'undefined' && !!(window as any).Capacitor);
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const capacitor = (window as any).Capacitor ?? {};
+    const isNative = Boolean(capacitor.isNativePlatform?.());
+    const firebasePlugin = getFirebasePlugin();
+
+    setIsCapacitor(Boolean(firebasePlugin) && isNative);
   }, []);
 
   const handleMobileSignIn = async () => {
-    try {
-      console.log('GoogleAuthButton: Mobile environment detected, but using NextAuth for compatibility...');
-      
-      // Por ahora, usar NextAuth incluso en móvil para evitar problemas de build
-      // TODO: Implementar Firebase nativo cuando resolvamos las dependencias de build
-      const result = await signIn('google', { callbackUrl: '/home' });
-      console.log('GoogleAuthButton: NextAuth sign-in initiated:', result);
-    } catch (error) {
-      console.error('GoogleAuthButton: Mobile sign-in error:', error);
-      throw error;
+    if (typeof window === 'undefined') {
+      throw new Error('Entorno no soportado');
     }
-  };
 
-  const handleWebSignIn = async () => {
-    console.log('GoogleAuthButton: Starting NextAuth web sign-in...');
-    const result = await signIn('google', { callbackUrl: '/home' });
-    console.log('GoogleAuthButton: NextAuth sign-in initiated:', result);
+    const plugin = getFirebasePlugin();
+
+    if (!plugin) {
+      throw new Error('Firebase Authentication plugin no disponible en el entorno actual');
+    }
+
+    if (typeof plugin.signInWithGoogle !== 'function') {
+      throw new Error('El plugin de Firebase no expone signInWithGoogle');
+    }
+
+    console.log('GoogleAuthButton: Iniciando login con Firebase (móvil)...');
+
+    const signInResult = await plugin.signInWithGoogle({
+      scopes: ['profile', 'email'],
+      serverClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    });
+    console.log('GoogleAuthButton: Resultado signInWithGoogle:', signInResult);
+
+    if (typeof plugin.getIdToken !== 'function') {
+      throw new Error('El plugin de Firebase no expone getIdToken');
+    }
+
+    const idTokenResult = await plugin.getIdToken({ forceRefresh: true });
+    console.log('GoogleAuthButton: Token obtenido:', idTokenResult);
+
+    if (!idTokenResult?.token) {
+      throw new Error('No se recibió el token de Firebase');
+    }
+
+    const response = await fetch('/api/auth/capacitor-google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idToken: idTokenResult.token,
+        user: signInResult?.user ?? null,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('GoogleAuthButton: Error en backend:', errorText);
+      throw new Error('No se pudo crear la sesión');
+    }
+
+    console.log('GoogleAuthButton: Sesión creada correctamente');
+    window.location.href = '/home';
   };
 
   const handleSignIn = async () => {
-    console.log('GoogleAuthButton: Starting sign-in process...', { isCapacitor });
+    if (!isCapacitor) {
+      alert('El inicio de sesión con Google está disponible únicamente dentro de la app móvil.');
+      return;
+    }
+
+    console.log('GoogleAuthButton: iniciando proceso de login en móvil...');
     setIsLoading(true);
-    
+
     try {
-      if (isCapacitor) {
-        await handleMobileSignIn();
-      } else {
-        await handleWebSignIn();
-      }
+      await handleMobileSignIn();
     } catch (error) {
       console.error('GoogleAuthButton: Error:', error);
       alert('Error al iniciar sesión: ' + (error?.message || 'Error desconocido'));
@@ -70,10 +124,12 @@ export function GoogleAuthButton() {
     );
   }
 
+  const label = isCapacitor ? 'Continuar con Google' : 'Disponible solo en la app móvil';
+
   return (
     <button
       onClick={handleSignIn}
-      disabled={isLoading}
+      disabled={isLoading || !isCapacitor}
       className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium py-3 px-4 rounded-xl hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-sm sm:text-base"
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -82,7 +138,7 @@ export function GoogleAuthButton() {
         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
       </svg>
-      <span>Continuar con Google</span>
+      <span>{label}</span>
     </button>
   );
 }

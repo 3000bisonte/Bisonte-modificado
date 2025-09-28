@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { compose, handle, withErrorBoundary, withValidation, withRateLimit } from "@/lib/http";
 import { guardarEnvioSchema } from "@/schemas/guardarenvio";
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   // Simple status endpoint for this route

@@ -8,8 +8,8 @@ const nextConfig = {
     // Permite que el build no falle por errores de TypeScript en Vercel
     ignoreBuildErrors: true,
   },
-  // Usar standalone para desarrollo, se puede cambiar a export para Capacitor
-  output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : 'standalone',
+  // Usar standalone siempre - funciona mejor con Capacitor y Vercel
+  output: 'standalone',
   trailingSlash: true,
   images: {
     unoptimized: true
