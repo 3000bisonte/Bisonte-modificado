@@ -7,6 +7,9 @@
     "cleartext": false
   },
   "plugins": {
+    "BisonteAuth": {
+      "class": "com.bisonte.auth.BisonteAuth"
+    },
     "FirebaseAuthentication": {
       "skipNativeAuth": false,
       "providers": ["google.com"]

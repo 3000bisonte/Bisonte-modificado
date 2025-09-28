@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { signIn } from 'next-auth/react';
+import { encode } from 'next-auth/jwt';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -11,10 +11,19 @@ export const runtime = 'nodejs';
  */
 export async function POST(request) {
   try {
+    console.log('POST /api/auth/capacitor-google - Request received');
+    
     const body = await request.json();
     const { idToken, user } = body;
 
+    console.log('POST /api/auth/capacitor-google - Body:', { 
+      hasIdToken: !!idToken, 
+      hasUser: !!user,
+      userEmail: user?.email 
+    });
+
     if (!idToken || !user) {
+      console.log('POST /api/auth/capacitor-google - Missing required data');
       return NextResponse.json(
         { error: 'Missing idToken or user data' },
         { status: 400 }
@@ -31,17 +40,27 @@ export async function POST(request) {
       name: user.name
     });
 
-    // Create or update user session
-    // This integrates with your existing NextAuth setup
-    const sessionToken = await createUserSession({
-      id: user.uid,
+    // Create NextAuth compatible session token
+    const sessionData = {
+      sub: user.uid,
       email: user.email,
       name: user.name,
-      image: user.picture,
-      provider: 'google-capacitor'
-    });
+      picture: user.picture,
+      provider: 'google',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 days
+    };
 
-    return NextResponse.json({
+    // Use NextAuth's encode function to create a compatible JWT
+    const token = await encode({
+      token: sessionData,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+    
+    console.log('JWT token created successfully');
+
+    // Create response with session cookie
+    const response = NextResponse.json({
       success: true,
       message: 'Authentication successful',
       user: {
@@ -50,8 +69,24 @@ export async function POST(request) {
         name: user.name,
         image: user.picture
       },
-      sessionToken
+      redirectUrl: '/home'
     });
+
+    // Set the NextAuth session cookie
+    const cookieName = process.env.NODE_ENV === 'production' 
+      ? '__Secure-next-auth.session-token' 
+      : 'next-auth.session-token';
+      
+    response.cookies.set(cookieName, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+      path: '/'
+    });
+
+    console.log('Response prepared with cookie');
+    return response;
 
   } catch (error) {
     console.error('Capacitor Google Auth error:', error);
@@ -99,32 +134,3 @@ export async function GET(request) {
   }
 }
 
-/**
- * Create user session (integrate with your existing auth system)
- */
-async function createUserSession(userData) {
-  // This should integrate with your existing user management
-  // For now, return a basic session token
-  
-  try {
-    // You can integrate this with your existing user creation logic
-    // from src/lib/auth.js or your database
-    
-    const sessionData = {
-      userId: userData.id,
-      email: userData.email,
-      name: userData.name,
-      provider: userData.provider,
-      createdAt: new Date().toISOString()
-    };
-
-    // Generate a session token (you should use proper JWT signing)
-    const sessionToken = Buffer.from(JSON.stringify(sessionData)).toString('base64');
-    
-    return sessionToken;
-
-  } catch (error) {
-    console.error('Failed to create user session:', error);
-    throw new Error('Session creation failed');
-  }
-}

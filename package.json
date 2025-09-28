@@ -47,11 +47,11 @@
     "quality:fix": "npm run lint:fix && npm run format"
   },
   "dependencies": {
-    "@bisonte/capacitor-bisonte-auth": "file:native/capacitor-bisonte-auth",
-    "@capacitor-community/admob": "^7.0.3",
-    "@capacitor-firebase/authentication": "^7.3.1",
-    "@capacitor/android": "^7.4.3",
-    "@capacitor/cli": "^7.4.3",
+    "@capacitor-community/admob": "5.1.0",
+    "@capacitor-firebase/authentication": "5.2.0",
+    "@capacitor/android": "6.1.2",
+    "@capacitor/cli": "6.1.2",
+    "@capacitor/core": "6.1.2",
     "@mercadopago/sdk-react": "^0.0.15",
     "@prisma/client": "^5.21.1",
     "@tanstack/react-table": "^8.21.3",
@@ -63,6 +63,7 @@
     "envalid": "^8.1.0",
     "formik": "^2.2.9",
     "google-auth-library": "^9.14.1",
+    "jsonwebtoken": "^9.0.2",
     "mercadopago": "^2.0.4",
     "mysql2": "^3.14.1",
     "next": "13.5.6",
@@ -73,6 +74,11 @@
     "resend": "^4.6.0",
     "yup": "^1.0.2",
     "zod": "^3.25.76"
+  },
+  "overrides": {
+    "@capacitor/android": "6.1.2",
+    "@capacitor/core": "6.1.2",
+    "@capacitor/cli": "6.1.2"
   },
   "devDependencies": {
     "@bubblewrap/cli": "^1.23.0",

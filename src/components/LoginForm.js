@@ -7,6 +7,7 @@ import { validateSchema, loginSchema, ValidationPatterns } from "../lib/validati
 // NOTE: Do not import server-only modules here (like ../lib/security) because it pulls prisma/env into the client bundle
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { GoogleAuthButton } from "./GoogleAuthButton";
 
 const LoginForm = ({ callbackUrl }) => {
   const [email, setEmail] = useState("");
@@ -409,16 +410,10 @@ const LoginForm = ({ callbackUrl }) => {
               </div>
             </div>
 
-            {/* Google Button */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading}
-              className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium py-3 px-4 rounded-xl hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-sm sm:text-base"
-            >
-              <img src="/google-logo.png" alt="Google" className="w-5 h-5" />
-              Continuar con Google
-            </button>
+            {/* Google Button - Using our new GoogleAuthButton component */}
+            <div className="w-full">
+              <GoogleAuthButton />
+            </div>
           </form>
 
           {/* Register Link */}
