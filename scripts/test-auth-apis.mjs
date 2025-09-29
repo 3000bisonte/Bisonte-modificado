@@ -80,7 +80,19 @@ const testCases = [
     endpoint: '/api/auth/password/request',
     body: () => ({ email: dynamicData.passwordEmail }),
     okStatuses: [200],
-    validate: ({ json }) => ({ ok: !!json?.message, message: json?.message })
+    validate: ({ json }) => {
+      if (!json?.message) {
+        return { ok: false, message: json?.error || 'Sin mensaje de confirmación' };
+      }
+
+      const delivery = json?.emailDelivery;
+      if (delivery) {
+        const status = delivery.sent ? 'correo enviado' : `correo omitido (${delivery.reason || 'sin motivo'})`;
+        return { ok: true, message: `${json.message} → ${status}` };
+      }
+
+      return { ok: true, message: json.message };
+    }
   },
   {
     name: 'Reset de contraseña código inválido',

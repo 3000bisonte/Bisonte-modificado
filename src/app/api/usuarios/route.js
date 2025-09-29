@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // Usar el singleton central en lugar de instanciar PrismaClient aquí para evitar demasiadas conexiones.
-import prisma from "../../../libs/prisma";
+import prisma from "../../../lib/prisma";
 
 // Ensure this route always runs dynamically on Node.js runtime (needed for Prisma)
 export const dynamic = 'force-dynamic';
@@ -21,14 +21,22 @@ export async function GET() {
         //direccion_recogida: true,
         //detalle_direccion: true,
         //esAdministrador: true,
-        envios: true
+        historial_envio: true
       },
       orderBy: { id: "desc" },
     });
+    const formatted = usuarios.map((usuario) => {
+      const { historial_envio, ...rest } = usuario;
+      return {
+        ...rest,
+        envios: historial_envio,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      data: usuarios,
-      message: `${usuarios.length} usuarios obtenidos`
+      data: formatted,
+      message: `${formatted.length} usuarios obtenidos`
     });
   } catch (error) {
     console.error("Error en GET /usuarios:", error);

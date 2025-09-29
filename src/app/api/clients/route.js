@@ -50,6 +50,7 @@ export const POST = withErrorHandler(async (request) => {
         email: validated.email.toLowerCase(),
         celular: validated.celular ?? null,
         ciudad: validated.ciudad ?? null,
+        updatedAt: new Date(),
       },
       select: { id: true, nombre: true, email: true, celular: true, ciudad: true },
     });

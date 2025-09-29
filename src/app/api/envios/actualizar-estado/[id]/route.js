@@ -41,7 +41,7 @@ export async function PATCH(request, { params }) {
     }
 
     // Buscar el envío existente
-    const envioExistente = await prisma.historialEnvio.findUnique({
+    const envioExistente = await prisma.historial_envio.findUnique({
       where: {
         id: id,
       },
@@ -69,7 +69,7 @@ export async function PATCH(request, { params }) {
     }
 
     // Actualizar el estado
-    const updatedEnvio = await prisma.historialEnvio.update({
+    const updatedEnvio = await prisma.historial_envio.update({
       where: {
         id: id,
       },

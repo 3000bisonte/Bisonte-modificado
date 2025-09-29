@@ -1,56 +1,71 @@
-import prisma from "../../../../libs/prisma";
 import { NextResponse } from "next/server";
+import prisma from "../../../../libs/prisma";
 
-export async function GET(request, { params }) {
+const ADMIN_VISIBLE_STATES = [
+  "RECOLECCION_PENDIENTE",
+  "RECOGIDO_TRANSPORTADORA",
+  "EN_TRANSPORTE",
+  "ENTREGADO",
+  "DEVOLUCION",
+  "REPROGRAMAR",
+  "EN_CIUDAD_DESTINO",
+  "EN_DISTRIBUCION",
+  "NO_ENTREGADO",
+  "ENVIO_CANCELADO",
+  "DEVUELTO_ORIGEN",
+  "EN_ESPERA_CLIENTE",
+];
+
+export async function GET(_request, { params }) {
   const perfilId = Number(params.id);
 
-  // Validar que el ID sea un número válido
-  if (isNaN(perfilId)) {
+  if (!Number.isFinite(perfilId) || perfilId <= 0) {
     return NextResponse.json(
       { error: "El ID proporcionado no es válido." },
       { status: 400 }
     );
   }
 
-  // Obtener el perfil del usuario
-  const perfil = await prisma.usuario.findUnique({
-    where: { id: perfilId },
-  });
+  try {
+    const perfil = await prisma.usuarios.findUnique({
+      where: { id: perfilId },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        esAdministrador: true,
+      },
+    });
 
-  // Validar si el perfil existe
-  if (!perfil) {
+    if (!perfil) {
+      return NextResponse.json(
+        { error: "Perfil no encontrado." },
+        { status: 404 }
+      );
+    }
+
+  const envios = await prisma.historial_envio.findMany({
+      where: perfil.esAdministrador
+        ? { Estado: { in: ADMIN_VISIBLE_STATES } }
+        : { usuarioId: perfil.id },
+      orderBy: { FechaSolicitud: "desc" },
+    });
+
+    return NextResponse.json({
+      success: true,
+      perfil: {
+        id: perfil.id,
+        nombre: perfil.nombre,
+        email: perfil.email,
+        esAdministrador: perfil.esAdministrador,
+      },
+      envios,
+    });
+  } catch (error) {
+    console.error("Error en GET /obtenerenvios/[id]", error);
     return NextResponse.json(
-      { error: "Perfil no encontrado." },
-      { status: 404 }
+      { error: "Error interno del servidor", details: error?.message },
+      { status: 500 }
     );
   }
-
-  let envios;
-
-  // Si el usuario es administrador, obtiene todos los envíos con estado "Recolección programada"
-  if (perfil.esAdministrador) {
-    envios = await prisma.historialEnvio.findMany({
-      where: {
-        OR: [
-          { Estado: "RECOLECCION_PENDIENTE" },
-          { Estado: "RECOGIDO_TRANSPORTADORA" },
-          { Estado: "EN_TRANSPORTE" },
-          { Estado: "ENTREGADO" },
-          { Estado: "DEVOLUCION" },
-          { Estado: "REPROGRAMAR" },
-        ],
-      },
-    });
-  } else {
-    // Si no es administrador, obtiene solo los envíos relacionados a su perfil
-    envios = await prisma.historialEnvio.findMany({
-      where: {
-        PerfilId: perfilId,
-      },
-    });
-  }
-
-  console.log("Envíos encontrados:", envios);
-
-  return NextResponse.json(envios);
 }

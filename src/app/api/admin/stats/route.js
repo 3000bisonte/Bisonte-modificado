@@ -9,7 +9,7 @@ export async function GET() {
     const usuarios = await prisma.usuarios.count();
 
     // Contar envíos (tabla: historialEnvio)
-    const envios = await prisma.historialEnvio.count();
+  const envios = await prisma.historial_envio.count();
 
   // Contar mensajes de contacto (modelo: contacto)
   const mensajes = await prisma.contacto.count();

@@ -3,10 +3,18 @@ import { headers } from 'next/headers';
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { OAuth2Client } from "google-auth-library";
-import { verifyPassword, hashPassword, checkLoginRateLimit, getClientIP, getClientUserAgent } from "./security";
-import { validateSchema, loginSchema, googleIdTokenSchema } from "./validation";
-import { logSecurityEvent, SecurityEvents } from "./monitoring";
-import prisma from "../libs/prisma";
+import { validateApiInput, loginSchema } from "./validation";
+import prisma from "./prisma";
+import bcrypt from "bcryptjs";
+
+// Helper functions
+const verifyPassword = async (password, hashedPassword) => {
+  return await bcrypt.compare(password, hashedPassword);
+};
+
+const hashPassword = async (password) => {
+  return await bcrypt.hash(password, 12);
+};
 
 const googleClient = process.env.GOOGLE_CLIENT_ID
   ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -68,9 +76,8 @@ export const authOptions = {
         // Path A: Native Google Sign-In via ID Token (no OAuth redirect, ideal para WebView)
         if (credentials?.idToken) {
           // 📋 Validate Google ID Token structure
-          const validation = validateSchema(googleIdTokenSchema, { idToken: credentials.idToken });
-          if (!validation.success) {
-            console.error('[Auth] Invalid Google ID Token format:', validation.errors);
+          if (!credentials.idToken || typeof credentials.idToken !== 'string') {
+            console.error('[Auth] Invalid Google ID Token format');
             throw new Error("Formato de token inválido");
           }
 
@@ -147,13 +154,13 @@ export const authOptions = {
 
         // Path B: Credenciales clásicas (email/password)
         // 📋 Validate login form data
-        const validation = validateSchema(loginSchema, {
+        const validation = validateApiInput(loginSchema, {
           email: credentials?.email || "",
           password: credentials?.password || ""
         });
         
         if (!validation.success) {
-          const errorMessages = validation.errors.map(e => e.message).join(', ');
+          const errorMessages = validation.error.details.map(e => e.message).join(', ');
           throw new Error(`Datos inválidos: ${errorMessages}`);
         }
 

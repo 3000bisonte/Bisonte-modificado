@@ -2,11 +2,36 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { requireAuth } from "@/lib/authMiddleware";
-import { ValidationService } from "@/lib/validation";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { logSecurityEvent, SecurityEvents } from "@/lib/security";
+
+const verifySessionSchema = z
+  .object({
+    sessionId: z
+      .union([
+        z.string().trim().min(1, "Session ID requerido"),
+        z.number().int().positive({ message: "Session ID inválido" }),
+      ])
+      .transform((value) => {
+        const normalized = String(value).trim();
+        if (!/^\d+$/.test(normalized)) {
+          throw new z.ZodError([
+            {
+              code: z.ZodIssueCode.custom,
+              message: "Session ID inválido",
+              path: ["sessionId"],
+            },
+          ]);
+        }
+        return normalized;
+      }),
+    lastActivity: z
+      .number({ invalid_type_error: "lastActivity debe ser numérico" })
+      .int("lastActivity debe ser un entero")
+      .optional(),
+  })
+  .strict();
 
 /**
  * POST /api/auth/verify-session
@@ -19,18 +44,28 @@ export async function POST(request) {
                      request.headers.get('x-real-ip') || 
                      'unknown';
 
-    // Validar datos de entrada
-    const validation = await ValidationService.validateApiInput(request, {
-      sessionId: z.string().min(1, 'Session ID requerido'),
-      lastActivity: z.number().optional()
-    });
+    let rawBody = null;
+    try {
+      rawBody = await request.json();
+    } catch (parseError) {
+      return NextResponse.json(
+        {
+          valid: false,
+          error: 'Cuerpo de la petición inválido',
+          code: 'INVALID_JSON',
+        },
+        { status: 400 }
+      );
+    }
+
+    const validation = verifySessionSchema.safeParse(rawBody);
 
     if (!validation.success) {
       return NextResponse.json(
         { 
           valid: false, 
           error: 'Datos de verificación inválidos',
-          details: validation.errors 
+          details: validation.error.flatten(),
         },
         { status: 400 }
       );
@@ -59,10 +94,12 @@ export async function POST(request) {
     }
 
     // Verificar que el ID de sesión coincida
-    if (session.user.id !== sessionId) {
+    const serverSessionId = session.user.id ? String(session.user.id) : undefined;
+
+    if (serverSessionId !== sessionId) {
       await logSecurityEvent(SecurityEvents.SESSION_ID_MISMATCH, {
         sessionId,
-        serverSessionId: session.user.id,
+        serverSessionId,
         ip: clientIP
       });
 
@@ -77,8 +114,27 @@ export async function POST(request) {
     }
 
     // Verificar usuario en base de datos
+    const numericSessionId = Number.parseInt(sessionId, 10);
+
+    if (Number.isNaN(numericSessionId)) {
+      await logSecurityEvent(SecurityEvents.SESSION_VERIFICATION_FAILED, {
+        sessionId,
+        ip: clientIP,
+        reason: 'invalid_session_id_format'
+      });
+
+      return NextResponse.json(
+        {
+          valid: false,
+          error: 'Formato de sesión inválido',
+          code: 'INVALID_SESSION_ID',
+        },
+        { status: 400 }
+      );
+    }
+
     const dbUser = await prisma.usuarios.findUnique({
-      where: { id: parseInt(sessionId) },
+      where: { id: numericSessionId },
       select: {
         id: true,
         email: true,
@@ -174,7 +230,7 @@ export async function POST(request) {
 
     // Actualizar último acceso
     await prisma.usuarios.update({
-      where: { id: parseInt(sessionId) },
+      where: { id: numericSessionId },
       data: { 
         lastLoginAt: new Date(),
         failedLogins: 0 // Resetear intentos fallidos en verificación exitosa

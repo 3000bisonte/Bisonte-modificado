@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createPasswordRecovery, checkRateLimit } from "@/lib/security";
+import { sendPasswordRecoveryEmail } from "@/lib/email";
 import prisma from "@/lib/prisma";
 
 /**
@@ -47,22 +48,38 @@ export async function POST(request) {
     }
 
     // Create recovery code
-  const recoveryData = await createPasswordRecovery(email, clientIp, userAgent);
+    const recoveryData = await createPasswordRecovery(email, clientIp, userAgent);
 
-    // Here you would send the recovery code via email
-    // For now, we'll return it (remove in production)
-    console.log(`Password recovery code for ${email}: ${recoveryData.code}`);
+    const emailDelivery = await sendPasswordRecoveryEmail({
+      to: email,
+      code: recoveryData.code,
+      token: recoveryData.token,
+      expiresAt: recoveryData.expiresAt,
+      name: user.nombre || user.email,
+    });
 
-    return NextResponse.json(
-      { 
-        message: "Si el email existe, se enviará un código de recuperación.",
-        // Remove this in production:
-        recoveryCode: process.env.NODE_ENV === "development" ? recoveryData.code : undefined,
-        recoveryToken: process.env.NODE_ENV === "development" ? recoveryData.token : undefined,
-        expiresAt: process.env.NODE_ENV === "development" ? recoveryData.expiresAt : undefined
-      },
-      { status: 200 }
-    );
+    if (!emailDelivery.sent) {
+      console.warn("[PasswordReset] Email delivery skipped or failed", {
+        email,
+        reason: emailDelivery.reason,
+        error: emailDelivery.error,
+      });
+    }
+
+    const responseBody = {
+      message: "Si el email existe, se enviará un código de recuperación.",
+    };
+
+    if (process.env.NODE_ENV !== "production") {
+      Object.assign(responseBody, {
+        recoveryCode: recoveryData.code,
+        recoveryToken: recoveryData.token,
+        expiresAt: recoveryData.expiresAt,
+        emailDelivery,
+      });
+    }
+
+    return NextResponse.json(responseBody, { status: 200 });
 
   } catch (error) {
     console.error("Error in password reset request:", error);

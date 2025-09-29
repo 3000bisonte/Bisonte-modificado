@@ -35,7 +35,7 @@ export async function GET() {
     }
 
     try {
-      const enviosCount = await prisma.historialEnvio.count();
+      const enviosCount = await prisma.historial_envio.count();
       diagnostics.prisma.tableChecks.historialEnvio = { accessible: true, count: enviosCount };
     } catch (e) {
       diagnostics.prisma.tableChecks.historialEnvio = { accessible: false, error: e.message };

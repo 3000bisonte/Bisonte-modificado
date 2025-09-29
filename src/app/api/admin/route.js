@@ -8,7 +8,7 @@ export async function GET() {
     // Simulate admin dashboard data
     const stats = {
       totalUsuarios: await prisma.usuarios.count().catch(() => 0),
-      totalEnvios: await prisma.historialEnvio.count().catch(() => 0),
+  totalEnvios: await prisma.historial_envio.count().catch(() => 0),
       totalContactos: await prisma.contacto.count().catch(() => 0)
     };
 

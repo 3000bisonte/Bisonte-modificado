@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
 import { requestGoogleIdToken } from "../lib/nativeBridge";
-import { validateSchema, loginSchema, ValidationPatterns } from "../lib/validation";
+import { validateApiInput, loginSchema } from "../lib/validation";
 // NOTE: Do not import server-only modules here (like ../lib/security) because it pulls prisma/env into the client bundle
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,35 +22,34 @@ const LoginForm = ({ callbackUrl }) => {
 
   // 🔍 Real-time validation
   const validateField = useCallback((field, value) => {
-    const newErrors = { ...fieldErrors };
-    
-    switch (field) {
-      case 'email':
+    setFieldErrors((prev) => {
+      const newErrors = { ...prev };
+
+      if (field === 'email') {
+        const result = loginSchema.shape.email.safeParse(value || '');
         if (!value) {
           newErrors.email = 'Email es requerido';
-        } else if (!ValidationPatterns.EMAIL.test(value)) {
-          newErrors.email = 'Formato de email inválido';
+        } else if (!result.success) {
+          newErrors.email = result.error.issues?.[0]?.message || 'Formato de email inválido';
         } else {
           delete newErrors.email;
         }
-        break;
-        
-      case 'password':
+      }
+
+      if (field === 'password') {
+        const result = loginSchema.shape.password.safeParse(value || '');
         if (!value) {
           newErrors.password = 'Contraseña es requerida';
-        } else if (value.length < 3) {
-          newErrors.password = 'Contraseña muy corta';
+        } else if (!result.success) {
+          newErrors.password = result.error.issues?.[0]?.message || 'Contraseña inválida';
         } else {
           delete newErrors.password;
         }
-        break;
-        
-      default:
-        break;
-    }
-    
-    setFieldErrors(newErrors);
-  }, [fieldErrors]);
+      }
+
+      return newErrors;
+    });
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -66,11 +65,14 @@ const LoginForm = ({ callbackUrl }) => {
     setFieldErrors({});
     
     // 📋 Client-side validation before submission
-    const validation = validateSchema(loginSchema, { email, password });
+    const validation = validateApiInput(loginSchema, { email, password });
     if (!validation.success) {
       const newErrors = {};
-      validation.errors.forEach(error => {
-        newErrors[error.field] = error.message;
+      (validation.error?.details || []).forEach((issue) => {
+        const field = issue?.path?.[0] || issue?.field;
+        if (field) {
+          newErrors[field] = issue.message || 'Dato inválido';
+        }
       });
       setFieldErrors(newErrors);
       setIsLoading(false);
@@ -80,8 +82,8 @@ const LoginForm = ({ callbackUrl }) => {
     try {
       const res = await signIn("credentials", {
         redirect: false,
-        email: validation.data.email,
-        password: validation.data.password,
+  email: validation.data.email,
+  password: validation.data.password,
       });
 
       if (res?.error) {

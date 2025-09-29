@@ -1,11 +1,15 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-misused-promises, no-console */
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import MegaSaleModal from "./MegaSaleModal";
-import DescuentoAnunciosModal from "./DescuentoAnunciosModal";
-import BottomNav from "./BottomNav";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+
+
+import { ADMOB_CONFIG } from "../config/admob.config";
 import { useAdMob } from "../services/AdMobService";
+
+import BottomNav from "./BottomNav";
+import MegaSaleModal from "./MegaSaleModal";
 
 // --- Helper Functions ---
 function formatDate(date) {
@@ -39,7 +43,7 @@ export default function Resumen() {
   const [remitente, setRemitente] = useState(null);
   const [destinatario, setDestinatario] = useState(null);
   const [costoTotal, setCostoTotal] = useState(null);
-  const [fecha, setFecha] = useState(formatDate(new Date()));
+  const fecha = useMemo(() => formatDate(new Date()), []);
   const [isCreatingShipment, setIsCreatingShipment] = useState(false);
 
   // UI State
@@ -53,8 +57,6 @@ export default function Resumen() {
     isRewardedReady, 
     isLoading: adMobLoading, 
     showRewardedAd, 
-    showBanner, 
-    hideBanner 
   } = useAdMob();
 
   // Legacy Ad State for backward compatibility
@@ -62,17 +64,104 @@ export default function Resumen() {
   const [retryCount, setRetryCount] = useState(0);
   const adTimeoutRef = useRef(null);
   const MAX_RETRIES = 3;
+  const DEFAULT_REWARD_AMOUNT = Number(
+    ADMOB_CONFIG?.REWARD_SETTINGS?.DISCOUNT_AMOUNT ?? 0
+  );
+
+  const syncCotizacionStores = useCallback((data) => {
+    if (!data || typeof data !== "object") {
+      return;
+    }
+
+    try {
+      localStorage.setItem("formCotizador", JSON.stringify(data));
+    } catch (error) {
+      console.error("[Resumen] Error actualizando formCotizador:", error);
+    }
+
+    try {
+      const existingRaw = localStorage.getItem("cotizacion");
+      if (existingRaw) {
+        const existing = JSON.parse(existingRaw);
+        const merged = {
+          ...existing,
+          ...data,
+          costoTotal: data.costoTotal,
+        };
+        localStorage.setItem("cotizacion", JSON.stringify(merged));
+      } else {
+        localStorage.setItem("cotizacion", JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error("[Resumen] Error sincronizando cotizacion:", error);
+      try {
+        localStorage.setItem("cotizacion", JSON.stringify(data));
+      } catch (persistError) {
+        console.error("[Resumen] Error persistiendo cotizacion:", persistError);
+      }
+    }
+  }, []);
+
+  const applyRewardDiscount = useCallback(
+    (rawAmount) => {
+      const amount = Number(
+        rawAmount !== undefined && rawAmount !== null
+          ? rawAmount
+          : DEFAULT_REWARD_AMOUNT
+      );
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return;
+      }
+
+      const read = (key) => {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+          console.error(`[Resumen] Error leyendo ${key}:`, error);
+          return null;
+        }
+      };
+
+      let stored = read("formCotizador");
+      if (!stored) {
+        stored = read("cotizacion");
+      }
+
+      if (!stored || typeof stored.costoTotal !== "number") {
+        console.warn("[Resumen] No se pudo aplicar descuento: cotizador inválido", stored);
+        return;
+      }
+
+      const nuevoCosto = Math.max(0, Number(stored.costoTotal) - amount);
+      const updated = {
+        ...stored,
+        costoTotal: nuevoCosto,
+        lastRewardAppliedAt: new Date().toISOString(),
+      };
+
+      syncCotizacionStores(updated);
+      setCotizador(updated);
+      setCostoTotal(nuevoCosto);
+    },
+    [DEFAULT_REWARD_AMOUNT, syncCotizacionStores]
+  );
 
   // --- Ad Logic ---
 
   const handleAdError = useCallback((errorType) => {
     console.error(`❌ Error de anuncio: ${errorType}`);
     setAdState("error");
-    if (adTimeoutRef.current) clearTimeout(adTimeoutRef.current);
+    if (adTimeoutRef.current) {
+      clearTimeout(adTimeoutRef.current);
+    }
   }, []);
 
   const preloadAd = useCallback(() => {
-    if (adState === "preloading" || adState === "ready") return;
+    if (adState === "preloading" || adState === "ready") {
+      return;
+    }
     if (window.AndroidInterface?.preloadRewardedAd) {
       console.log("📺 Precargando anuncio recompensado...");
       setAdState("preloading");
@@ -101,22 +190,14 @@ export default function Resumen() {
         console.log("📺 Mostrando anuncio recompensado con AdMob...");
         
         const result = await showRewardedAd();
-        
-        if (result?.reward?.amount > 0) {
-          // Aplicar descuento
-          const earnedReward = result.reward.amount || 2013;
-          const currentCotizador = JSON.parse(localStorage.getItem("formCotizador"));
-          
-          if (currentCotizador && typeof currentCotizador.costoTotal === "number") {
-            const nuevoCosto = Math.max(0, currentCotizador.costoTotal - earnedReward);
-            currentCotizador.costoTotal = nuevoCosto;
-            localStorage.setItem("formCotizador", JSON.stringify(currentCotizador));
-            setCotizador(currentCotizador);
-            setCostoTotal(nuevoCosto);
-          }
-          
+        const rewardAmount = result?.reward?.amount ?? DEFAULT_REWARD_AMOUNT;
+
+        if (Number.isFinite(Number(rewardAmount)) && Number(rewardAmount) > 0) {
+          applyRewardDiscount(rewardAmount);
           setAdState("done");
           setTimeout(() => setAdState("idle"), 3000);
+        } else {
+          setAdState("idle");
         }
         
       } catch (error) {
@@ -140,7 +221,9 @@ export default function Resumen() {
       try {
         window.AndroidInterface.showRewardedAd();
         adTimeoutRef.current = setTimeout(() => {
-          if (adState === "loading") handleAdError("show_timeout");
+          if (adState === "loading") {
+            handleAdError("show_timeout");
+          }
         }, 8000);
       } catch (error) {
         console.error("❌ Error al llamar a showRewardedAd:", error);
@@ -149,65 +232,141 @@ export default function Resumen() {
     } else {
       alert("📱 Los anuncios solo están disponibles en la app móvil.\n💡 Descarga la app para obtener descuentos.");
     }
-  }, [adState, costoTotal, adMobInitialized, isRewardedReady, showRewardedAd, preloadAd, handleAdError]);
+  }, [adState, costoTotal, adMobInitialized, isRewardedReady, showRewardedAd, preloadAd, handleAdError, applyRewardDiscount, DEFAULT_REWARD_AMOUNT]);
 
   // --- Effects ---
 
   // Cargar datos iniciales de localStorage
   useEffect(() => {
-    const cotizadorData = JSON.parse(localStorage.getItem("formCotizador"));
-    const remitenteData = JSON.parse(localStorage.getItem("formRemitente"));
-    const destinatarioData = JSON.parse(localStorage.getItem("formDestinatario"));
-    setCotizador(cotizadorData);
+    const safeRead = (key) => {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+      } catch (error) {
+        console.error(`[Resumen] Error leyendo ${key}:`, error);
+        return null;
+      }
+    };
+
+    const cotizadorData = safeRead("formCotizador");
+    const cotizacionData = safeRead("cotizacion");
+    const remitenteData = safeRead("formRemitente");
+    const destinatarioData = safeRead("formDestinatario");
+
+    let mergedCotizador = null;
+    if (cotizadorData && cotizacionData) {
+      const costoCandidates = [cotizadorData.costoTotal, cotizacionData.costoTotal]
+        .filter((value) => typeof value === "number");
+
+      const selectedCosto =
+        costoCandidates.length > 0 ? Math.min(...costoCandidates) : undefined;
+
+      mergedCotizador = {
+        ...cotizadorData,
+        ...cotizacionData,
+        ...(typeof selectedCosto === "number" ? { costoTotal: selectedCosto } : {}),
+      };
+    } else {
+      mergedCotizador = cotizadorData || cotizacionData;
+    }
+
+    if (mergedCotizador) {
+      setCotizador(mergedCotizador);
+      if (typeof mergedCotizador.costoTotal === "number") {
+        setCostoTotal(mergedCotizador.costoTotal);
+      }
+      syncCotizacionStores(mergedCotizador);
+    }
+
     setRemitente(remitenteData);
     setDestinatario(destinatarioData);
-    if (cotizadorData?.costoTotal !== undefined) {
-      setCostoTotal(cotizadorData.costoTotal);
-    }
-  }, []);
+  }, [syncCotizacionStores]);
 
   // Listener para mensajes de la interfaz nativa de Android
   useEffect(() => {
     const handleRewardedAdMessage = (event) => {
-      let data = event.data;
-      try {
-        if (typeof data === "string") data = JSON.parse(data);
-      } catch (e) { return; }
+      let data = event?.detail ?? event?.data ?? event;
 
-      if (!data || !data.type) return;
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data);
+        } catch (error) {
+          return;
+        }
+      }
+
+      if (!data || typeof data !== "object") {
+        return;
+      }
 
       console.log("📬 Mensaje recibido del anuncio:", data);
-      if (adTimeoutRef.current) clearTimeout(adTimeoutRef.current);
+      if (adTimeoutRef.current) {
+        clearTimeout(adTimeoutRef.current);
+      }
 
-      if (data.type === "reward" && data.status === "completed") {
+      const rewardAmountCandidate =
+        typeof data.amount === "number"
+          ? data.amount
+          : typeof data.reward?.amount === "number"
+            ? data.reward.amount
+            : null;
+
+      const rewardStatus =
+        typeof data.status === "string"
+          ? data.status.toLowerCase()
+          : undefined;
+
+      const rewardType = data.type;
+      const shouldApplyReward =
+        rewardType === "reward" ||
+        rewardType === ADMOB_CONFIG?.REWARD_SETTINGS?.REWARD_TYPE ||
+        rewardAmountCandidate !== null;
+
+      if (
+        shouldApplyReward &&
+        (rewardStatus === undefined || ["completed", "rewarded", "fulfilled"].includes(rewardStatus))
+      ) {
+        const amountToApply =
+          rewardAmountCandidate !== null ? rewardAmountCandidate : DEFAULT_REWARD_AMOUNT;
+        applyRewardDiscount(amountToApply);
         setAdState("done");
-        const earnedReward = data.amount || 2013;
-        const currentCotizador = JSON.parse(localStorage.getItem("formCotizador"));
-        if (currentCotizador && typeof currentCotizador.costoTotal === "number") {
-          const nuevoCosto = Math.max(0, currentCotizador.costoTotal - earnedReward);
-          currentCotizador.costoTotal = nuevoCosto;
-          localStorage.setItem("formCotizador", JSON.stringify(currentCotizador));
-          setCotizador(currentCotizador);
-          setCostoTotal(nuevoCosto);
-        }
         setTimeout(() => {
           setAdState("idle");
           preloadAd();
         }, 3000);
-      } else if (data.type === "adStatus") {
+        return;
+      }
+
+      if (rewardType === "adStatus") {
         switch (data.status) {
-          case "ready": setAdState("ready"); setRetryCount(0); break;
-          case "opened": setAdState("watching"); break;
-          case "closed": setAdState("idle"); preloadAd(); break;
-          case "error": handleAdError(data.errorType || "unknown_error"); break;
-          default: setAdState(data.status); break;
+          case "ready":
+            setAdState("ready");
+            setRetryCount(0);
+            break;
+          case "opened":
+            setAdState("watching");
+            break;
+          case "closed":
+            setAdState("idle");
+            preloadAd();
+            break;
+          case "error":
+            handleAdError(data.errorType || "unknown_error");
+            break;
+          default:
+            setAdState(data.status);
+            break;
         }
       }
     };
 
     window.addEventListener("message", handleRewardedAdMessage);
-    return () => window.removeEventListener("message", handleRewardedAdMessage);
-  }, [preloadAd, handleAdError]);
+    window.addEventListener("adReward", handleRewardedAdMessage);
+    return () => {
+      window.removeEventListener("message", handleRewardedAdMessage);
+      window.removeEventListener("adReward", handleRewardedAdMessage);
+    };
+  }, [applyRewardDiscount, preloadAd, handleAdError, DEFAULT_REWARD_AMOUNT]);
 
   // Lógica de reintento para errores de anuncios
   useEffect(() => {
@@ -240,7 +399,9 @@ export default function Resumen() {
   // Limpieza de timeouts al desmontar
   useEffect(() => {
     return () => {
-      if (adTimeoutRef.current) clearTimeout(adTimeoutRef.current);
+      if (adTimeoutRef.current) {
+        clearTimeout(adTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -248,6 +409,12 @@ export default function Resumen() {
 
   const handlePagar = async () => {
     setShowMegaSale(false);
+    if (cotizador) {
+      syncCotizacionStores({
+        ...cotizador,
+        costoTotal,
+      });
+    }
     if (costoTotal === 0) {
       await handleFreeShipment();
     } else {
@@ -260,7 +427,9 @@ export default function Resumen() {
       alert("Error: No se detectó una sesión activa.");
       return;
     }
-    if (costoTotal > 0) return;
+    if (costoTotal > 0) {
+      return;
+    }
 
     setIsCreatingShipment(true);
     const numeroGuia = generarNumeroGuia();

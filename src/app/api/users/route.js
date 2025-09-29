@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/libs/prisma';
-import { validateRequest } from '@/lib/validation.ts';
-import { withErrorHandler } from '@/lib/errorHandler';
+import prisma from '@/lib/prisma';
+import { validateApiInput, registerSchema } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -9,7 +8,7 @@ export const runtime = 'nodejs';
 
 
 // GET handler
-export const GET = withErrorHandler(async () => {
+export async function GET() {
   try {
     const users = await prisma.usuarios.findMany({
       select: { id: true, nombre: true, email: true, celular: true, ciudad: true },
@@ -23,26 +22,28 @@ export const GET = withErrorHandler(async () => {
       { status: 500 }
     );
   }
-});
+}
 
 // POST handler
-export const POST = withErrorHandler(async (request) => {
+export async function POST(request) {
   try {
     const body = await request.json();
 
-    const validated = await validateRequest(body, {
-      nombre: { type: 'string', required: true, min: 2, max: 100 },
-      email: { type: 'string', required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-      celular: { type: 'string', required: false },
-      ciudad: { type: 'string', required: false },
-    });
+    const validation = validateApiInput(registerSchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'Datos inválidos', details: validation.error.details },
+        { status: 400 }
+      );
+    }
 
     const created = await prisma.usuarios.create({
       data: {
-        nombre: validated.nombre,
-        email: validated.email.toLowerCase(),
-        celular: validated.celular ?? null,
-        ciudad: validated.ciudad ?? null,
+        nombre: validation.data.nombre,
+        email: validation.data.email.toLowerCase(),
+        celular: validation.data.telefono || null,
+        ciudad: null,
+        updatedAt: new Date(),
       },
       select: { id: true, nombre: true, email: true, celular: true, ciudad: true },
     });
@@ -55,4 +56,4 @@ export const POST = withErrorHandler(async (request) => {
       { status: 500 }
     );
   }
-});
+}

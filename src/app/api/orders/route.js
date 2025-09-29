@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/libs/prisma';
-import { validateRequest } from '@/lib/validation.ts';
-import { withErrorHandler } from '@/lib/errorHandler';
+import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -9,9 +7,9 @@ export const runtime = 'nodejs';
 
 
 // GET handler
-export const GET = withErrorHandler(async () => {
+export async function GET() {
   try {
-    const orders = await prisma.historialEnvio.findMany({
+    const orders = await prisma.historial_envio.findMany({
       orderBy: { FechaSolicitud: 'desc' },
       select: {
         id: true,
@@ -33,32 +31,22 @@ export const GET = withErrorHandler(async () => {
       { status: 500 }
     );
   }
-});
+}
 
 // POST handler
-export const POST = withErrorHandler(async (request) => {
+export async function POST(request) {
   try {
     const body = await request.json();
 
-    const validated = await validateRequest(body, {
-      NumeroGuia: { type: 'string', required: true, min: 3 },
-      Origen: { type: 'string', required: true },
-      Destino: { type: 'string', required: true },
-      Destinatario: { type: 'string', required: true },
-      Remitente: { type: 'string', required: true },
-      Estado: { type: 'string', required: true },
-      usuarioId: { type: 'number', required: false },
-    });
-
-    const created = await prisma.historialEnvio.create({
+    const created = await prisma.historial_envio.create({
       data: {
-        NumeroGuia: validated.NumeroGuia,
-        Origen: validated.Origen,
-        Destino: validated.Destino,
-        Destinatario: validated.Destinatario,
-        Remitente: validated.Remitente,
-        Estado: validated.Estado,
-        usuarioId: validated.usuarioId ?? null,
+        NumeroGuia: body.NumeroGuia || `BST-${Date.now()}`,
+        Origen: body.Origen,
+        Destino: body.Destino,
+        Destinatario: body.Destinatario,
+        Remitente: body.Remitente,
+        Estado: body.Estado || 'Pendiente',
+        usuarioId: body.usuarioId || null,
       },
       select: {
         id: true, NumeroGuia: true, Origen: true, Destino: true, Destinatario: true, Remitente: true, Estado: true, FechaSolicitud: true, usuarioId: true
@@ -73,4 +61,4 @@ export const POST = withErrorHandler(async (request) => {
       { status: 500 }
     );
   }
-});
+}

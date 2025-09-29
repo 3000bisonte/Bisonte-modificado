@@ -283,3 +283,32 @@ export function getClientIP(req) {
 export function getClientUserAgent(req) {
   return req.headers.get('user-agent') || 'unknown';
 }
+
+export const SecurityEvents = Object.freeze({
+  SESSION_VERIFICATION_FAILED: 'SESSION_VERIFICATION_FAILED',
+  SESSION_ID_MISMATCH: 'SESSION_ID_MISMATCH',
+  USER_NOT_FOUND_IN_SESSION: 'USER_NOT_FOUND_IN_SESSION',
+  LOCKED_ACCOUNT_ACCESS_ATTEMPT: 'LOCKED_ACCOUNT_ACCESS_ATTEMPT',
+  PASSWORD_VERSION_MISMATCH: 'PASSWORD_VERSION_MISMATCH',
+  SESSION_INACTIVE: 'SESSION_INACTIVE',
+  SESSION_VERIFIED: 'SESSION_VERIFIED',
+  SESSION_VERIFICATION_ERROR: 'SESSION_VERIFICATION_ERROR'
+});
+
+export async function logSecurityEvent(event, details = {}) {
+  const entry = {
+    event,
+    timestamp: new Date().toISOString(),
+    details
+  };
+
+  try {
+    if (process.env.NODE_ENV !== 'production') {
+      console.info(`[SecurityEvent:${event}]`, entry);
+    }
+  } catch (error) {
+    console.error('[SecurityEvent] Error al registrar evento:', error);
+  }
+
+  return entry;
+}

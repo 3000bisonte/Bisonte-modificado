@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "../../../libs/prisma";
+import prisma from "../../../lib/prisma";
 
 // Ensure this route always runs dynamically on Node.js runtime (needed for Prisma)
 export const dynamic = 'force-dynamic';
@@ -8,10 +8,10 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const envios = await prisma.historialEnvio.findMany({
+    const envios = await prisma.historial_envio.findMany({
       orderBy: { FechaSolicitud: "desc" },
       include: {
-        usuario: {
+        usuarios: {
           select: {
             nombre: true,
             email: true,
@@ -21,10 +21,18 @@ export async function GET() {
       },
     });
 
+    const formatted = envios.map((envio) => {
+      const { usuarios, ...rest } = envio;
+      return {
+        ...rest,
+        usuario: usuarios || null,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      data: envios,
-      message: `${envios.length} envíos obtenidos desde obtenerenvios`
+      data: formatted,
+      message: `${formatted.length} envíos obtenidos desde obtenerenvios`
     });
   } catch (error) {
     console.error("Error al obtener envíos:", error);
