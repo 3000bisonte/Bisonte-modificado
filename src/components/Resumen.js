@@ -56,6 +56,7 @@ export default function Resumen() {
     isInitialized: adMobInitialized, 
     isRewardedReady, 
     isLoading: adMobLoading, 
+    isSupported: adMobSupported,
     showRewardedAd, 
   } = useAdMob();
 
@@ -209,9 +210,16 @@ export default function Resumen() {
     }
 
     // Fallback a interfaz Android legacy
+    if (!adMobSupported && !window.AndroidInterface?.showRewardedAd) {
+      alert("📱 Los anuncios solo están disponibles en la app móvil.\n💡 Descarga la app para obtener descuentos.");
+      return;
+    }
+
     if (!isRewardedReady) {
       preloadAd();
-      alert("📱 Preparando anuncio. Por favor, espera unos segundos e inténtalo de nuevo.");
+      if (adMobSupported || window.AndroidInterface?.preloadRewardedAd) {
+        alert("📱 Preparando anuncio. Por favor, espera unos segundos e inténtalo de nuevo.");
+      }
       return;
     }
     
@@ -229,10 +237,8 @@ export default function Resumen() {
         console.error("❌ Error al llamar a showRewardedAd:", error);
         handleAdError("show_exception");
       }
-    } else {
-      alert("📱 Los anuncios solo están disponibles en la app móvil.\n💡 Descarga la app para obtener descuentos.");
     }
-  }, [adState, costoTotal, adMobInitialized, isRewardedReady, showRewardedAd, preloadAd, handleAdError, applyRewardDiscount, DEFAULT_REWARD_AMOUNT]);
+  }, [adState, costoTotal, adMobInitialized, adMobSupported, isRewardedReady, showRewardedAd, preloadAd, handleAdError, applyRewardDiscount, DEFAULT_REWARD_AMOUNT]);
 
   // --- Effects ---
 

@@ -17,19 +17,14 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // Firma condicional: si existen variables de entorno se aplica firma release, sino queda unsigned
-    def keystorePath = System.getenv("BISONTE_KEYSTORE_PATH")
-    def keystorePass = System.getenv("BISONTE_KEYSTORE_PASS")
-    def keyAlias     = System.getenv("BISONTE_KEY_ALIAS")
-    def keyPass      = System.getenv("BISONTE_KEY_PASS")
-
+    // Firma de release usando variables de gradle.properties
     signingConfigs {
-        if (keystorePath && new File(keystorePath).exists()) {
-            release {
-                storeFile file(keystorePath)
-                storePassword keystorePass
-                keyAlias keyAlias
-                keyPassword keyPass
+        release {
+            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
             }
         }
     }
@@ -38,9 +33,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            if (signingConfigs.findByName('release')) {
-                signingConfig signingConfigs.release
-            }
+            signingConfig signingConfigs.release
         }
         debug {
             // Mantener firma debug automática
