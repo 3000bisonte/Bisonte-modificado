@@ -239,7 +239,7 @@ const LoginForm = ({ callbackUrl }) => {
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-gradient-to-r from-teal-400 to-cyan-500 rounded-full blur opacity-40"></div>
               <img
-                src="/logo-bisonte-512x512.png"
+                src="/LogoNew.png"
                 alt="Bisonte Logo"
                 className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-white/20 shadow-lg"
               />

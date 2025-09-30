@@ -303,7 +303,7 @@ const Home = (): JSX.Element => {
         <div className="flex items-center gap-3">
           <Link href="/home" className="block">
             <Image
-              src="/logo-bisonte-512x512.png"
+              src="/LogoNew.png"
               alt="Logo"
               width={48}
               height={48}
