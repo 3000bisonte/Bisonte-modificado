@@ -363,7 +363,7 @@ const PagarComponent = ({ saldo, onRecargarSaldo, onPagarAhora, onClick }) => {
       <div className="flex flex-col w-full max-w-sm items-center space-y-6 bg-white p-6 rounded-lg shadow-lg">
         <div className="flex items-center mb-4 space-x-4">
           <Image
-            src="/LogoNew.jpg"
+            src="/logo-bisonte-512x512.png"
             alt="Logo de BisonteApp"
             width={80}
             height={80}
