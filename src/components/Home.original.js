@@ -143,7 +143,7 @@ const Home = () => {
         <div className="mx-auto w-full flex items-center justify-between px-4 sm:px-6 py-2 rounded-b-3xl min-h-[56px]">
           <div className="flex items-center gap-3 min-w-0">
             <Link href="/home/" className="shrink-0">
-              <img src="/LogoNew.png" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg hover:scale-110 transition-transform duration-300" />
+              <img src="/LogoNew.jpeg" alt="Logo" className="w-10 h-10 rounded-xl shadow-lg hover:scale-110 transition-transform duration-300" />
             </Link>
             <span className="text-[#41e0b3] font-extrabold text-2xl tracking-wide drop-shadow truncate">Bisonte</span>
           </div>
