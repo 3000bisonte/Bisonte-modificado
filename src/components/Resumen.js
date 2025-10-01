@@ -252,18 +252,6 @@ export default function Resumen() {
       return;
     }
 
-    // Fallback a interfaz Android legacy
-    if (!adMobSupported && !window.AndroidInterface?.showRewardedAd) {
-      alert("📱 Los anuncios solo están disponibles en la app móvil.\n💡 Descarga la app para obtener descuentos.");
-      return;
-    }
-
-    if (window.AndroidInterface?.preloadRewardedAd && adState !== "ready") {
-      preloadAd();
-      alert("📱 Preparando anuncio. Por favor, espera unos segundos e inténtalo de nuevo.");
-      return;
-    }
-
     if (messagePortRef.current) {
       console.log("📨 Solicitando anuncio mediante MessagePort...");
       setAdState("loading");
@@ -283,8 +271,14 @@ export default function Resumen() {
       }
       return;
     }
-    
+
     if (window.AndroidInterface?.showRewardedAd) {
+      if (window.AndroidInterface?.preloadRewardedAd && adState !== "ready") {
+        preloadAd();
+        alert("📱 Preparando anuncio. Por favor, espera unos segundos e inténtalo de nuevo.");
+        return;
+      }
+
       console.log("📺 Mostrando anuncio recompensado (legacy)...");
       setAdState("loading");
       try {
@@ -298,6 +292,12 @@ export default function Resumen() {
         console.error("❌ Error al llamar a showRewardedAd:", error);
         handleAdError("show_exception");
       }
+      return;
+    }
+
+    if (!adMobSupported) {
+      alert("📱 Los anuncios solo están disponibles en la app móvil.\n💡 Descarga la app para obtener descuentos.");
+      return;
     }
   }, [adState, costoTotal, adMobInitialized, adMobSupported, isRewardedReady, showRewardedAd, prepareRewardedAd, preloadAd, handleAdError, applyRewardDiscount, resolveRewardAmount]);
 
@@ -438,6 +438,7 @@ export default function Resumen() {
         const [port] = event.ports;
         if (port && messagePortRef.current !== port) {
           messagePortRef.current = port;
+          setAdState((prev) => (prev === "ready" ? prev : "ready"));
           try {
             port.postMessage("bridge:connected");
           } catch (error) {
