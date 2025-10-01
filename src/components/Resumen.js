@@ -45,6 +45,7 @@ export default function Resumen() {
   const [costoTotal, setCostoTotal] = useState(null);
   const fecha = useMemo(() => formatDate(new Date()), []);
   const [isCreatingShipment, setIsCreatingShipment] = useState(false);
+  const [rewardBanner, setRewardBanner] = useState(null);
 
   // UI State
   const [showRemitente, setShowRemitente] = useState(false);
@@ -71,6 +72,23 @@ export default function Resumen() {
   const DEFAULT_REWARD_AMOUNT = Number(
     ADMOB_CONFIG?.REWARD_SETTINGS?.DISCOUNT_AMOUNT ?? 0
   );
+
+  const formatPrice = useCallback((value) => {
+    if (!Number.isFinite(Number(value))) {
+      return "";
+    }
+
+    try {
+      return Number(value).toLocaleString("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0,
+      });
+    } catch (error) {
+      console.error("[Resumen] Error formateando precio:", error);
+      return `$${Number(value).toLocaleString("es-CO")}`;
+    }
+  }, []);
 
   const resolveRewardAmount = useCallback(
     (rawAmount) => {
@@ -149,7 +167,9 @@ export default function Resumen() {
         return;
       }
 
-      const nuevoCosto = Math.max(0, Number(stored.costoTotal) - amount);
+      const previousTotal = Number(stored.costoTotal);
+      const normalizedDiscount = Number.isFinite(amount) ? amount : DEFAULT_REWARD_AMOUNT;
+      const nuevoCosto = Math.max(0, previousTotal - normalizedDiscount);
       const updated = {
         ...stored,
         costoTotal: nuevoCosto,
@@ -159,6 +179,14 @@ export default function Resumen() {
       syncCotizacionStores(updated);
       setCotizador(updated);
       setCostoTotal(nuevoCosto);
+
+      if (Number.isFinite(previousTotal)) {
+        setRewardBanner({
+          previous: previousTotal,
+          current: nuevoCosto,
+          discount: Math.max(0, previousTotal - nuevoCosto),
+        });
+      }
     },
     [DEFAULT_REWARD_AMOUNT, syncCotizacionStores]
   );
@@ -599,6 +627,15 @@ export default function Resumen() {
     setTimeout(showAd, 300);
   };
 
+  useEffect(() => {
+    if (!rewardBanner) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => setRewardBanner(null), 8000);
+    return () => clearTimeout(timeoutId);
+  }, [rewardBanner]);
+
   // --- Render Logic ---
 
   if (!cotizador || !remitente || !destinatario) {
@@ -625,6 +662,34 @@ export default function Resumen() {
           <h1 className="text-3xl font-extrabold text-[#18191A] mb-2 drop-shadow">Resumen del envío</h1>
           <p className="text-[#41e0b3] font-medium">Revisa los detalles antes de proceder al pago</p>
         </div>
+
+        {rewardBanner && (
+          <div className="mb-10 rounded-3xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-white to-amber-100 p-6 text-center shadow-xl">
+            <p className="text-3xl font-extrabold uppercase tracking-wide text-amber-600 drop-shadow-sm">
+              ¡Felicidades!
+            </p>
+            <p className="mt-3 text-lg font-semibold text-slate-700">
+              Tu precio anterior:
+              <span className="ml-2 text-2xl font-black text-amber-700">
+                {formatPrice(rewardBanner.previous)}
+              </span>
+            </p>
+            <p className="mt-1 text-lg font-semibold text-emerald-600">
+              Precio con descuento:
+              <span className="ml-2 text-2xl font-black text-emerald-700">
+                {formatPrice(rewardBanner.current)}
+              </span>
+            </p>
+            {Number.isFinite(Number(rewardBanner?.discount)) && Number(rewardBanner.discount) > 0 && (
+              <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-emerald-500">
+                Ahorro total:
+                <span className="ml-2 text-emerald-600">
+                  {formatPrice(rewardBanner.discount)}
+                </span>
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Ruta del envío */}
         <div className="bg-[#18191A]/90 rounded-3xl shadow-xl border-2 border-[#41e0b3]/30 p-8 mb-8">
