@@ -221,15 +221,27 @@ export default function Resumen() {
     // Usar nuevo servicio AdMob si está disponible
     if (adMobInitialized && adMobSupported) {
       try {
+        if (!isRewardedReady) {
+          setAdState((prev) => (prev === "loading" ? prev : "preloading"));
+          const prepared = await prepareRewardedAd();
+          if (!prepared) {
+            handleAdError("prepare_failed");
+            return;
+          }
+        }
+
         setAdState("loading");
         console.log("📺 Mostrando anuncio recompensado con AdMob...");
-        
+
         const result = await showRewardedAd();
         const rewardAmount = resolveRewardAmount(result?.reward?.amount);
 
         applyRewardDiscount(rewardAmount);
         setAdState("done");
-        setTimeout(() => setAdState("idle"), 3000);
+        setTimeout(() => {
+          setAdState("idle");
+          preloadAd();
+        }, 3000);
         
       } catch (error) {
         console.error("❌ Error mostrando anuncio AdMob:", error);
@@ -266,7 +278,7 @@ export default function Resumen() {
         handleAdError("show_exception");
       }
     }
-  }, [adState, costoTotal, adMobInitialized, adMobSupported, isRewardedReady, showRewardedAd, preloadAd, handleAdError, applyRewardDiscount, DEFAULT_REWARD_AMOUNT]);
+  }, [adState, costoTotal, adMobInitialized, adMobSupported, isRewardedReady, showRewardedAd, prepareRewardedAd, preloadAd, handleAdError, applyRewardDiscount, resolveRewardAmount]);
 
   // --- Effects ---
 
