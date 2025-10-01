@@ -42,15 +42,27 @@ export default function AdminEnvios() {
 
   const loadEnvios = () => {
     setLoading(true);
-    fetch("/api/envios")
-      .then((res) => res.json())
+    fetch("/api/envios", { cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Error ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
         console.log('✅ Envíos cargados:', data);
-        setEnvios(Array.isArray(data) ? data : []);
+        const enviosData = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+        setEnvios(enviosData);
         setLoading(false);
       })
       .catch((error) => {
         console.error('❌ Error cargando envíos:', error);
+        setEnvios([]);
+        showNotification('❌ Error al cargar envíos', 'error');
         setLoading(false);
       });
   };

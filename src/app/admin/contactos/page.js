@@ -26,11 +26,22 @@ export default function AdminContactos() {
   const { showConfirmModal } = useConfirmModal();
 
   const loadMensajes = useCallback(() => {
-    fetch("/api/contacto")
-      .then((res) => res.json())
+    setLoading(true);
+    fetch("/api/contacto", { cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Error ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
         console.log("API /api/contacto:", data);
-        setMensajes(Array.isArray(data) ? data : []);
+        const mensajesData = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+        setMensajes(mensajesData);
         setLoading(false);
       })
       .catch((error) => {

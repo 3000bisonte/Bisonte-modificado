@@ -25,13 +25,27 @@ export default function AdminUsuarios() {
     if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
       router.push("/");
     } else {
-      fetch("/api/usuarios")
-        .then((res) => res.json())
+      fetch("/api/usuarios", { cache: "no-store" })
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error(`Error ${res.status}`);
+          }
+          return res.json();
+        })
         .then((data) => {
-          setUsuarios(data);
+          const usuariosData = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.data)
+              ? data.data
+              : [];
+          setUsuarios(usuariosData);
           setLoading(false);
         })
-        .catch(() => setLoading(false));
+        .catch((error) => {
+          console.error("❌ Error cargando usuarios:", error);
+          setUsuarios([]);
+          setLoading(false);
+        });
     }
   }, [session, status, router]);
 
