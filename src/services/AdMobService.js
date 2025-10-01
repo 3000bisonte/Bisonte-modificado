@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return */
 import { Capacitor } from '@capacitor/core';
 import { AdMob } from '@capacitor-community/admob';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { ADMOB_CONFIG } from '../config/admob.config';
 
@@ -136,11 +136,30 @@ export function useAdMob() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
 
-  useEffect(() => {
-    void initializeAdMob();
+  const prepareRewardedAd = useCallback(async () => {
+    const supported = AdMobService.isSupported();
+    setIsSupported(supported);
+
+    if (!supported) {
+      setIsRewardedReady(false);
+      return false;
+    }
+
+    setIsLoading(true);
+    try {
+      const ready = await AdMobService.prepareRewardedAd();
+      setIsRewardedReady(ready);
+      return ready;
+    } catch (error) {
+      console.error('❌ Error preparando anuncio recompensado:', error);
+      setIsRewardedReady(false);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const initializeAdMob = async () => {
+  const initializeAdMob = useCallback(async () => {
     setIsLoading(true);
     const supported = AdMobService.isSupported();
     setIsSupported(supported);
@@ -149,43 +168,60 @@ export function useAdMob() {
       setIsInitialized(false);
       setIsRewardedReady(false);
       setIsLoading(false);
-      return;
+      return false;
     }
 
-    const success = await AdMobService.initialize();
-    setIsInitialized(success);
-    
-    if (success) {
-      // Preparar anuncio recompensado automáticamente
-      const rewardedReady = await AdMobService.prepareRewardedAd();
-      setIsRewardedReady(rewardedReady);
-    }
-    
-    setIsLoading(false);
-  };
+    try {
+      const success = await AdMobService.initialize();
+      setIsInitialized(success);
 
-  const showRewardedAd = async () => {
+      if (success) {
+        await prepareRewardedAd();
+      } else {
+        setIsRewardedReady(false);
+      }
+
+      return success;
+    } catch (error) {
+      console.error('❌ Error inicializando AdMob:', error);
+      setIsInitialized(false);
+      setIsRewardedReady(false);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [prepareRewardedAd]);
+
+  useEffect(() => {
+    void initializeAdMob();
+  }, [initializeAdMob]);
+
+  const showRewardedAd = useCallback(async () => {
     if (!isSupported) {
       throw new Error('AdMob no está disponible en esta plataforma');
     }
 
     if (!isRewardedReady) {
-      throw new Error('Anuncio recompensado no está listo');
+      const prepared = await prepareRewardedAd();
+      if (!prepared) {
+        throw new Error('Anuncio recompensado no está listo');
+      }
     }
 
     setIsLoading(true);
     try {
       const result = await AdMobService.showRewardedAd();
+      setIsRewardedReady(false);
       // Preparar el siguiente anuncio
       setTimeout(() => {
-        void AdMobService.prepareRewardedAd().then(setIsRewardedReady);
+        void prepareRewardedAd();
       }, 1000);
       
       return result;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isSupported, isRewardedReady, prepareRewardedAd]);
 
   const showBanner = () => {
     return AdMobService.showBanner();
@@ -200,6 +236,7 @@ export function useAdMob() {
     isLoading,
     isSupported,
     showRewardedAd,
+    prepareRewardedAd,
     showBanner,
     hideBanner,
     reinitialize: initializeAdMob

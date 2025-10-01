@@ -58,6 +58,7 @@ export default function Resumen() {
     isLoading: adMobLoading, 
     isSupported: adMobSupported,
     showRewardedAd, 
+    prepareRewardedAd,
   } = useAdMob();
 
   // Legacy Ad State for backward compatibility
@@ -67,6 +68,17 @@ export default function Resumen() {
   const MAX_RETRIES = 3;
   const DEFAULT_REWARD_AMOUNT = Number(
     ADMOB_CONFIG?.REWARD_SETTINGS?.DISCOUNT_AMOUNT ?? 0
+  );
+
+  const resolveRewardAmount = useCallback(
+    (rawAmount) => {
+      const numeric = Number(rawAmount);
+      if (!Number.isFinite(numeric) || numeric <= 0) {
+        return DEFAULT_REWARD_AMOUNT;
+      }
+      return numeric < DEFAULT_REWARD_AMOUNT ? DEFAULT_REWARD_AMOUNT : numeric;
+    },
+    [DEFAULT_REWARD_AMOUNT]
   );
 
   const syncCotizacionStores = useCallback((data) => {
@@ -160,9 +172,31 @@ export default function Resumen() {
   }, []);
 
   const preloadAd = useCallback(() => {
-    if (adState === "preloading" || adState === "ready") {
+    if (adState === "preloading" || adState === "loading" || adState === "watching") {
       return;
     }
+
+    if (adMobSupported) {
+      if (isRewardedReady) {
+        setAdState((prev) => (prev === "ready" ? prev : "ready"));
+        return;
+      }
+
+      setAdState("preloading");
+      void prepareRewardedAd()
+        .then((ready) => {
+          setAdState(ready ? "ready" : "idle");
+          if (!ready) {
+            handleAdError("prepare_failed");
+          }
+        })
+        .catch((error) => {
+          console.error("❌ Error al precargar anuncio recompensado:", error);
+          handleAdError("prepare_exception");
+        });
+      return;
+    }
+
     if (window.AndroidInterface?.preloadRewardedAd) {
       console.log("📺 Precargando anuncio recompensado...");
       setAdState("preloading");
@@ -174,9 +208,9 @@ export default function Resumen() {
       }
     } else {
       console.log("⚠️ Interfaz de anuncios no disponible.");
-      setAdState("idle"); // No hay interfaz, no se puede hacer nada.
+      setAdState("idle");
     }
-  }, [adState, handleAdError]);
+  }, [adState, adMobSupported, isRewardedReady, prepareRewardedAd, handleAdError]);
 
   const showAd = useCallback(async () => {
     if (costoTotal <= 0) {
@@ -185,21 +219,17 @@ export default function Resumen() {
     }
 
     // Usar nuevo servicio AdMob si está disponible
-    if (adMobInitialized && isRewardedReady) {
+    if (adMobInitialized && adMobSupported) {
       try {
         setAdState("loading");
         console.log("📺 Mostrando anuncio recompensado con AdMob...");
         
         const result = await showRewardedAd();
-        const rewardAmount = result?.reward?.amount ?? DEFAULT_REWARD_AMOUNT;
+        const rewardAmount = resolveRewardAmount(result?.reward?.amount);
 
-        if (Number.isFinite(Number(rewardAmount)) && Number(rewardAmount) > 0) {
-          applyRewardDiscount(rewardAmount);
-          setAdState("done");
-          setTimeout(() => setAdState("idle"), 3000);
-        } else {
-          setAdState("idle");
-        }
+        applyRewardDiscount(rewardAmount);
+        setAdState("done");
+        setTimeout(() => setAdState("idle"), 3000);
         
       } catch (error) {
         console.error("❌ Error mostrando anuncio AdMob:", error);
@@ -215,11 +245,9 @@ export default function Resumen() {
       return;
     }
 
-    if (!isRewardedReady) {
+    if (window.AndroidInterface?.preloadRewardedAd && adState !== "ready") {
       preloadAd();
-      if (adMobSupported || window.AndroidInterface?.preloadRewardedAd) {
-        alert("📱 Preparando anuncio. Por favor, espera unos segundos e inténtalo de nuevo.");
-      }
+      alert("📱 Preparando anuncio. Por favor, espera unos segundos e inténtalo de nuevo.");
       return;
     }
     
@@ -310,12 +338,14 @@ export default function Resumen() {
         clearTimeout(adTimeoutRef.current);
       }
 
-      const rewardAmountCandidate =
-        typeof data.amount === "number"
+      const rawRewardAmount =
+        typeof data.rewardAmount === "number"
+          ? data.rewardAmount
+          : typeof data.amount === "number"
           ? data.amount
           : typeof data.reward?.amount === "number"
-            ? data.reward.amount
-            : null;
+          ? data.reward.amount
+          : null;
 
       const rewardStatus =
         typeof data.status === "string"
@@ -326,14 +356,14 @@ export default function Resumen() {
       const shouldApplyReward =
         rewardType === "reward" ||
         rewardType === ADMOB_CONFIG?.REWARD_SETTINGS?.REWARD_TYPE ||
-        rewardAmountCandidate !== null;
+        rawRewardAmount !== null ||
+        (rewardStatus && ["completed", "rewarded", "fulfilled"].includes(rewardStatus));
 
       if (
         shouldApplyReward &&
         (rewardStatus === undefined || ["completed", "rewarded", "fulfilled"].includes(rewardStatus))
       ) {
-        const amountToApply =
-          rewardAmountCandidate !== null ? rewardAmountCandidate : DEFAULT_REWARD_AMOUNT;
+        const amountToApply = resolveRewardAmount(rawRewardAmount);
         applyRewardDiscount(amountToApply);
         setAdState("done");
         setTimeout(() => {
@@ -372,7 +402,7 @@ export default function Resumen() {
       window.removeEventListener("message", handleRewardedAdMessage);
       window.removeEventListener("adReward", handleRewardedAdMessage);
     };
-  }, [applyRewardDiscount, preloadAd, handleAdError, DEFAULT_REWARD_AMOUNT]);
+  }, [applyRewardDiscount, preloadAd, handleAdError, resolveRewardAmount]);
 
   // Lógica de reintento para errores de anuncios
   useEffect(() => {
@@ -394,6 +424,12 @@ export default function Resumen() {
       return () => clearTimeout(timer);
     }
   }, [cotizador, remitente, destinatario, costoTotal, preloadAd]);
+
+  useEffect(() => {
+    if (adMobSupported && adMobInitialized) {
+      preloadAd();
+    }
+  }, [adMobSupported, adMobInitialized, preloadAd]);
 
   useEffect(() => {
     if (adState === "ready" && costoTotal > 0) {
