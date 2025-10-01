@@ -260,25 +260,68 @@ const Home = (): JSX.Element => {
   const isAdmin = userEmail.length > 0 && ADMIN_EMAILS.includes(userEmail);
 
   useEffect(() => {
+    if (!isAdmin || status !== "authenticated") {
+      return;
+    }
+
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return;
+    }
+
+    let cancelled = false;
+
     const fetchStats = async () => {
+      if (cancelled) return;
       try {
-        const res = await fetch("/api/admin/stats");
+        const res = await fetch("/api/admin/stats", { cache: "no-store" });
         if (!res.ok) {
-          return;
+          throw new Error(`Error ${res.status}`);
         }
 
         const json = (await res.json()) as unknown;
+        if (cancelled) return;
         const parsedStats = parseStatsSummary(json);
         if (parsedStats) {
           setStats(parsedStats);
         }
       } catch (error: unknown) {
-        // Leave stats with default values when the request fails
+        if (!cancelled) {
+          console.error("[Home] Error obteniendo estadísticas admin:", error);
+        }
       }
     };
 
     void fetchStats();
-  }, []);
+    const intervalId = window.setInterval(() => {
+      void fetchStats();
+    }, 30000);
+
+    const handleFocus = () => {
+      void fetchStats();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void fetchStats();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [isAdmin, status]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setStats({ usuarios: 0, envios: 0, mensajes: 0 });
+    }
+  }, [isAdmin]);
 
   if (status === "loading") {
     return (

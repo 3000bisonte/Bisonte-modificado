@@ -184,23 +184,64 @@ const Home = () => {
   const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
 
   useEffect(() => {
+    if (!isAdmin || status !== "authenticated") {
+      return;
+    }
+
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return;
+    }
+
+    let cancelled = false;
+
     const fetchStats = async () => {
+      if (cancelled) return;
       try {
-        const res = await fetch("/api/admin/stats");
-        if (res.ok) {
-          const data = await res.json();
+        const res = await fetch("/api/admin/stats", { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error(`Error ${res.status}`);
+        }
+        const data = await res.json();
+        if (!cancelled) {
           setStats({
-            usuarios: data.usuarios,
-            envios: data.envios,
-            mensajes: data.mensajes,
+            usuarios: Number(data?.usuarios) || 0,
+            envios: Number(data?.envios) || 0,
+            mensajes: Number(data?.mensajes) || 0,
           });
         }
       } catch (err) {
-        // Si falla, deja los valores en 0
+        if (!cancelled) {
+          console.error("❌ Error obteniendo estadísticas admin:", err);
+        }
       }
     };
+
     fetchStats();
-  }, []);
+    const intervalId = setInterval(fetchStats, 30000);
+
+    const handleFocus = () => fetchStats();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchStats();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [isAdmin, status]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setStats({ usuarios: 0, envios: 0, mensajes: 0 });
+    }
+  }, [isAdmin]);
 
   if (status === "loading") {
     return (
