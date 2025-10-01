@@ -124,8 +124,8 @@ export const authOptions = {
             const userResult = await handleGoogleAuth({
               email,
               name,
-              picture: user.image,
-              email_verified: user.email_verified ?? true
+              picture: payload.picture,
+              email_verified: payload.email_verified ?? true
             });
             
             return {
@@ -133,7 +133,7 @@ export const authOptions = {
               email: userResult.email,
               name: userResult.name,
               role: userResult.role,
-              passwordVersion: 0, // Google users don't have password versions
+              passwordVersion: userResult.passwordVersion ?? 0,
               emailVerified: userResult.emailVerified,
             };
           } catch (e) {
@@ -358,7 +358,35 @@ export const authOptions = {
   },
 
   callbacks: {
-    async signIn() {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'google') {
+        try {
+          const resolvedEmail = user?.email ?? profile?.email;
+          if (!resolvedEmail) {
+            throw new Error('Google OAuth no proporcionó email');
+          }
+
+          const { handleGoogleAuth } = await import('./userManager.js');
+          const syncResult = await handleGoogleAuth({
+            email: resolvedEmail,
+            name: user?.name ?? profile?.name,
+            picture: (user && (user.image || user.picture)) || profile?.picture,
+            email_verified: user?.emailVerified ?? profile?.email_verified ?? true,
+          });
+
+          // Mutate user object so downstream callbacks receive DB data
+          user.id = syncResult.id;
+          user.email = syncResult.email;
+          user.name = syncResult.name;
+          user.role = syncResult.role;
+          user.emailVerified = syncResult.emailVerified;
+          user.passwordVersion = syncResult.passwordVersion ?? 0;
+        } catch (error) {
+          console.error('[NextAuth signIn] Error syncing Google user', error);
+          return false;
+        }
+      }
+
       return true;
     },
     async jwt({ token, user, trigger, session, account }) {
@@ -367,7 +395,7 @@ export const authOptions = {
         // Credentials/idToken flow provides all needed fields
         token.userId = user.id;
         token.role = user.role;
-        token.passwordVersion = user.passwordVersion;
+        token.passwordVersion = typeof user.passwordVersion === 'number' ? user.passwordVersion : 0;
         token.emailVerified = user.emailVerified;
       }
 

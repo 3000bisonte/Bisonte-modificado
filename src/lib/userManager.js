@@ -181,6 +181,7 @@ export async function handleGoogleAuth(googlePayload) {
       name: result.user.nombre || result.user.email,
       role: result.user.esAdministrador ? 'admin' : result.user.esRecolector ? 'collector' : 'user',
       emailVerified: result.user.emailVerified,
+      passwordVersion: result.user.passwordVersion ?? 0,
       method: 'google'
     };
     
