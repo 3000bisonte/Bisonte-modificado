@@ -1,5 +1,4 @@
 // Unified authentication system for NextAuth integration
-import { headers } from 'next/headers';
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { OAuth2Client } from "google-auth-library";
@@ -206,7 +205,7 @@ export const authOptions = {
             metadata: { userExists: !!user, hasPassword: !!(user?.password) }
           });
           
-          console.warn(`[Auth] Failed login attempt for non-existent user: ${email} from IP: ${clientIP}`);
+          console.warn(`[Auth] Failed login attempt for non-existent user: ${normalizedEmail} from IP: ${clientIP}`);
           throw new Error("Credenciales inválidas");
         }
 
@@ -217,7 +216,7 @@ export const authOptions = {
           // 📊 Log blocked login attempt
           await logSecurityEvent(SecurityEvents.LOGIN_BLOCKED, {
             userId: user.id.toString(),
-            email,
+            email: normalizedEmail,
             ip: clientIP,
             userAgent,
             success: false,
@@ -250,7 +249,7 @@ export const authOptions = {
           const eventType = shouldLock ? SecurityEvents.ACCOUNT_LOCKED : SecurityEvents.LOGIN_FAILED;
           await logSecurityEvent(eventType, {
             userId: user.id.toString(),
-            email,
+            email: normalizedEmail,
             ip: clientIP,
             userAgent,
             success: false,

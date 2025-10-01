@@ -1,8 +1,10 @@
 import 'server-only'
 import { Resend } from 'resend'
+import nodemailer from 'nodemailer'
 import { env } from './env'
 
 let cachedResend = null
+let cachedSmtpTransport = null
 
 function getResendClient() {
   if (!env.RESEND_API_KEY) {
@@ -19,6 +21,26 @@ function getResendClient() {
 function ensureSiteUrl() {
   const baseUrl = env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+}
+
+function getSmtpTransport() {
+  if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS) {
+    return null
+  }
+
+  if (!cachedSmtpTransport) {
+    cachedSmtpTransport = nodemailer.createTransport({
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+      secure: env.SMTP_SECURE,
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASS,
+      },
+    })
+  }
+
+  return cachedSmtpTransport
 }
 
 function normalizeFromAddress() {
@@ -88,15 +110,9 @@ export async function sendPasswordRecoveryEmail({ to, code, token, expiresAt, na
     previewUrl: null,
     error: null,
     reason: null,
+    transport: null,
+    transportsTried: [],
   }
-
-  const resend = getResendClient()
-  if (!resend) {
-    result.reason = 'missing_api_key'
-    return result
-  }
-
-  result.attempted = true
 
   const baseUrl = ensureSiteUrl()
   const normalizedCode = String(code).padStart(6, '0')
@@ -104,28 +120,78 @@ export async function sendPasswordRecoveryEmail({ to, code, token, expiresAt, na
   const expiresMinutes = expiresDate ? Math.max(1, Math.round((expiresDate.getTime() - Date.now()) / 60000)) : undefined
   const resetUrl = `${baseUrl}/recuperar/validar-token?email=${encodeURIComponent(to)}&code=${encodeURIComponent(normalizedCode)}&token=${encodeURIComponent(token)}`
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: normalizeFromAddress(),
-      to,
-      subject: 'Código de recuperación de contraseña',
-      html: formatHtmlEmail({ name, code: normalizedCode, resetUrl, expiresMinutes }),
-      text: formatTextEmail({ name, code: normalizedCode, resetUrl, expiresMinutes }),
+  const resend = getResendClient()
+  const smtpTransport = getSmtpTransport()
+
+  const transports = []
+
+  if (resend) {
+    transports.push({
+      type: 'resend',
+      send: async () => {
+        const { data, error } = await resend.emails.send({
+          from: normalizeFromAddress(),
+          to,
+          subject: 'Código de recuperación de contraseña',
+          html: formatHtmlEmail({ name, code: normalizedCode, resetUrl, expiresMinutes }),
+          text: formatTextEmail({ name, code: normalizedCode, resetUrl, expiresMinutes }),
+        })
+
+        if (error) {
+          throw new Error(error.message || String(error))
+        }
+
+        return {
+          id: data?.id ?? null,
+          previewUrl: data?.previewUrl ?? null,
+        }
+      },
     })
+  }
 
-    if (error) {
-      result.error = error.message || String(error)
-      result.reason = 'api_error'
-      return result
-    }
+  if (smtpTransport) {
+    transports.push({
+      type: 'smtp',
+      send: async () => {
+        const info = await smtpTransport.sendMail({
+          from: normalizeFromAddress(),
+          to,
+          subject: 'Código de recuperación de contraseña',
+          html: formatHtmlEmail({ name, code: normalizedCode, resetUrl, expiresMinutes }),
+          text: formatTextEmail({ name, code: normalizedCode, resetUrl, expiresMinutes }),
+        })
 
-    result.sent = true
-    result.id = data?.id ?? null
-    result.previewUrl = data?.previewUrl ?? null
-    return result
-  } catch (err) {
-    result.error = err?.message || String(err)
-    result.reason = 'exception'
+        return {
+          id: info?.messageId ?? null,
+          previewUrl: info?.previewUrl ?? null,
+        }
+      },
+    })
+  }
+
+  if (transports.length === 0) {
+    result.reason = 'no_email_transport_configured'
     return result
   }
+
+  for (const transport of transports) {
+    try {
+      result.transportsTried.push(transport.type)
+      result.attempted = true
+
+      const response = await transport.send()
+      result.sent = true
+      result.transport = transport.type
+      result.id = response.id
+      result.previewUrl = response.previewUrl ?? null
+      result.reason = null
+      result.error = null
+      return result
+    } catch (err) {
+      result.error = err?.message || String(err)
+      result.reason = `${transport.type}_error`
+    }
+  }
+
+  return result
 }
