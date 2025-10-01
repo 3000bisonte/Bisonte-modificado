@@ -33,6 +33,9 @@ const ciudades = {
   "25740": "Soacha", "25743": "Sibaté",
 };
 
+const REWARDED_CHAIN_MIN = 2;
+const REWARDED_CHAIN_MAX = 3;
+
 // --- Main Component ---
 export default function Resumen() {
   const { data: session } = useSession();
@@ -46,6 +49,7 @@ export default function Resumen() {
   const fecha = useMemo(() => formatDate(new Date()), []);
   const [isCreatingShipment, setIsCreatingShipment] = useState(false);
   const [rewardBanner, setRewardBanner] = useState(null);
+  const [rewardChainProgress, setRewardChainProgress] = useState(null);
 
   // UI State
   const [showRemitente, setShowRemitente] = useState(false);
@@ -88,6 +92,11 @@ export default function Resumen() {
       console.error("[Resumen] Error formateando precio:", error);
       return `$${Number(value).toLocaleString("es-CO")}`;
     }
+  }, []);
+
+  const pickRewardChainLength = useCallback(() => {
+    const span = REWARDED_CHAIN_MAX - REWARDED_CHAIN_MIN + 1;
+    return REWARDED_CHAIN_MIN + Math.floor(Math.random() * span);
   }, []);
 
   const resolveRewardAmount = useCallback(
@@ -264,34 +273,85 @@ export default function Resumen() {
 
     // Usar nuevo servicio AdMob si está disponible
     if (adMobInitialized && adMobSupported) {
-      try {
-        if (!isRewardedReady) {
+      const totalAds = pickRewardChainLength();
+      setRewardChainProgress({ current: 0, total: totalAds });
+      let successfulAds = 0;
+      let chainAborted = false;
+
+      const delay = async (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      for (let index = 0; index < totalAds; index += 1) {
+        let prepared = index === 0 ? Boolean(isRewardedReady) : false;
+
+        if (!prepared) {
           setAdState((prev) => (prev === "loading" ? prev : "preloading"));
-          const prepared = await prepareRewardedAd();
-          if (!prepared) {
-            handleAdError("prepare_failed");
-            return;
+          try {
+            prepared = await prepareRewardedAd();
+          } catch (error) {
+            console.error("❌ Error preparando anuncio recompensado:", error);
+            handleAdError("prepare_exception");
+            chainAborted = true;
+            break;
           }
         }
 
+        if (!prepared) {
+          handleAdError("prepare_failed");
+          chainAborted = true;
+          break;
+        }
+
         setAdState("loading");
-        console.log("📺 Mostrando anuncio recompensado con AdMob...");
+        setRewardChainProgress({ current: index + 1, total: totalAds });
+        console.log(`📺 Mostrando anuncio recompensado ${index + 1} de ${totalAds}...`);
 
-        const result = await showRewardedAd();
-        const rewardAmount = resolveRewardAmount(result?.reward?.amount);
+        try {
+          const result = await showRewardedAd();
+          successfulAds += 1;
+          const rewardAmount = resolveRewardAmount(result?.reward?.amount);
+          applyRewardDiscount(rewardAmount);
+          setAdState("done");
+        } catch (error) {
+          console.error("❌ Error mostrando anuncio AdMob:", error);
+          handleAdError("show_exception");
+          chainAborted = true;
+          break;
+        }
 
-        applyRewardDiscount(rewardAmount);
-        setAdState("done");
+        if (index < totalAds - 1) {
+          setAdState("preloading");
+          try {
+            const nextReady = await prepareRewardedAd();
+            if (!nextReady) {
+              handleAdError("prepare_failed");
+              chainAborted = true;
+              break;
+            }
+          } catch (error) {
+            console.error("❌ Error preparando siguiente anuncio recompensado:", error);
+            handleAdError("prepare_exception");
+            chainAborted = true;
+            break;
+          }
+
+          await delay(900);
+        }
+      }
+
+      const finalizeChain = (delayMs) => {
         setTimeout(() => {
+          setRewardChainProgress(null);
           setAdState("idle");
           preloadAd();
-        }, 3000);
-        
-      } catch (error) {
-        console.error("❌ Error mostrando anuncio AdMob:", error);
-        setAdState("error");
-        setTimeout(() => setAdState("idle"), 3000);
+        }, delayMs);
+      };
+
+      if (chainAborted && successfulAds === 0) {
+        finalizeChain(0);
+      } else {
+        finalizeChain(2000);
       }
+
       return;
     }
 
@@ -342,7 +402,7 @@ export default function Resumen() {
       alert("📱 Los anuncios solo están disponibles en la app móvil.\n💡 Descarga la app para obtener descuentos.");
       return;
     }
-  }, [adState, costoTotal, adMobInitialized, adMobSupported, isRewardedReady, showRewardedAd, prepareRewardedAd, preloadAd, handleAdError, applyRewardDiscount, resolveRewardAmount]);
+  }, [adState, costoTotal, adMobInitialized, adMobSupported, isRewardedReady, showRewardedAd, prepareRewardedAd, preloadAd, handleAdError, applyRewardDiscount, resolveRewardAmount, pickRewardChainLength]);
 
   // --- Effects ---
 
@@ -688,6 +748,17 @@ export default function Resumen() {
                 </span>
               </p>
             )}
+          </div>
+        )}
+
+        {rewardChainProgress && (
+          <div className="mb-10 rounded-3xl border border-blue-200 bg-blue-50/80 p-4 text-center shadow">
+            <p className="text-lg font-semibold text-blue-600">
+              Anuncio {Math.max(1, rewardChainProgress.current ?? 0)} de {rewardChainProgress.total}
+            </p>
+            <p className="text-sm text-blue-500">
+              Mantente mirando para obtener el máximo descuento posible.
+            </p>
           </div>
         )}
 
