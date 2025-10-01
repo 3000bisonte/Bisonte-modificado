@@ -164,15 +164,15 @@ export const authOptions = {
           throw new Error(`Datos inválidos: ${errorMessages}`);
         }
 
-        const { email, password } = validation.data;
+        const { email: normalizedEmail, password } = validation.data;
 
         // 🛡️ Enhanced rate limiting (IP + Email)
         try {
-          await checkLoginRateLimit(clientIP, email);
+          await checkLoginRateLimit(clientIP, normalizedEmail);
         } catch (rateLimitError) {
           // 📊 Log rate limit exceeded
           await logSecurityEvent(SecurityEvents.RATE_LIMIT_EXCEEDED, {
-            email,
+            email: normalizedEmail,
             ip: clientIP,
             userAgent,
             success: false,
@@ -185,13 +185,13 @@ export const authOptions = {
 
         // Find user in database
         const user = await prisma.usuarios.findUnique({
-          where: { email }
+          where: { email: normalizedEmail }
         });
 
         if (!user || !user.password) {
           // 📊 Log failed attempt for non-existent user
           await logSecurityEvent(SecurityEvents.LOGIN_FAILED, {
-            email,
+            email: normalizedEmail,
             ip: clientIP,
             userAgent,
             success: false,
@@ -262,7 +262,7 @@ export const authOptions = {
         // 📊 Enhanced security logging for successful login
         await logSecurityEvent(SecurityEvents.LOGIN_SUCCESS, {
           userId: user.id.toString(),
-          email,
+            email: normalizedEmail,
           ip: clientIP,
           userAgent,
           success: true,
@@ -361,7 +361,7 @@ export const authOptions = {
     async signIn({ user, account, profile }) {
       if (account?.provider === 'google') {
         try {
-          const resolvedEmail = user?.email ?? profile?.email;
+          const resolvedEmail = (user?.email ?? profile?.email ?? '').trim().toLowerCase();
           if (!resolvedEmail) {
             throw new Error('Google OAuth no proporcionó email');
           }

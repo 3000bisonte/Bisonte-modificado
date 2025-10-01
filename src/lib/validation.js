@@ -1,13 +1,19 @@
 ﻿import { z } from 'zod';
 
 export const loginSchema = z.object({
-  email: z.string().email('Email no válido'),
+  email: z.string()
+    .trim()
+    .email('Email no válido')
+    .transform((value) => value.toLowerCase()),
   password: z.string().min(6, 'Password debe tener al menos 6 caracteres')
 });
 
 export const registerSchema = z.object({
   nombre: z.string().min(2, 'Nombre debe tener al menos 2 caracteres'),
-  email: z.string().email('Email no válido'),
+  email: z.string()
+    .trim()
+    .email('Email no válido')
+    .transform((value) => value.toLowerCase()),
   password: z.string().min(8, 'Password debe tener al menos 8 caracteres'),
   telefono: z.string().min(10, 'Teléfono debe tener al menos 10 dígitos').optional()
 });
