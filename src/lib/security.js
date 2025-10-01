@@ -237,7 +237,10 @@ export async function verifyRecoveryCode(email, code) {
   // Mark as used
   await prisma.passwordReset.update({
     where: { id: recovery.id },
-    data: { used: true }
+    data: {
+      used: true,
+      usedAt: new Date()
+    }
   });
   
   return recovery;

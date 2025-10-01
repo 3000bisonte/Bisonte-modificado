@@ -28,13 +28,20 @@ model Contacto {
 model PasswordReset {
   id        Int       @id @default(autoincrement())
   userId    Int
+  email     String    @default("") @db.VarChar(320)
+  token     String    @default("") @db.VarChar(128)
   code      String    @db.VarChar(10)
   expiresAt DateTime
   createdAt DateTime  @default(now())
+  used      Boolean   @default(false)
   usedAt    DateTime?
+  ipAddress String?   @db.VarChar(45)
+  userAgent String?   @db.VarChar(255)
   usuarios  usuarios  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([code])
+  @@index([email])
+  @@index([token])
   @@index([userId])
 }
 

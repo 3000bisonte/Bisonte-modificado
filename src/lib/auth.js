@@ -6,6 +6,13 @@ import { OAuth2Client } from "google-auth-library";
 import { validateApiInput, loginSchema } from "./validation";
 import prisma from "./prisma";
 import bcrypt from "bcryptjs";
+import {
+  checkLoginRateLimit,
+  logSecurityEvent,
+  SecurityEvents,
+  getClientIP,
+  getClientUserAgent
+} from "./security";
 
 // Helper functions
 const verifyPassword = async (password, hashedPassword) => {
