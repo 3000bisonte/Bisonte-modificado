@@ -64,6 +64,7 @@ export default function Resumen() {
   // Legacy Ad State for backward compatibility
   const [adState, setAdState] = useState("idle");
   const [retryCount, setRetryCount] = useState(0);
+  const [hideAdErrorModal, setHideAdErrorModal] = useState(false);
   const adTimeoutRef = useRef(null);
   const messagePortRef = useRef(null);
   const MAX_RETRIES = 3;
@@ -163,6 +164,20 @@ export default function Resumen() {
   );
 
   // --- Ad Logic ---
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    try {
+      const storedPreference = window.localStorage.getItem("hideAdErrorModal");
+      if (storedPreference === "1") {
+        setHideAdErrorModal(true);
+      }
+    } catch (error) {
+      console.warn("[Resumen] No se pudo leer preferencia hideAdErrorModal:", error);
+    }
+  }, []);
 
   const handleAdError = useCallback((errorType) => {
     console.error(`❌ Error de anuncio: ${errorType}`);
@@ -867,6 +882,25 @@ export default function Resumen() {
                     )}
                   </button>
                 )}
+                {hideAdErrorModal && (
+                  <div className="mt-3 text-center text-xs text-gray-500">
+                    <span className="block">Has ocultado los avisos de error de anuncios.</span>
+                    <button
+                      type="button"
+                      className="mt-1 font-semibold text-[#41e0b3] hover:text-[#2bbd8c] underline"
+                      onClick={() => {
+                        setHideAdErrorModal(false);
+                        try {
+                          localStorage.removeItem("hideAdErrorModal");
+                        } catch (error) {
+                          console.warn("[Resumen] No se pudo restablecer la preferencia hideAdErrorModal:", error);
+                        }
+                      }}
+                    >
+                      Volver a mostrarlos
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -919,21 +953,67 @@ export default function Resumen() {
           </div>
         )}
         
-        {adState === "error" && (
+        {adState === "error" && !hideAdErrorModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-            <div className="bg-white rounded-xl p-8 shadow text-center">
+            <div className="relative bg-white rounded-xl p-8 shadow text-center">
+              <button
+                type="button"
+                aria-label="Cerrar"
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+                onClick={() => {
+                  setAdState("idle");
+                  setRetryCount(0);
+                }}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
               <span className="block mb-4 text-lg font-bold text-red-500">Error al cargar el anuncio</span>
-              <p className="text-sm text-gray-600 mb-4">No se pudo mostrar el anuncio. Inténtalo de nuevo.</p>
+              <p className="text-sm text-gray-600">No se pudo mostrar el anuncio. Inténtalo de nuevo.</p>
+              <div className="flex flex-col gap-3 mt-5 sm:flex-row sm:justify-center">
+                <button
+                  type="button"
+                  className="bg-[#41e0b3] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#2bbd8c] transition-colors"
+                  onClick={() => {
+                    setAdState("idle");
+                    setRetryCount(0);
+                    preloadAd();
+                  }}
+                >
+                  Reintentar
+                </button>
+                <button
+                  type="button"
+                  className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                  onClick={() => {
+                    setAdState("idle");
+                    setRetryCount(0);
+                  }}
+                >
+                  Cerrar
+                </button>
+              </div>
               <button
-                className="bg-[#41e0b3] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#2bbd8c] transition-colors"
-                onClick={() => { setAdState("idle"); setRetryCount(0); preloadAd(); }}
+                type="button"
+                className="mt-4 text-sm text-gray-500 underline hover:text-gray-700"
+                onClick={() => {
+                  setHideAdErrorModal(true);
+                  setAdState("idle");
+                  setRetryCount(0);
+                  try {
+                    localStorage.setItem("hideAdErrorModal", "1");
+                  } catch (error) {
+                    console.warn("[Resumen] No se pudo guardar la preferencia hideAdErrorModal:", error);
+                  }
+                }}
               >
-                Reintentar
+                No volver a mostrar este aviso
               </button>
             </div>
           </div>
