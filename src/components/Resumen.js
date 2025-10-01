@@ -65,6 +65,7 @@ export default function Resumen() {
   const [adState, setAdState] = useState("idle");
   const [retryCount, setRetryCount] = useState(0);
   const adTimeoutRef = useRef(null);
+  const messagePortRef = useRef(null);
   const MAX_RETRIES = 3;
   const DEFAULT_REWARD_AMOUNT = Number(
     ADMOB_CONFIG?.REWARD_SETTINGS?.DISCOUNT_AMOUNT ?? 0
@@ -262,6 +263,26 @@ export default function Resumen() {
       alert("📱 Preparando anuncio. Por favor, espera unos segundos e inténtalo de nuevo.");
       return;
     }
+
+    if (messagePortRef.current) {
+      console.log("📨 Solicitando anuncio mediante MessagePort...");
+      setAdState("loading");
+      try {
+        messagePortRef.current.postMessage("iniciarVideo");
+        if (adTimeoutRef.current) {
+          clearTimeout(adTimeoutRef.current);
+        }
+        adTimeoutRef.current = setTimeout(() => {
+          if (adState === "loading") {
+            handleAdError("message_port_timeout");
+          }
+        }, 8000);
+      } catch (error) {
+        console.error("❌ Error al enviar mensaje al puerto del anuncio:", error);
+        handleAdError("message_port_exception");
+      }
+      return;
+    }
     
     if (window.AndroidInterface?.showRewardedAd) {
       console.log("📺 Mostrando anuncio recompensado (legacy)...");
@@ -328,84 +349,108 @@ export default function Resumen() {
     setDestinatario(destinatarioData);
   }, [syncCotizacionStores]);
 
-  // Listener para mensajes de la interfaz nativa de Android
-  useEffect(() => {
-    const handleRewardedAdMessage = (event) => {
-      let data = event?.detail ?? event?.data ?? event;
+  const processRewardPayload = useCallback((payload) => {
+    let data = payload;
 
-      if (typeof data === "string") {
-        try {
-          data = JSON.parse(data);
-        } catch (error) {
-          return;
-        }
-      }
+    if (payload && typeof payload === "object" && ("data" in payload || "detail" in payload)) {
+      data = payload.data ?? payload.detail ?? payload;
+    }
 
-      if (!data || typeof data !== "object") {
+    if (typeof data === "string") {
+      try {
+        data = JSON.parse(data);
+      } catch (error) {
         return;
       }
+    }
 
-      console.log("📬 Mensaje recibido del anuncio:", data);
-      if (adTimeoutRef.current) {
-        clearTimeout(adTimeoutRef.current);
-      }
+    if (!data || typeof data !== "object") {
+      return;
+    }
 
-      const rawRewardAmount =
-        typeof data.rewardAmount === "number"
-          ? data.rewardAmount
-          : typeof data.amount === "number"
-          ? data.amount
-          : typeof data.reward?.amount === "number"
-          ? data.reward.amount
-          : null;
+    console.log("📬 Mensaje recibido del anuncio:", data);
+    if (adTimeoutRef.current) {
+      clearTimeout(adTimeoutRef.current);
+    }
 
-      const rewardStatus =
-        typeof data.status === "string"
-          ? data.status.toLowerCase()
-          : undefined;
+    const rawRewardAmount =
+      typeof data.rewardAmount === "number"
+        ? data.rewardAmount
+        : typeof data.amount === "number"
+        ? data.amount
+        : typeof data.reward?.amount === "number"
+        ? data.reward.amount
+        : null;
 
-      const rewardType = data.type;
-      const shouldApplyReward =
-        rewardType === "reward" ||
-        rewardType === ADMOB_CONFIG?.REWARD_SETTINGS?.REWARD_TYPE ||
-        rawRewardAmount !== null ||
-        (rewardStatus && ["completed", "rewarded", "fulfilled"].includes(rewardStatus));
+    const rewardStatus =
+      typeof data.status === "string"
+        ? data.status.toLowerCase()
+        : undefined;
 
-      if (
-        shouldApplyReward &&
-        (rewardStatus === undefined || ["completed", "rewarded", "fulfilled"].includes(rewardStatus))
-      ) {
-        const amountToApply = resolveRewardAmount(rawRewardAmount);
-        applyRewardDiscount(amountToApply);
-        setAdState("done");
-        setTimeout(() => {
+    const rewardType = data.type;
+    const shouldApplyReward =
+      rewardType === "reward" ||
+      rewardType === ADMOB_CONFIG?.REWARD_SETTINGS?.REWARD_TYPE ||
+      rawRewardAmount !== null ||
+      (rewardStatus && ["completed", "rewarded", "fulfilled"].includes(rewardStatus));
+
+    if (
+      shouldApplyReward &&
+      (rewardStatus === undefined || ["completed", "rewarded", "fulfilled"].includes(rewardStatus))
+    ) {
+      const amountToApply = resolveRewardAmount(rawRewardAmount);
+      applyRewardDiscount(amountToApply);
+      setAdState("done");
+      setTimeout(() => {
+        setAdState("idle");
+        preloadAd();
+      }, 3000);
+      return;
+    }
+
+    if (rewardType === "adStatus") {
+      switch (data.status) {
+        case "ready":
+          setAdState("ready");
+          setRetryCount(0);
+          break;
+        case "opened":
+          setAdState("watching");
+          break;
+        case "closed":
           setAdState("idle");
           preloadAd();
-        }, 3000);
+          break;
+        case "error":
+          handleAdError(data.errorType || "unknown_error");
+          break;
+        default:
+          setAdState(data.status);
+          break;
+      }
+    }
+  }, [applyRewardDiscount, preloadAd, handleAdError, resolveRewardAmount]);
+
+  // Listener para mensajes de la interfaz nativa de Android o bridge webview
+  useEffect(() => {
+    const handleRewardedAdMessage = (event) => {
+      if (event?.ports && event.ports.length > 0) {
+        const [port] = event.ports;
+        if (port && messagePortRef.current !== port) {
+          messagePortRef.current = port;
+          try {
+            port.postMessage("bridge:connected");
+          } catch (error) {
+            console.error("❌ Error al enviar handshake al MessagePort:", error);
+          }
+          port.onmessage = (messageEvent) => {
+            processRewardPayload(messageEvent?.data ?? messageEvent);
+          };
+        }
         return;
       }
 
-      if (rewardType === "adStatus") {
-        switch (data.status) {
-          case "ready":
-            setAdState("ready");
-            setRetryCount(0);
-            break;
-          case "opened":
-            setAdState("watching");
-            break;
-          case "closed":
-            setAdState("idle");
-            preloadAd();
-            break;
-          case "error":
-            handleAdError(data.errorType || "unknown_error");
-            break;
-          default:
-            setAdState(data.status);
-            break;
-        }
-      }
+      processRewardPayload(event);
     };
 
     window.addEventListener("message", handleRewardedAdMessage);
@@ -413,8 +458,19 @@ export default function Resumen() {
     return () => {
       window.removeEventListener("message", handleRewardedAdMessage);
       window.removeEventListener("adReward", handleRewardedAdMessage);
+      const port = messagePortRef.current;
+      if (port) {
+        try {
+          port.onmessage = null;
+          port.postMessage?.("bridge:disconnect");
+          port.close?.();
+        } catch (error) {
+          console.warn("⚠️ No se pudo cerrar el MessagePort correctamente:", error);
+        }
+        messagePortRef.current = null;
+      }
     };
-  }, [applyRewardDiscount, preloadAd, handleAdError, resolveRewardAmount]);
+  }, [processRewardPayload]);
 
   // Lógica de reintento para errores de anuncios
   useEffect(() => {
