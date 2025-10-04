@@ -4,7 +4,7 @@ import 'server-only';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 
-import prisma from '../libs/prisma';
+import prisma from './prisma.js';
 
 // Rate limiting storage (in-memory, consider Redis for production)
 const rateLimitStore = new Map();

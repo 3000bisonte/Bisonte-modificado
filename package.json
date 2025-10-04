@@ -40,6 +40,8 @@
     "deploy:netlify": "./scripts/deploy/deploy-netlify.sh",
     "deploy:vercel": "./scripts/deploy/deploy-vercel.sh",
     "diagnostics:auth": "node scripts/diagnostics/auth/run.js",
+    "diagnostics:analyze": "node scripts/diagnostics/auth/analyze.js", 
+    "diagnostics:production": "node scripts/diagnostics/auth/production-test.js",
     "maintenance:cleanup": "node scripts/maintenance/cleanup-unused-files.js",
     "maintenance:validate-imports": "node scripts/maintenance/validate-imports.js",
     "maintenance:validate-config": "node scripts/maintenance/validate-configuration.js",

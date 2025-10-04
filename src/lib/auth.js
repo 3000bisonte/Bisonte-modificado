@@ -1,10 +1,12 @@
+import 'server-only';
+
 // Unified authentication system for NextAuth integration
 import bcrypt from "bcryptjs";
 import { OAuth2Client } from "google-auth-library";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 
-import prisma from "./prisma";
+import prisma from "./prisma.js";
 import {
   checkLoginRateLimit,
   logSecurityEvent,
