@@ -12,17 +12,6 @@
       ],
       "destination": "https://www.bisonteapp.com",
       "permanent": true
-    },
-    {
-      "source": "/((?!api/).*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "bisonteapp.com"
-        }
-      ],
-      "destination": "https://www.bisonteapp.com/$1",
-      "permanent": true
     }
   ]
 }
