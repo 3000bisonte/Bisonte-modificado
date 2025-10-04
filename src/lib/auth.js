@@ -319,7 +319,7 @@ export const authOptions = {
       name: isProd ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
       options: {
         httpOnly: true,
-        sameSite: useSecure ? 'none' : 'lax',
+        sameSite: 'lax', // Fixed: Always 'lax' for session cookies to work on same-origin login
         path: '/',
         secure: useSecure,
         ...(cookieDomain ? { domain: cookieDomain } : {}),
@@ -329,7 +329,7 @@ export const authOptions = {
       name: isProd ? '__Secure-next-auth.callback-url' : 'next-auth.callback-url',
       options: {
         httpOnly: true,
-        sameSite: useSecure ? 'none' : 'lax',
+        sameSite: 'lax', // Fixed: Use 'lax' for better compatibility with same-origin requests
         path: '/',
         secure: useSecure,
         ...(cookieDomain ? { domain: cookieDomain } : {}),
@@ -340,7 +340,7 @@ export const authOptions = {
       name: isProd ? '__Secure-next-auth.pkce.code_verifier' : 'next-auth.pkce.code_verifier',
       options: {
         httpOnly: true,
-        sameSite: useSecure ? 'none' : 'lax',
+        sameSite: 'lax', // Fixed: Use 'lax' for OAuth flows from same domain
         path: '/',
         secure: useSecure,
         ...(cookieDomain ? { domain: cookieDomain } : {}),
