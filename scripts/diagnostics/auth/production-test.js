@@ -5,9 +5,25 @@
  * Identifica issues comunes que causan fallas en registro, login y recuperación
  */
 
-const fetch = require('node:fetch').default || global.fetch;
+// Importar fetch para Node.js - función async para manejar imports dinámicos
+let fetch;
 
-const BASE_URL = process.env.PRODUCTION_URL || process.env.VERCEL_URL || 'https://bisonteapp.com';
+async function initFetch() {
+  if (typeof globalThis.fetch === 'undefined') {
+    try {
+      const nodeFetch = await import('node-fetch');
+      fetch = nodeFetch.default;
+    } catch (error) {
+      console.error('❌ Error importando node-fetch:', error.message);
+      console.log('📦 Instala node-fetch: npm install node-fetch');
+      process.exit(1);
+    }
+  } else {
+    fetch = globalThis.fetch;
+  }
+}
+
+const BASE_URL = (process.env.PRODUCTION_URL || process.env.VERCEL_URL || 'https://bisonteapp.com').trim();
 
 console.log(`🔍 Diagnóstico de producción para: ${BASE_URL}`);
 
@@ -204,6 +220,9 @@ async function analyzeCommonProductionIssues() {
 
 async function main() {
   console.log('🚀 Iniciando diagnóstico de producción...\n');
+  
+  // Inicializar fetch primero
+  await initFetch();
   
   await testHealthEndpoints();
   await analyzeCommonProductionIssues();

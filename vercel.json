@@ -1,0 +1,28 @@
+﻿{
+  "version": 2,
+  "name": "bisonte-logistica", 
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "bisonteapp.com"
+        }
+      ],
+      "destination": "https://www.bisonteapp.com",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host", 
+          "value": "bisonteapp.com"
+        }
+      ],
+      "destination": "https://www.bisonteapp.com/$1",
+      "permanent": true
+    }
+  ]
+}

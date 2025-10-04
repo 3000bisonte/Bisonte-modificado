@@ -29,7 +29,16 @@ const rawBaseUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
   process.env.NEXTAUTH_URL ||
   'http://localhost:3000';
-const BASE_URL = rawBaseUrl.replace(/\/$/, '');
+const BASE_URL = rawBaseUrl.trim().replace(/\/$/, '');
+
+// Validar que la URL base sea válida
+try {
+  new URL(BASE_URL);
+} catch (error) {
+  console.error(`❌ URL base inválida: "${BASE_URL}"`);
+  console.error('   Asegúrate de que BASE_URL tenga formato: https://example.com');
+  process.exit(1);
+}
 
 const CACHE_PATH = path.resolve(process.cwd(), 'scripts', 'auth', '.diagnostics-auth-cache.json');
 const cookieStore = new Map();
@@ -158,7 +167,10 @@ async function step(label, action) {
 }
 
 async function registerUser(credentials) {
-  const response = await fetchWithSession(`${BASE_URL}/api/register`, {
+  const registerUrl = `${BASE_URL}/api/register`;
+  debugLog(`Registrando usuario en: ${registerUrl}`);
+  
+  const response = await fetchWithSession(registerUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
