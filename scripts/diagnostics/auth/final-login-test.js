@@ -25,23 +25,38 @@ async function initFetch() {
 // Cookie storage
 const cookieStore = new Map();
 
-function storeCookies(response, source) {
-  if (response.headers.raw && typeof response.headers.raw === 'function') {
-    const setCookieHeaders = response.headers.raw()['set-cookie'] || [];
-    setCookieHeaders.forEach(cookieString => {
-      const [nameValue] = cookieString.split(';');
-      const [name, value] = nameValue.split('=');
-      if (name?.trim()) {
-        cookieStore.set(name.trim(), value?.trim() || '');
-        console.log(`   🍪 Cookie guardada: ${name.trim()}`);
-        
-        // Detectar cookies de sesión específicamente
-        if (name.includes('session') || name.includes('next-auth.session-token')) {
-          console.log(`   🎯 ¡COOKIE DE SESIÓN DETECTADA!: ${name.trim()}`);
-        }
-      }
-    });
+function getSetCookieArray(headers) {
+  if (typeof headers.getSetCookie === 'function') {
+    return headers.getSetCookie();
   }
+  if (headers.raw && typeof headers.raw === 'function') {
+    return headers.raw()['set-cookie'] || [];
+  }
+  const cookies = [];
+  headers.forEach((value, key) => {
+    if (key.toLowerCase() === 'set-cookie') {
+      cookies.push(value);
+    }
+  });
+  return cookies;
+}
+
+function storeCookies(response, source) {
+  const setCookieHeaders = getSetCookieArray(response.headers);
+  setCookieHeaders.forEach(cookieString => {
+    const [nameValue] = cookieString.split(';');
+    const [name, value] = nameValue.split('=');
+    if (name?.trim()) {
+      cookieStore.set(name.trim(), value?.trim() || '');
+      console.log(`   🍪 Cookie guardada: ${name.trim()}`);
+
+      // Detectar cookies de sesión específicamente
+      if (name.includes('session') || name.includes('next-auth.session-token')) {
+        console.log(`   🎯 ¡COOKIE DE SESIÓN DETECTADA!: ${name.trim()}`);
+        console.log(`   🔐 Valor: ${value?.substring(0, 50)}...`);
+      }
+    }
+  });
 }
 
 async function fetchWithCookies(url, init = {}, description = '') {

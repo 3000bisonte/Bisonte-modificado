@@ -268,10 +268,23 @@ export async function cleanupExpiredRecovery() {
  * @param {Request} req - Request object
  * @returns {string} Client IP address
  */
+function readHeader(req, headerName) {
+  if (!req || !req.headers) return undefined;
+
+  const name = headerName.toLowerCase();
+  if (typeof req.headers.get === 'function') {
+    return req.headers.get(name) || req.headers.get(name.toUpperCase()) || undefined;
+  }
+
+  // NextAuth authorize() can pass a plain object of headers (Lowercase keys in v4)
+  const headersObj = req.headers;
+  return headersObj[name] || headersObj[headerName] || undefined;
+}
+
 export function getClientIP(req) {
-  const forwarded = req.headers.get('x-forwarded-for');
-  const realIP = req.headers.get('x-real-ip');
-  const cfIP = req.headers.get('cf-connecting-ip');
+  const forwarded = readHeader(req, 'x-forwarded-for');
+  const realIP = readHeader(req, 'x-real-ip');
+  const cfIP = readHeader(req, 'cf-connecting-ip');
   
   if (forwarded) {
     return forwarded.split(',')[0].trim();
@@ -286,7 +299,7 @@ export function getClientIP(req) {
  * @returns {string} User agent string
  */
 export function getClientUserAgent(req) {
-  return req.headers.get('user-agent') || 'unknown';
+  return readHeader(req, 'user-agent') || 'unknown';
 }
 
 export const SecurityEvents = Object.freeze({
