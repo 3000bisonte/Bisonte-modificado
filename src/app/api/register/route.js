@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+
+import prisma from "../../../lib/prisma";
 import { checkRateLimit, validatePasswordStrength } from "../../../lib/security";
 import { handleEmailAuth } from "../../../lib/userManager";
-import prisma from "../../../lib/prisma";
 
 /**
  * Get register endpoint info

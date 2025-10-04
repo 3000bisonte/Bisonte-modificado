@@ -1,10 +1,10 @@
 // Unified authentication system for NextAuth integration
+import bcrypt from "bcryptjs";
+import { OAuth2Client } from "google-auth-library";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { OAuth2Client } from "google-auth-library";
-import { validateApiInput, loginSchema } from "./validation";
+
 import prisma from "./prisma";
-import bcrypt from "bcryptjs";
 import {
   checkLoginRateLimit,
   logSecurityEvent,
@@ -12,6 +12,7 @@ import {
   getClientIP,
   getClientUserAgent
 } from "./security";
+import { validateApiInput, loginSchema } from "./validation";
 
 // Helper functions
 const verifyPassword = async (password, hashedPassword) => {

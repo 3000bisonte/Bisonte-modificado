@@ -1,7 +1,9 @@
-import 'server-only'
+import 'server-only';
+
 // Security utilities for authentication and rate limiting
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+
 import prisma from '../libs/prisma';
 
 // Rate limiting storage (in-memory, consider Redis for production)
@@ -288,6 +290,13 @@ export function getClientUserAgent(req) {
 }
 
 export const SecurityEvents = Object.freeze({
+  ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+  LOGIN_BLOCKED: 'LOGIN_BLOCKED',
+  LOGIN_FAILED: 'LOGIN_FAILED',
+  LOGIN_SUCCESS: 'LOGIN_SUCCESS',
+  OAUTH_FAILED: 'OAUTH_FAILED',
+  OAUTH_SUCCESS: 'OAUTH_SUCCESS',
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
   SESSION_VERIFICATION_FAILED: 'SESSION_VERIFICATION_FAILED',
   SESSION_ID_MISMATCH: 'SESSION_ID_MISMATCH',
   USER_NOT_FOUND_IN_SESSION: 'USER_NOT_FOUND_IN_SESSION',
@@ -307,7 +316,7 @@ export async function logSecurityEvent(event, details = {}) {
 
   try {
     if (process.env.NODE_ENV !== 'production') {
-      console.info(`[SecurityEvent:${event}]`, entry);
+      console.warn(`[SecurityEvent:${event}]`, entry);
     }
   } catch (error) {
     console.error('[SecurityEvent] Error al registrar evento:', error);
