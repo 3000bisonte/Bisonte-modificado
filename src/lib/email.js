@@ -45,12 +45,10 @@ function getSmtpTransport() {
 
 function normalizeFromAddress() {
   if (!env.EMAIL_FROM) {
-    return 'Bisonte Logística <no-reply@bisonte.com>'
+    return 'logistica@notificaciones.bisonteapp.com'
   }
 
-  return /<.+>/.test(env.EMAIL_FROM)
-    ? env.EMAIL_FROM
-    : `Bisonte Logística <${env.EMAIL_FROM}>`
+  return env.EMAIL_FROM.trim()
 }
 
 function formatHtmlEmail({ name, code, resetUrl, expiresMinutes }) {
