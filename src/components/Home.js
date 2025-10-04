@@ -127,7 +127,7 @@ const Home = () => {
 
   const handleGoToProfile = () => {
     handleCloseWelcome();
-    router.push("/profile");
+    router.push("/perfilCard");
   };
 
   // Slider handlers
@@ -601,75 +601,75 @@ const Home = () => {
 
         {/* Modal de bienvenida */}
         {showWelcome && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur">
-            <div className="relative mx-4 w-full max-w-lg overflow-hidden rounded-[32px] border border-white/10 bg-[#111214]/95 shadow-[0_20px_80px_-28px_rgba(65,224,179,0.55)]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-10 backdrop-blur sm:px-6">
+            <div className="relative w-full max-w-md overflow-hidden rounded-[28px] border border-white/10 bg-[#111214]/95 shadow-[0_20px_80px_-28px_rgba(65,224,179,0.55)] sm:rounded-[32px] sm:max-w-lg">
               <div className="absolute -inset-px rounded-[34px] bg-gradient-to-br from-[#41e0b3]/40 via-transparent to-transparent opacity-40 blur-2xl" aria-hidden="true" />
               <div className="relative">
-                <div className="px-10 pt-10 text-center">
-                  <div className="relative mx-auto mb-8 h-20 w-20">
-                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#41e0b3] to-[#2bbd8c] opacity-90 shadow-[0_15px_35px_rgba(43,189,140,0.45)]" />
-                    <div className="absolute inset-2 rounded-[22px] bg-[#111214]" />
-                    <div className="relative flex h-full items-center justify-center rounded-[24px] bg-gradient-to-br from-[#41e0b3] to-[#2bbd8c]">
-                      <IconSparkles className="h-9 w-9 text-white" />
+                <div className="px-6 pt-8 text-center sm:px-10 sm:pt-10">
+                  <div className="relative mx-auto mb-6 h-16 w-16 sm:mb-8 sm:h-20 sm:w-20">
+                    <div className="absolute inset-0 rounded-[26px] bg-gradient-to-br from-[#41e0b3] to-[#2bbd8c] opacity-90 shadow-[0_12px_30px_rgba(43,189,140,0.45)] sm:rounded-3xl" />
+                    <div className="absolute inset-2 rounded-[20px] bg-[#111214] sm:rounded-[22px]" />
+                    <div className="relative flex h-full items-center justify-center rounded-[22px] bg-gradient-to-br from-[#41e0b3] to-[#2bbd8c] sm:rounded-[24px]">
+                      <IconSparkles className="h-7 w-7 text-white sm:h-9 sm:w-9" />
                     </div>
                   </div>
 
-                  <p className="text-sm uppercase tracking-[0.4em] text-[#41e0b3]/70">Nueva experiencia</p>
-                  <h2 className="mt-3 text-3xl font-semibold text-white">{`Hola, ${getUserName()}!`}</h2>
-                  <p className="mt-4 text-base leading-relaxed text-gray-300">
+                  <p className="text-xs uppercase tracking-[0.35em] text-[#41e0b3]/70 sm:text-sm sm:tracking-[0.4em]">Nueva experiencia</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-white sm:mt-3 sm:text-3xl">{`Hola, ${getUserName()}!`}</h2>
+                  <p className="mt-3 text-sm leading-relaxed text-gray-300 sm:mt-4 sm:text-base">
                     Preparamos un panel inteligente para que gestiones tus envíos y clientes con más claridad y velocidad.
                   </p>
                 </div>
 
-                <div className="px-6 pb-10">
-                  <div className="rounded-3xl border border-white/5 bg-white/5 p-6 backdrop-blur-xl">
-                    <div className="mb-5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#41e0b3]/80">
+                <div className="px-5 pb-8 sm:px-6 sm:pb-10">
+                  <div className="rounded-[26px] border border-white/5 bg-white/5 p-5 backdrop-blur-xl sm:rounded-3xl sm:p-6">
+                    <div className="mb-4 flex flex-col gap-1 text-left text-[11px] font-semibold uppercase tracking-wider text-[#41e0b3]/80 sm:mb-5 sm:flex-row sm:items-center sm:justify-between sm:text-xs">
                       <span>Lo que obtienes</span>
-                      <span>Modo guía</span>
+                      <span className="text-white/70">Modo guía</span>
                     </div>
                     <div className="grid gap-3 text-left">
-                      <div className="flex items-start gap-4 rounded-2xl border border-white/5 bg-[#15171a]/80 p-4">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#41e0b3] to-[#2bbd8c]">
-                          <IconChecklist className="h-5 w-5 text-white" />
+                      <div className="flex items-start gap-3 rounded-2xl border border-white/5 bg-[#15171a]/80 p-3 sm:gap-4 sm:p-4">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#41e0b3] to-[#2bbd8c] sm:h-10 sm:w-10">
+                          <IconChecklist className="h-4 w-4 text-white sm:h-5 sm:w-5" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-white">Checklist guiada</p>
-                          <p className="mt-1 text-sm text-gray-400">Recibe tareas claras para activar tu cuenta sin perderte.</p>
+                          <p className="text-sm font-semibold text-white sm:text-base">Checklist guiada</p>
+                          <p className="mt-1 text-xs text-gray-400 sm:text-sm">Recibe tareas claras para activar tu cuenta sin perderte.</p>
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-4 rounded-2xl border border-white/5 bg-[#15171a]/80 p-4">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2bbd8c] to-[#1f9471]">
-                          <IconShield className="h-5 w-5 text-white" />
+                      <div className="flex items-start gap-3 rounded-2xl border border-white/5 bg-[#15171a]/80 p-3 sm:gap-4 sm:p-4">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2bbd8c] to-[#1f9471] sm:h-10 sm:w-10">
+                          <IconShield className="h-4 w-4 text-white sm:h-5 sm:w-5" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-white">Seguridad verificada</p>
-                          <p className="mt-1 text-sm text-gray-400">Protegemos tu información y aseguramos cada entrega.</p>
+                          <p className="text-sm font-semibold text-white sm:text-base">Seguridad verificada</p>
+                          <p className="mt-1 text-xs text-gray-400 sm:text-sm">Protegemos tu información y aseguramos cada entrega.</p>
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-4 rounded-2xl border border-white/5 bg-[#15171a]/80 p-4">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#41e0b3] to-[#0b6b63]">
-                          <IconLightning className="h-5 w-5 text-white" />
+                      <div className="flex items-start gap-3 rounded-2xl border border-white/5 bg-[#15171a]/80 p-3 sm:gap-4 sm:p-4">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#41e0b3] to-[#0b6b63] sm:h-10 sm:w-10">
+                          <IconLightning className="h-4 w-4 text-white sm:h-5 sm:w-5" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-white">Acceso inmediato</p>
-                          <p className="mt-1 text-sm text-gray-400">Activa métricas, rutas y notificaciones desde tu perfil.</p>
+                          <p className="text-sm font-semibold text-white sm:text-base">Acceso inmediato</p>
+                          <p className="mt-1 text-xs text-gray-400 sm:text-sm">Activa métricas, rutas y notificaciones desde tu perfil.</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
                     <button
                       onClick={handleGoToProfile}
-                      className="flex-1 rounded-2xl bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] py-4 text-base font-semibold text-white shadow-[0_15px_40px_-24px_rgba(65,224,179,0.9)] transition-transform duration-200 hover:scale-[1.02]"
+                      className="flex-1 rounded-2xl bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] py-3 text-sm font-semibold text-white shadow-[0_15px_40px_-24px_rgba(65,224,179,0.9)] transition-transform duration-200 hover:scale-[1.02] sm:py-4 sm:text-base"
                     >
                       Completar mi perfil
                     </button>
                     <button
                       onClick={handleCloseWelcome}
-                      className="flex-1 rounded-2xl border border-white/10 bg-transparent py-4 text-base font-semibold text-gray-300 transition-colors duration-200 hover:border-white/30 hover:text-white"
+                      className="flex-1 rounded-2xl border border-white/10 bg-transparent py-3 text-sm font-semibold text-gray-300 transition-colors duration-200 hover:border-white/30 hover:text-white sm:py-4 sm:text-base"
                     >
                       Explorar después
                     </button>
