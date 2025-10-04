@@ -7,7 +7,12 @@ import bcrypt from 'bcryptjs';
 import prisma from './prisma.js';
 
 // Rate limiting storage (in-memory, consider Redis for production)
+// Each entry keeps a sliding window of attempt timestamps to avoid over-counting bursts
 const rateLimitStore = new Map();
+
+const DEFAULT_IDENTIFIER = 'anonymous';
+const MAX_RATE_LIMIT_KEYS = 5000;
+const CLEANUP_PROBABILITY = 0.05;
 
 /**
  * Enhanced rate limiting with IP and user-based limits
@@ -17,38 +22,52 @@ const rateLimitStore = new Map();
  * @param {number} windowMs - Time window in milliseconds
  * @returns {object} Rate limit status and info
  */
-export async function checkRateLimit(identifier, action = 'default', maxAttempts = 5, windowMs = 15 * 60 * 1000) {
-  const key = `${action}:${identifier}`;
-  const now = Date.now();
-  
+export async function checkRateLimit(
+  identifier,
+  action = 'default',
+  maxAttempts = 5,
+  windowMs = 15 * 60 * 1000,
+  options = {}
+) {
+  const now = Number.isFinite(options.now) ? options.now : Date.now();
+  const weight = Math.max(1, Math.floor(options.weight ?? 1));
+  const sanitizedAction = typeof action === 'string' && action.trim() ? action.trim() : 'default';
+  const sanitizedIdentifier = normalizeIdentifier(identifier);
+  const key = `${sanitizedAction}:${sanitizedIdentifier}`;
+
   let record = rateLimitStore.get(key);
-  
-  if (!record || now > record.resetAt) {
+
+  if (!record) {
     record = {
-      count: 0,
-      resetAt: now + windowMs,
-      firstAttempt: now
+      attempts: [],
+      windowMs,
+      lastSeen: now
     };
+    rateLimitStore.set(key, record);
+  } else {
+    record.windowMs = windowMs;
+    record.lastSeen = now;
   }
-  
-  record.count += 1;
-  rateLimitStore.set(key, record);
-  
-  // Cleanup old entries periodically
-  if (Math.random() < 0.01) { // 1% chance
-    cleanupRateLimit();
+
+  const windowStart = now - windowMs;
+  record.attempts = record.attempts.filter((timestamp) => timestamp > windowStart);
+
+  if (record.attempts.length >= maxAttempts) {
+    const resetAt = record.attempts[0] + windowMs;
+    return buildRateLimitResponse(false, record.attempts.length, maxAttempts, resetAt, now);
   }
-  
-  const isAllowed = record.count <= maxAttempts;
-  const resetIn = Math.ceil((record.resetAt - now) / 1000 / 60); // minutes
-  
-  return {
-    allowed: isAllowed,
-    count: record.count,
-    limit: maxAttempts,
-    resetIn,
-    resetAt: record.resetAt
-  };
+
+  for (let i = 0; i < weight; i += 1) {
+    record.attempts.push(now);
+  }
+
+  const resetAt = record.attempts[0] + windowMs;
+
+  if (rateLimitStore.size > MAX_RATE_LIMIT_KEYS || Math.random() < CLEANUP_PROBABILITY) {
+    cleanupRateLimit(now);
+  }
+
+  return buildRateLimitResponse(true, record.attempts.length, maxAttempts, resetAt, now);
 }
 
 /**
@@ -58,9 +77,14 @@ export async function checkRateLimit(identifier, action = 'default', maxAttempts
  * @returns {object} Combined rate limit check
  */
 export async function checkLoginRateLimit(ip, email = null) {
-  const ipLimit = await checkRateLimit(ip, 'login_ip', 20, 15 * 60 * 1000); // 20 per 15min per IP
-  const emailLimit = email ? await checkRateLimit(email, 'login_email', 5, 15 * 60 * 1000) : { allowed: true }; // 5 per 15min per email
-  
+  const normalizedIp = normalizeIdentifier(ip);
+  const normalizedEmail = typeof email === 'string' ? email.toLowerCase().trim() : null;
+
+  const ipLimit = await checkRateLimit(normalizedIp, 'login_ip', 60, 10 * 60 * 1000);
+  const emailLimit = normalizedEmail
+    ? await checkRateLimit(`email:${normalizedEmail}`, 'login_email', 12, 10 * 60 * 1000)
+    : { allowed: true, limit: 0, count: 0, resetIn: 0, resetAt: Date.now() };
+
   const isAllowed = ipLimit.allowed && emailLimit.allowed;
   
   if (!isAllowed) {
@@ -76,13 +100,43 @@ export async function checkLoginRateLimit(ip, email = null) {
 /**
  * Clean up expired rate limit entries
  */
-function cleanupRateLimit() {
-  const now = Date.now();
+function cleanupRateLimit(now = Date.now()) {
   for (const [key, record] of rateLimitStore.entries()) {
-    if (now > record.resetAt) {
+    if (!record?.attempts?.length) {
+      rateLimitStore.delete(key);
+      continue;
+    }
+
+    const windowMs = record.windowMs ?? 0;
+    const windowStart = now - windowMs;
+    record.attempts = record.attempts.filter((timestamp) => timestamp > windowStart);
+
+    if (!record.attempts.length || now - (record.lastSeen ?? now) > windowMs * 2) {
       rateLimitStore.delete(key);
     }
   }
+}
+
+function buildRateLimitResponse(allowed, count, limit, resetAt, now) {
+  const deltaMs = resetAt - now;
+  const resetInMinutes = deltaMs <= 0 ? 0 : Math.ceil(deltaMs / 1000 / 60);
+
+  return {
+    allowed,
+    count,
+    limit,
+    resetIn: resetInMinutes,
+    resetAt
+  };
+}
+
+function normalizeIdentifier(identifier) {
+  if (identifier === null || identifier === undefined) {
+    return DEFAULT_IDENTIFIER;
+  }
+
+  const str = String(identifier).trim();
+  return str.length ? str : DEFAULT_IDENTIFIER;
 }
 
 /**
@@ -300,6 +354,51 @@ export function getClientIP(req) {
  */
 export function getClientUserAgent(req) {
   return readHeader(req, 'user-agent') || 'unknown';
+}
+
+/**
+ * Build a resilient identifier for rate limiting using IP, UA or a fallback token
+ * @param {Request} req - HTTP Request
+ * @param {object} options - Additional options
+ * @param {string} options.extra - Extra suffix for the identifier
+ * @param {string} options.fallback - Custom fallback identifier
+ * @returns {string} Rate limit identifier
+ */
+export function getRateLimitIdentity(req, options = {}) {
+  const ip = getClientIP(req);
+  const userAgent = getClientUserAgent(req);
+  const suffix = options.extra ? `:${options.extra}` : '';
+
+  if (ip && ip !== 'unknown') {
+    return `ip:${ip}${suffix}`;
+  }
+
+  if (userAgent && userAgent !== 'unknown') {
+    return `ua:${hashToken(userAgent).slice(0, 16)}${suffix}`;
+  }
+
+  if (options.fallback) {
+    return `${options.fallback}${suffix}`;
+  }
+
+  return `${DEFAULT_IDENTIFIER}${suffix}`;
+}
+
+/**
+ * Reset a specific rate limit bucket (useful after successful actions or in tests)
+ * @param {string} identifier - Identifier used when checking the limit
+ * @param {string} action - Action scope
+ */
+export function resetRateLimit(identifier, action = 'default') {
+  const sanitizedAction = typeof action === 'string' && action.trim() ? action.trim() : 'default';
+  rateLimitStore.delete(`${sanitizedAction}:${normalizeIdentifier(identifier)}`);
+}
+
+/**
+ * Clears all rate limit buckets (ONLY for maintenance/tests)
+ */
+export function clearAllRateLimits() {
+  rateLimitStore.clear();
 }
 
 export const SecurityEvents = Object.freeze({

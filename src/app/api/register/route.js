@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
-import prisma from "../../../lib/prisma";
-import { checkRateLimit, validatePasswordStrength } from "../../../lib/security";
+import { checkRateLimit, validatePasswordStrength, getRateLimitIdentity, resetRateLimit } from "../../../lib/security";
 import { handleEmailAuth } from "../../../lib/userManager";
 
 /**
@@ -25,23 +24,54 @@ export async function POST(request) {
   try {
     const { email, password, nombre, celular, ciudad } = await request.json();
 
-    if (!email || !password || !nombre) {
+    const normalizedEmail = email?.toLowerCase().trim();
+
+    if (!normalizedEmail || !password || !nombre) {
       return NextResponse.json(
         { error: "Email, contraseña y nombre son requeridos" },
         { status: 400 }
       );
     }
 
-    // Check rate limit
-    const clientIp = request.headers.get("x-forwarded-for") || "unknown";
-    const rateLimitKey = `register:${clientIp}`;
-    
-    const rateLimit = await checkRateLimit(rateLimitKey, 'register', 5, 60 * 60 * 1000); // 5 registrations per hour per IP
-    if (!rateLimit?.allowed) {
+    // Smart rate limits - more generous for normal usage
+    const clientIdentity = getRateLimitIdentity(request, { extra: 'register' });
+    const emailIdentity = `email:${normalizedEmail}`;
+
+    // Smart registration limits: allow burst but prevent spam (sliding window)
+    const [shortWindow, mediumWindow, longWindow, emailWindow] = await Promise.all([
+      checkRateLimit(clientIdentity, 'register_burst', 20, 2 * 60 * 1000),
+      checkRateLimit(clientIdentity, 'register_medium', 90, 60 * 60 * 1000),
+      checkRateLimit(clientIdentity, 'register_daily', 500, 24 * 60 * 60 * 1000),
+      checkRateLimit(emailIdentity, 'register_email', 6, 60 * 60 * 1000)
+    ]);
+
+    if (!shortWindow?.allowed || !mediumWindow?.allowed || !longWindow?.allowed || !emailWindow?.allowed) {
+      let errorMessage = "Límite de registros alcanzado.";
+      let retryMinutes = 1;
+      let blockSource = 'ip';
+      
+      if (!emailWindow?.allowed) {
+        errorMessage = "Este email ya ha sido usado recientemente. Intenta más tarde.";
+        retryMinutes = emailWindow.resetIn;
+        blockSource = 'email';
+      } else if (!shortWindow?.allowed) {
+        errorMessage = "Demasiados registros muy seguidos. Espera un momento.";
+        retryMinutes = shortWindow.resetIn;
+      } else if (!mediumWindow?.allowed) {
+        errorMessage = "Límite temporal alcanzado. Intenta en unos minutos.";
+        retryMinutes = mediumWindow.resetIn;
+      } else if (!longWindow?.allowed) {
+        errorMessage = "Límite diario alcanzado. Intenta mañana.";
+        retryMinutes = longWindow.resetIn;
+      }
+
+      retryMinutes = Math.max(1, retryMinutes ?? 1);
+
       return NextResponse.json(
         {
-          error: "Demasiados intentos de registro. Intenta más tarde.",
-          retryInMinutes: rateLimit?.resetIn ?? null
+          error: errorMessage,
+          retryInMinutes: retryMinutes,
+          blockedBy: blockSource
         },
         { status: 429 }
       );
@@ -58,11 +88,15 @@ export async function POST(request) {
 
     try {
       // Use improved user management (handles duplicates automatically)
-      const userResult = await handleEmailAuth(email, password, {
+      const userResult = await handleEmailAuth(normalizedEmail, password, {
         nombre,
         celular,
         ciudad
       });
+
+      // Successful registration should release the stricter buckets to avoid lockouts on retry
+      resetRateLimit(emailIdentity, 'register_email');
+      resetRateLimit(clientIdentity, 'register_burst');
 
       return NextResponse.json(
         { 
