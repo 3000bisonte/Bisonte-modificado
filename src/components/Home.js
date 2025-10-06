@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BottomNav from "./BottomNav";
 import CapacitorGoogleAuth from "@/lib/capacitor-google-auth";
+import {
+  extendHomeSticky,
+  clearHomeSticky,
+  setLastActivity,
+  clearLastActivity,
+} from "../utils/homeStickyStorage";
 
 // Iconos SVG
 const IconUser = () => (
@@ -98,12 +104,28 @@ const Home = () => {
   const sliderTrackRef = useRef(null);
   const [stats, setStats] = useState({ usuarios: 0, envios: 0, mensajes: 0 });
 
+  const stickyUserId = session?.user?.email ?? session?.user?.id ?? null;
+
   // Redirigir si no está autenticado
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/");
     }
   }, [status, router]);
+
+  // Mantener la app anclada en Home por 30 días mientras la sesión siga activa
+  useEffect(() => {
+    if (status !== "authenticated") {
+      return;
+    }
+
+    extendHomeSticky(stickyUserId || undefined);
+
+    if (typeof window !== "undefined") {
+      const currentPath = window.location.pathname + window.location.search + window.location.hash;
+      setLastActivity(stickyUserId || undefined, Date.now(), currentPath || "/home");
+    }
+  }, [status, stickyUserId]);
 
   // Obtener nombre o usuario del correo
   const getUserName = () => {
@@ -153,6 +175,8 @@ const Home = () => {
 
   const handleLogout = async () => {
     setShowProfileMenu(false);
+  clearHomeSticky();
+  clearLastActivity();
     try {
       await CapacitorGoogleAuth.signOut();
     } catch (error) {

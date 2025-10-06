@@ -186,6 +186,7 @@ export default withAuth(
           "/destinatario",
           "/pagos",
           "/profile",
+          "/perfilCard",
         ];
         const isProtected = protectedPaths.some((path) => p === path || p.startsWith(path + "/"));
         return isProtected ? !!token : true;

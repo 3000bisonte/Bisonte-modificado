@@ -1,13 +1,22 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { signIn, useSession } from "next-auth/react";
-import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
-import { requestGoogleIdToken } from "../lib/nativeBridge";
-import { validateApiInput, loginSchema } from "../lib/validation";
-// NOTE: Do not import server-only modules here (like ../lib/security) because it pulls prisma/env into the client bundle
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
+import { useCallback, useEffect, useState } from "react";
+
 import { GoogleAuthButton } from "./GoogleAuthButton";
+import { requestGoogleIdToken } from "../lib/nativeBridge";
+import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
+import { validateApiInput, loginSchema } from "../lib/validation";
+import {
+  getLastActivity,
+  setLastActivity,
+  clearLastActivity,
+  INACTIVITY_MIN_MS,
+  INACTIVITY_MAX_MS,
+} from "../utils/homeStickyStorage";
+// NOTE: Do not import server-only modules here (like ../lib/security) because it pulls prisma/env into the client bundle
 
 const LoginForm = ({ callbackUrl }) => {
   const [email, setEmail] = useState("");
@@ -19,6 +28,44 @@ const LoginForm = ({ callbackUrl }) => {
   const [loginAttempts, setLoginAttempts] = useState(0);
   const router = useRouter();
   const { data: session } = useSession();
+  // Comprobar inactividad para redirigir según el tiempo transcurrido desde la última actividad
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!session?.user) {
+      return;
+    }
+
+    const userId = session.user.email ?? session.user.id ?? null;
+    const now = Date.now();
+
+    const { timestamp, path } = getLastActivity();
+
+    if (!timestamp) {
+      setLastActivity(userId, now, "/home");
+      router.replace("/home");
+      return;
+    }
+
+    const inactivity = now - timestamp;
+
+    if (inactivity > INACTIVITY_MAX_MS) {
+      clearLastActivity();
+      return;
+    }
+
+    if (inactivity >= INACTIVITY_MIN_MS) {
+      setLastActivity(userId, now, "/home");
+      router.replace("/home?resume=1");
+      return;
+    }
+
+    const target = path && path !== "/" ? path : "/home";
+    setLastActivity(userId, now, target);
+    router.replace(target);
+  }, [session?.user, router]);
 
   // 🔍 Real-time validation
   const validateField = useCallback((field, value) => {
