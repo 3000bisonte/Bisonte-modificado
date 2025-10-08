@@ -30,10 +30,26 @@ const mockMercadoPago = {
 
 export function GET() {
   try {
+    // 🔍 Verificar configuración de Mercado Pago
+    const mpAccessToken = process.env.MP_ACCESS_TOKEN;
+    const mpPublicKey = process.env.MP_PUBLIC_KEY;
+    const mpInitKey = process.env.NEXT_PUBLIC_INIT_MERCADOPAGO;
+    
+    const isConfigured = !!(mpAccessToken && mpPublicKey && mpInitKey);
+    const isProduction = mpAccessToken?.includes('APP_USR') || false;
+    const isTest = mpAccessToken?.includes('TEST') || false;
+    
     return NextResponse.json({
       success: true,
       message: "MercadoPago integration status",
-      status: "operational",
+      status: isConfigured ? "operational" : "not_configured",
+      configured: {
+        accessToken: !!mpAccessToken,
+        publicKey: !!mpPublicKey,
+        initKey: !!mpInitKey,
+        all: isConfigured
+      },
+      environment: isProduction ? "production" : isTest ? "test" : "unknown",
       version: "2.0.0",
       timestamp: new Date().toISOString()
     });
