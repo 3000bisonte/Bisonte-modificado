@@ -174,8 +174,11 @@ const LoginForm = ({ callbackUrl }) => {
         if (typeof window !== "undefined") {
           localStorage.setItem("lastUser", email);
           localStorage.removeItem("passwordRegistro");
+          // 🔄 Clear lastActivity to force fresh home redirect after password reset
+          clearLastActivity();
         }
-        router.push(callbackUrl || "/home");
+        // ✅ Force hard navigation to ensure redirect after password change
+        window.location.href = callbackUrl || "/home";
       } else {
         setErrorMessage("Error al iniciar sesión.");
         if (typeof window !== "undefined") {
