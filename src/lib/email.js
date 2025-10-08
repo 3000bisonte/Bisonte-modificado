@@ -216,7 +216,6 @@ export async function sendContactResponseEmail({ to, clientName, originalMessage
     transportsTried: [],
   }
 
-  const baseUrl = ensureSiteUrl()
   const resend = getResendClient()
   const smtpTransport = getSmtpTransport()
 
@@ -254,16 +253,10 @@ export async function sendContactResponseEmail({ to, clientName, originalMessage
           
           <p style="margin:0 0 16px 0; font-size:14px; line-height:1.6; color:#6b7280">Si tienes alguna otra pregunta, no dudes en responder a este correo o contactarnos nuevamente.</p>
           
-          <div style="text-align:center; margin:32px 0">
-            <a href="${baseUrl}/contacto" style="display:inline-block; background:linear-gradient(135deg, #41e0b3 0%, #2bbd8c 100%); color:#ffffff; padding:14px 32px; border-radius:8px; text-decoration:none; font-weight:600; font-size:15px; box-shadow:0 4px 12px rgba(65, 224, 179, 0.3)">Enviar otro mensaje</a>
-          </div>
-          
           <hr style="border:none; border-top:1px solid #e5e7eb; margin:32px 0" />
           
           <p style="margin:0 0 8px 0; font-size:14px; color:#111827; font-weight:600">¿Necesitas ayuda adicional?</p>
-          <p style="margin:0 0 4px 0; font-size:14px; color:#6b7280">📧 Email: <a href="mailto:soporte@bisontelogistica.com" style="color:#2563eb">soporte@bisontelogistica.com</a></p>
-          <p style="margin:0 0 4px 0; font-size:14px; color:#6b7280">📱 WhatsApp: <a href="https://wa.me/573000000000" style="color:#2563eb">+57 300 000 0000</a></p>
-          <p style="margin:0; font-size:14px; color:#6b7280">🌐 Web: <a href="${baseUrl}" style="color:#2563eb">${baseUrl}</a></p>
+          <p style="margin:0; font-size:14px; color:#6b7280">📧 Email: <a href="mailto:3000bisonte@gmail.com" style="color:#2563eb">3000bisonte@gmail.com</a></p>
           
           <p style="margin:32px 0 0 0; font-size:13px; color:#9ca3af; text-align:center">Equipo de atención al cliente - Bisonte Logística</p>
         </td>
@@ -290,12 +283,8 @@ ${response}
 
 Si tienes alguna otra pregunta, no dudes en responder a este correo o contactarnos nuevamente.
 
-Visita: ${baseUrl}/contacto
-
 ¿Necesitas ayuda adicional?
-- Email: soporte@bisontelogistica.com
-- WhatsApp: +57 300 000 0000
-- Web: ${baseUrl}
+Email: 3000bisonte@gmail.com
 
 Equipo de atención al cliente
 Bisonte Logística
@@ -310,7 +299,7 @@ Bisonte Logística
         const { data, error } = await resend.emails.send({
           from: normalizeFromAddress(),
           to,
-          replyTo: 'soporte@bisontelogistica.com',
+          replyTo: '3000bisonte@gmail.com',
           subject: `Re: Tu mensaje a Bisonte Logística`,
           html: htmlContent,
           text: textContent,
@@ -335,7 +324,7 @@ Bisonte Logística
         const info = await smtpTransport.sendMail({
           from: normalizeFromAddress(),
           to,
-          replyTo: 'soporte@bisontelogistica.com',
+          replyTo: '3000bisonte@gmail.com',
           subject: `Re: Tu mensaje a Bisonte Logística`,
           html: htmlContent,
           text: textContent,
