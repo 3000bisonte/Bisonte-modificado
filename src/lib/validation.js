@@ -19,7 +19,7 @@ export const registerSchema = z.object({
 });
 
 export function sanitizeObject(obj) {
-  if (typeof obj !== 'object' || obj === null) return obj;
+  if (typeof obj !== 'object' || obj === null) {return obj;}
   
   const sanitized = {};
   

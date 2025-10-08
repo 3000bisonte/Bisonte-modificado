@@ -1,7 +1,7 @@
 import React from "react";
 
 export default function DescuentoAnunciosModal({ open, onClose, onPay, onVerOtro }) {
-  if (!open) return null;
+  if (!open) {return null;}
 
   // Tamaño real de la imagen: 768x768px
   // Botón "VER OTRO ANUNCIO": left=60px, bottom=40px, width=280px, height=60px aprox

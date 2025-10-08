@@ -7,13 +7,13 @@ export interface ValidationSchema {
     min?: number;
     max?: number;
     pattern?: RegExp;
-    validate?: (value: any) => boolean;
+    validate?: (value: unknown) => boolean;
   };
 }
 
-export async function validateRequest(data: any, schema: ValidationSchema): Promise<any> {
+export function validateRequest(data: Record<string, unknown>, schema: ValidationSchema): Record<string, unknown> {
   const errors: string[] = [];
-  const validated: any = {};
+  const validated: Record<string, unknown> = {};
 
   for (const [field, rules] of Object.entries(schema)) {
     const value = data[field];
@@ -69,7 +69,7 @@ export async function validateRequest(data: any, schema: ValidationSchema): Prom
   return validated;
 }
 
-function validateType(value: any, type: string): boolean {
+function validateType(value: unknown, type: string): boolean {
   switch (type) {
     case 'string':
       return typeof value === 'string';
@@ -122,7 +122,7 @@ export const clientSchema: ValidationSchema = {
   phone: {
     type: 'string',
     required: false,
-    pattern: /^[\+]?[1-9][\d\s\-\(\)]{7,15}$/
+    pattern: /^[+]?[1-9][\d\s\-()]{7,15}$/
   },
   address: {
     type: 'string',

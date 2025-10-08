@@ -8,8 +8,8 @@ import {
   getSortedRowModel,
   getFilteredRowModel,
 } from "@tanstack/react-table";
-import { useState } from "react";
 import Link from 'next/link'; // Importar Link
+import { useState } from "react";
 
 function TanstackReactTable({ data, columns }) {
   const [sorting, setSorting] = useState([]);
@@ -100,6 +100,7 @@ function TanstackReactTable({ data, columns }) {
         </h1>
         {/* Botón/Link para ir a Inicio */}
         <Link href="/home" legacyBehavior>
+          {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
           <a className="inline-flex items-center justify-center whitespace-nowrap rounded-md bg-teal-200 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition duration-150 ease-in-out w-full sm:w-auto"> {/* Ancho completo en móvil */}
              Ir a Inicio
           </a>

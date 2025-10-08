@@ -3,14 +3,38 @@
 
 import type { CapacitorGlobal } from '@capacitor/core';
 
-// Dynamic import to avoid server-side bundling issues
-let FirebaseAuthentication: any = null;
+interface FirebaseUser {
+  uid: string;
+  email?: string;
+  displayName?: string;
+  photoUrl?: string;
+}
+
+interface FirebaseSignInResult {
+  user?: FirebaseUser;
+  credential?: {
+    idToken?: string;
+  };
+}
+
+interface FirebaseIdTokenResult {
+  token?: string;
+}
+
+interface FirebaseAuthPlugin {
+  signOut: () => Promise<void>;
+  signInWithGoogle: (options: { scopes: string[]; mode?: string }) => Promise<FirebaseSignInResult>;
+  getIdToken: (options: { forceRefresh: boolean }) => Promise<FirebaseIdTokenResult>;
+  getCurrentUser: () => Promise<{ user?: FirebaseUser }>;
+}
+
+let FirebaseAuthentication: FirebaseAuthPlugin | null = null;
 
 // Only import on client side
 if (typeof window !== 'undefined') {
   try {
-    import('@capacitor-firebase/authentication').then((module) => {
-      FirebaseAuthentication = module.FirebaseAuthentication;
+    void import('@capacitor-firebase/authentication').then((module) => {
+      FirebaseAuthentication = module.FirebaseAuthentication as FirebaseAuthPlugin;
     }).catch(() => {
       // Ignore import errors in web environment
     });
@@ -34,11 +58,12 @@ export interface GoogleAuthResult {
 interface CapacitorWindow extends Window {
   Capacitor?: (CapacitorGlobal & {
     Plugins?: {
-      FirebaseAuthentication?: any;
-      firebaseAuthentication?: any;
+      FirebaseAuthentication?: FirebaseAuthPlugin;
+      firebaseAuthentication?: FirebaseAuthPlugin;
     };
   }) | null;
-  FirebaseAuthentication?: any;
+  FirebaseAuthentication?: FirebaseAuthPlugin;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   firebaseAuthentication?: any;
 }
 
@@ -280,7 +305,7 @@ export class CapacitorGoogleAuth {
       const result = await FirebaseAuthentication.getCurrentUser();
       
       if (result.user) {
-        const tokenResult = await FirebaseAuthentication.getIdToken();
+        const tokenResult = await FirebaseAuthentication.getIdToken({ forceRefresh: false });
         
         return {
           success: true,

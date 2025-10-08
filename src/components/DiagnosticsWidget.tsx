@@ -1,10 +1,31 @@
 "use client";
-import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
-import { isWebViewRuntime, buildBridgeCallback, isCapacitorRuntime } from "@/lib/ua";
-import { requestGoogleIdToken } from "@/lib/nativeBridge";
+import { useEffect, useState } from "react";
 
-function jsonShort(obj: any, max = 800) {
+import { requestGoogleIdToken } from "@/lib/nativeBridge";
+import { isWebViewRuntime, buildBridgeCallback } from "@/lib/ua";
+
+interface ClientDiagnostics {
+  userAgent?: string;
+  isWebViewRuntime?: boolean;
+  hasRNWebView?: boolean;
+  hasWKBridge?: boolean;
+  hasCapacitor?: boolean;
+  capPlugins?: Record<string, boolean>;
+  isStandalone?: boolean;
+  cookieEnabled?: boolean;
+  localStorage?: boolean;
+  sessionStorage?: boolean;
+  hasServiceWorker?: boolean;
+  href?: string;
+  error?: string;
+}
+
+interface ServerDiagnostics {
+  [key: string]: unknown;
+}
+
+function jsonShort(obj: unknown, max = 800): string {
   try {
     const s = JSON.stringify(obj, null, 2);
     return s.length > max ? s.slice(0, max) + "\n…" : s;
@@ -13,11 +34,11 @@ function jsonShort(obj: any, max = 800) {
 
 export default function DiagnosticsWidget() {
   const [visible, setVisible] = useState(false);
-  const [client, setClient] = useState<any>(null);
-  const [server, setServer] = useState<any>(null);
-  const [nativeDiag, setNativeDiag] = useState<any>(null);
+  const [client, setClient] = useState<ClientDiagnostics | null>(null);
+  const [server, setServer] = useState<ServerDiagnostics | null>(null);
+  const [nativeDiag, setNativeDiag] = useState<Record<string, unknown> | null>(null);
   const [lastIdToken, setLastIdToken] = useState<string | null>(null);
-  const [verifyRes, setVerifyRes] = useState<any>(null);
+  const [verifyRes, setVerifyRes] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     const hashDiag = typeof window !== 'undefined' && window.location.hash.includes('diag');
@@ -25,27 +46,51 @@ export default function DiagnosticsWidget() {
   }, []);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {return;}
     try {
-      const nav = navigator as any;
+      type ExtendedNavigator = Navigator & { standalone?: boolean };
+      type ExtendedWindow = Window & {
+        ReactNativeWebView?: unknown;
+        webkit?: { messageHandlers?: unknown };
+        Capacitor?: {
+          Plugins?: {
+            FirebaseAuthentication?: unknown;
+            GoogleAuth?: unknown;
+            BisonteAuth?: unknown;
+          };
+        };
+        FirebaseAuthentication?: unknown;
+        GoogleAuth?: unknown;
+        BisonteAuth?: unknown;
+      };
+
+      const nav = navigator as ExtendedNavigator;
+      const w = window as ExtendedWindow;
       const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (nav.standalone === true);
-      const hasRNWebView = !!(window as any).ReactNativeWebView;
-      const hasWKBridge = !!((window as any).webkit && (window as any).webkit.messageHandlers);
-      const hasCapacitor = !!(window as any).Capacitor;
-      let capPlugins: any = undefined;
+      const hasRNWebView = !!w.ReactNativeWebView;
+      const hasWKBridge = !!(w.webkit && w.webkit.messageHandlers);
+      const hasCapacitor = !!w.Capacitor;
+      let capPlugins: Record<string, boolean> | undefined = undefined;
       try {
-        const w: any = window as any;
         capPlugins = {
           FirebaseAuthentication: !!(w.Capacitor?.Plugins?.FirebaseAuthentication || w.FirebaseAuthentication),
           GoogleAuth: !!(w.Capacitor?.Plugins?.GoogleAuth || w.GoogleAuth),
           BisonteAuth: !!(w.Capacitor?.Plugins?.BisonteAuth || w.BisonteAuth),
         };
-      } catch {}
+      } catch {
+        // Plugin detection failed
+      }
       const hasSW = !!navigator.serviceWorker;
       let cookieEnabled = false;
-      try { document.cookie = `diag_widget=1; path=/`; cookieEnabled = document.cookie.includes('diag_widget=1'); } catch {}
-      let ls=false, ss=false; try { localStorage.setItem('dw','1'); ls = localStorage.getItem('dw')==='1'; localStorage.removeItem('dw'); } catch {}
-      try { sessionStorage.setItem('dw','1'); ss = sessionStorage.getItem('dw')==='1'; sessionStorage.removeItem('dw'); } catch {}
+      try { document.cookie = `diag_widget=1; path=/`; cookieEnabled = document.cookie.includes('diag_widget=1'); } catch {
+        // Cookie access failed
+      }
+      let ls=false, ss=false; try { localStorage.setItem('dw','1'); ls = localStorage.getItem('dw')==='1'; localStorage.removeItem('dw'); } catch {
+        // localStorage access failed
+      }
+      try { sessionStorage.setItem('dw','1'); ss = sessionStorage.getItem('dw')==='1'; sessionStorage.removeItem('dw'); } catch {
+        // sessionStorage access failed
+      }
       setClient({
         userAgent: navigator.userAgent,
         isWebViewRuntime: isWebViewRuntime(),
@@ -59,10 +104,10 @@ export default function DiagnosticsWidget() {
 
   const serverCheck = async (op?: 'set'|'clear', kind?: 'none'|'lax'|'client'|'all') => {
     const u = new URL('/api/diag', window.location.origin);
-    if (op==='set') u.searchParams.set('setcookie', kind || 'none');
-    if (op==='clear') u.searchParams.set('clear', kind ? (kind==='all'?'1':kind==='none'?'diag_server_none':kind==='lax'?'diag_server_lax':'diag_client') : '1');
+    if (op==='set') {u.searchParams.set('setcookie', kind || 'none');}
+    if (op==='clear') {u.searchParams.set('clear', kind ? (kind==='all'?'1':kind==='none'?'diag_server_none':kind==='lax'?'diag_server_lax':'diag_client') : '1');}
     const res = await fetch(u.toString(), { credentials: 'include' });
-    const data = await res.json();
+    const data = await res.json() as Record<string, unknown>;
     setServer(data);
   };
 
@@ -80,7 +125,19 @@ export default function DiagnosticsWidget() {
 
   const signInCCT = async () => {
     try {
-      const w: any = window as any;
+      type ExtendedWindow = Window & {
+        Capacitor?: {
+          Plugins?: {
+            BisonteAuth?: {
+              googleSignInCCT: () => Promise<{ idToken?: string; token?: string }>;
+            };
+          };
+        };
+        BisonteAuth?: {
+          googleSignInCCT: () => Promise<{ idToken?: string; token?: string }>;
+        };
+      };
+      const w = window as ExtendedWindow;
       const BA = w.Capacitor?.Plugins?.BisonteAuth || w.BisonteAuth;
       if (!BA || typeof BA.googleSignInCCT !== 'function') {
         alert('Plugin BisonteAuth.googleSignInCCT no disponible.');
@@ -96,68 +153,119 @@ export default function DiagnosticsWidget() {
       const bridge = new URL(buildBridgeCallback('/home'), window.location.origin);
       bridge.searchParams.set('wv','1');
       await signIn('credentials', { idToken, redirect: true, callbackUrl: bridge.toString() });
-    } catch (e:any) {
-      alert('Error en CCT: ' + (e?.message || e));
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      alert('Error en CCT: ' + errMsg);
     }
   };
 
   const testCapacitorPlugins = async () => {
-    const w: any = window as any;
-    const out: any = { when: new Date().toISOString() };
+    type ExtendedWindow = Window & {
+      Capacitor?: {
+        Plugins?: {
+          BisonteAuth?: {
+            googleSignInCCT: () => Promise<{ idToken?: string; token?: string }>;
+          };
+          FirebaseAuthentication?: {
+            signInWithGoogle: () => Promise<{
+              credential?: { idToken?: string };
+              idToken?: string;
+              accessToken?: string;
+            }>;
+          };
+          GoogleAuth?: {
+            initialize?: () => Promise<void>;
+            signIn: () => Promise<{
+              authentication?: { idToken?: string };
+              idToken?: string;
+            }>;
+          };
+        };
+      };
+      BisonteAuth?: {
+        googleSignInCCT: () => Promise<{ idToken?: string; token?: string }>;
+      };
+      FirebaseAuthentication?: {
+        signInWithGoogle: () => Promise<{
+          credential?: { idToken?: string };
+          idToken?: string;
+          accessToken?: string;
+        }>;
+      };
+      GoogleAuth?: {
+        initialize?: () => Promise<void>;
+        signIn: () => Promise<{
+          authentication?: { idToken?: string };
+          idToken?: string;
+        }>;
+      };
+    };
+    const w = window as ExtendedWindow;
+    const out: Record<string, unknown> = { when: new Date().toISOString() };
     try {
       const BA = w.Capacitor?.Plugins?.BisonteAuth || w.BisonteAuth;
       out.BisonteAuth = {
         available: !!(BA && typeof BA.googleSignInCCT === 'function')
       };
-      if (out.BisonteAuth.available) {
+      if (out.BisonteAuth && typeof out.BisonteAuth === 'object' && 'available' in out.BisonteAuth && out.BisonteAuth.available && BA) {
         try {
           const res = await BA.googleSignInCCT();
-          out.BisonteAuth.result = res;
-          out.BisonteAuth.idTokenLen = (res?.idToken || res?.token)?.length || 0;
-          if (res?.idToken || res?.token) setLastIdToken(res.idToken || res.token);
-        } catch (e:any) {
-          out.BisonteAuth.error = e?.message || String(e);
+          (out.BisonteAuth as Record<string, unknown>).result = res;
+          (out.BisonteAuth as Record<string, unknown>).idTokenLen = (res?.idToken || res?.token)?.length || 0;
+          if (res?.idToken || res?.token) {setLastIdToken(res.idToken || res.token);}
+        } catch (e) {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          (out.BisonteAuth as Record<string, unknown>).error = errMsg;
         }
       }
-    } catch {}
+    } catch {
+      // BisonteAuth detection failed
+    }
     try {
       const CFA = w.Capacitor?.Plugins?.FirebaseAuthentication || w.FirebaseAuthentication;
       out.FirebaseAuthentication = { available: !!(CFA && typeof CFA.signInWithGoogle === 'function') };
-      if (out.FirebaseAuthentication.available) {
+      if (out.FirebaseAuthentication && typeof out.FirebaseAuthentication === 'object' && 'available' in out.FirebaseAuthentication && out.FirebaseAuthentication.available && CFA) {
         try {
           const res = await CFA.signInWithGoogle();
-          out.FirebaseAuthentication.result = res;
+          (out.FirebaseAuthentication as Record<string, unknown>).result = res;
           const t = res?.credential?.idToken || res?.idToken || res?.accessToken;
-          out.FirebaseAuthentication.idTokenLen = (t && typeof t === 'string') ? t.length : 0;
-          if (t && typeof t === 'string') setLastIdToken(t);
-        } catch (e:any) {
-          out.FirebaseAuthentication.error = e?.message || String(e);
+          (out.FirebaseAuthentication as Record<string, unknown>).idTokenLen = (t && typeof t === 'string') ? t.length : 0;
+          if (t && typeof t === 'string') {setLastIdToken(t);}
+        } catch (e) {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          (out.FirebaseAuthentication as Record<string, unknown>).error = errMsg;
         }
       }
-    } catch {}
+    } catch {
+      // FirebaseAuthentication detection failed
+    }
     try {
       const CGA = w.Capacitor?.Plugins?.GoogleAuth || w.GoogleAuth;
       out.GoogleAuth = { available: !!(CGA && typeof CGA.signIn === 'function') };
-      if (out.GoogleAuth.available) {
+      if (out.GoogleAuth && typeof out.GoogleAuth === 'object' && 'available' in out.GoogleAuth && out.GoogleAuth.available && CGA) {
         try {
           if (typeof CGA.initialize === 'function') {
             await CGA.initialize();
-            out.GoogleAuth.initialized = true;
+            (out.GoogleAuth as Record<string, unknown>).initialized = true;
           }
-        } catch (e:any) {
-          out.GoogleAuth.initError = e?.message || String(e);
+        } catch (e) {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          (out.GoogleAuth as Record<string, unknown>).initError = errMsg;
         }
         try {
           const res = await CGA.signIn();
-          out.GoogleAuth.result = res;
+          (out.GoogleAuth as Record<string, unknown>).result = res;
           const t = res?.authentication?.idToken || res?.idToken;
-          out.GoogleAuth.idTokenLen = (t && typeof t === 'string') ? t.length : 0;
-          if (t && typeof t === 'string') setLastIdToken(t);
-        } catch (e:any) {
-          out.GoogleAuth.error = e?.message || String(e);
+          (out.GoogleAuth as Record<string, unknown>).idTokenLen = (t && typeof t === 'string') ? t.length : 0;
+          if (t && typeof t === 'string') {setLastIdToken(t);}
+        } catch (e) {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          (out.GoogleAuth as Record<string, unknown>).error = errMsg;
         }
       }
-    } catch {}
+    } catch {
+      // GoogleAuth detection failed
+    }
     setNativeDiag(out);
   };
 
@@ -172,15 +280,19 @@ export default function DiagnosticsWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken: lastIdToken })
       });
-      const data = await res.json();
+      const data = await res.json() as Record<string, unknown>;
       setVerifyRes(data);
-      if (!data?.ok) alert('Verificación fallida: ' + (data?.error || 'error'));
-    } catch (e:any) {
-      alert('Error verificando token: ' + (e?.message || e));
+      if (!data?.ok) {
+        const errorMsg = typeof data?.error === 'string' ? data.error : 'error';
+        alert('Verificación fallida: ' + errorMsg);
+      }
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      alert('Error verificando token: ' + errMsg);
     }
   };
 
-  if (!visible) return null;
+  if (!visible) {return null;}
 
   return (
     <div style={{position:'fixed', bottom: 8, right: 8, zIndex: 9999}}>
@@ -197,19 +309,19 @@ export default function DiagnosticsWidget() {
           <div className="mb-2">
             <div className="font-semibold">Servidor</div>
             <div className="flex gap-2 mb-1 flex-wrap">
-              <button className="px-2 py-0.5 bg-teal-600 rounded" onClick={()=>serverCheck()}>Check</button>
-              <button className="px-2 py-0.5 bg-sky-600 rounded" onClick={()=>serverCheck('set','none')}>Set None</button>
-              <button className="px-2 py-0.5 bg-amber-600 rounded" onClick={()=>serverCheck('set','lax')}>Set Lax</button>
-              <button className="px-2 py-0.5 bg-indigo-600 rounded" onClick={()=>serverCheck('set','client')}>Set Client</button>
-              <button className="px-2 py-0.5 bg-rose-600 rounded" onClick={()=>serverCheck('clear','all')}>Clear all</button>
+              <button className="px-2 py-0.5 bg-teal-600 rounded" onClick={()=>void serverCheck()}>Check</button>
+              <button className="px-2 py-0.5 bg-sky-600 rounded" onClick={()=>void serverCheck('set','none')}>Set None</button>
+              <button className="px-2 py-0.5 bg-amber-600 rounded" onClick={()=>void serverCheck('set','lax')}>Set Lax</button>
+              <button className="px-2 py-0.5 bg-indigo-600 rounded" onClick={()=>void serverCheck('set','client')}>Set Client</button>
+              <button className="px-2 py-0.5 bg-rose-600 rounded" onClick={()=>void serverCheck('clear','all')}>Clear all</button>
             </div>
             <pre className="whitespace-pre-wrap break-all max-h-40 overflow-auto">{jsonShort(server)}</pre>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button className="px-2 py-0.5 bg-blue-600 rounded" onClick={signInNative}>Nativo (Capacitor)</button>
-            <button className="px-2 py-0.5 bg-emerald-600 rounded" onClick={signInCCT}>CCT (Custom Tabs)</button>
-            <button className="px-2 py-0.5 bg-fuchsia-700 rounded" onClick={testCapacitorPlugins}>Test Plugins</button>
-            <button className="px-2 py-0.5 bg-amber-700 rounded" onClick={verifyIdToken} disabled={!lastIdToken}>Verificar Token</button>
+            <button className="px-2 py-0.5 bg-blue-600 rounded" onClick={()=>void signInNative()}>Nativo (Capacitor)</button>
+            <button className="px-2 py-0.5 bg-emerald-600 rounded" onClick={()=>void signInCCT()}>CCT (Custom Tabs)</button>
+            <button className="px-2 py-0.5 bg-fuchsia-700 rounded" onClick={()=>void testCapacitorPlugins()}>Test Plugins</button>
+            <button className="px-2 py-0.5 bg-amber-700 rounded" onClick={()=>void verifyIdToken()} disabled={!lastIdToken}>Verificar Token</button>
             <a className="px-2 py-0.5 bg-gray-700 rounded" href="/diagnostic" target="_blank" rel="noreferrer">/diagnostic</a>
           </div>
           {lastIdToken && (

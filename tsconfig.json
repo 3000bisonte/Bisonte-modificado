@@ -105,14 +105,15 @@
     "src/**/*.js",
     "src/**/*.jsx",
     "types/**/*.ts",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "tests/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
     ".next",
     "out",
     "archive/**/*",
-    "mobile/android/**/*",
-    "tests/**/*"
+    "mobile/android/**/*"
   ]
 }

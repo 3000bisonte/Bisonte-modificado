@@ -1,6 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function GET() {
+interface NotificationData {
+  remitente?: { email?: string };
+  destinatario?: { email?: string };
+  cotizador?: unknown;
+  fecha?: string;
+  envioId?: string | number;
+  mensaje?: string;
+}
+
+export function GET() {
   try {
     return NextResponse.json({
       success: true,
@@ -8,29 +17,20 @@ export async function GET() {
       status: "operational",
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
-    console.error("Error en GET /notificar-envio:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json({
       success: false,
       error: "Error al obtener notificaciones",
-      details: error?.message ?? String(error)
+      details: errorMessage
     }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { remitente, destinatario, cotizador, fecha, envioId, mensaje } = await req.json();
-
-    // Simulate email sending for testing purposes
-    console.log("Notification request:", {
-      remitente,
-      destinatario,
-      cotizador,
-      fecha,
-      envioId,
-      mensaje
-    });
+    const data = await req.json() as NotificationData;
+    const { destinatario, envioId } = data;
 
     return NextResponse.json({
       success: true,
@@ -42,12 +42,12 @@ export async function POST(req: NextRequest) {
         timestamp: new Date().toISOString()
       }
     });
-  } catch (error: any) {
-    console.error("Error al enviar notificación:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json({
       success: false,
       error: "Error al enviar notificación",
-      details: error?.message ?? String(error)
+      details: errorMessage
     }, { status: 500 });
   }
 }

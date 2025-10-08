@@ -1,5 +1,6 @@
-import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+
 import { authOptions } from "../../../../lib/auth";
 
 const handler = NextAuth(authOptions);
@@ -11,8 +12,6 @@ export async function GET(request, ctx) {
 		const error = request.nextUrl.searchParams.get('error');
     const message = request.nextUrl.searchParams.get('message')?.toLowerCase() || '';
 		const ua = (request.headers.get('user-agent') || '').toLowerCase();
-		const explicitWv = request.nextUrl.searchParams.get('wv') === '1';
-		const isWebViewUA = /\bwv\b|webview|; wv\)|gsa\/|fbav|fban|line\//i.test(ua);
 		if (isGoogleCb && (error === 'OAuthCallback' || message.includes('pkce'))) {
 			const url = new URL('/auth/bridge', request.url);
 			url.search = '';
@@ -31,9 +30,13 @@ export async function GET(request, ctx) {
 				const cookie = request.headers.get('cookie') || '';
 				const q = Object.fromEntries(request.nextUrl.searchParams.entries());
 				console.log('[OAuth callback] UA len:', ua.length, 'Cookie len:', cookie.length, 'Query:', q);
-			} catch {}
+			} catch {
+				// Silently ignore parsing errors
+			}
 		}
-	} catch {}
+	} catch {
+		// Silently ignore middleware errors
+	}
 	return handler(request, ctx);
 }
 
@@ -47,6 +50,8 @@ export async function POST(request, ctx) {
 			url.search = '';
 			return NextResponse.redirect(url, 303);
 		}
-	} catch {}
+	} catch (middlewareError) {
+		console.error('Middleware error:', middlewareError);
+	}
 	return handler(request, ctx);
 }

@@ -13,12 +13,12 @@ export type Remitente = {
 
 type RemitenteInput = Partial<Remitente> & { telefono?: string };
 
-export async function createRemitente(data: RemitenteInput): Promise<Remitente> {
+export function createRemitente(data: RemitenteInput): Remitente {
   const now = new Date().toISOString();
   return {
     id: Date.now(),
     nombre: data.nombre || 'Sin nombre',
-  celular: String((data as RemitenteInput).celular || (data as RemitenteInput).telefono || ''),
+  celular: String((data).celular || (data).telefono || ''),
     direccion: data.direccion || 'Dirección no especificada',
     ciudad: data.ciudad || 'N/A',
     documento: data.documento || 'Sin documento',
@@ -28,12 +28,12 @@ export async function createRemitente(data: RemitenteInput): Promise<Remitente> 
   };
 }
 
-export async function updateRemitente(id: number, data: RemitenteInput): Promise<Remitente> {
+export function updateRemitente(id: number, data: RemitenteInput): Remitente {
   const now = new Date().toISOString();
   return {
     id,
     nombre: data.nombre || 'Sin nombre',
-  celular: String((data as RemitenteInput).celular || (data as RemitenteInput).telefono || ''),
+  celular: String((data).celular || (data).telefono || ''),
     direccion: data.direccion || 'Dirección no especificada',
     ciudad: data.ciudad || 'N/A',
     documento: data.documento || 'Sin documento',

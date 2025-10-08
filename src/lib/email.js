@@ -1,6 +1,7 @@
 import 'server-only'
-import { Resend } from 'resend'
 import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
+
 import { env } from './env'
 
 let cachedResend = null

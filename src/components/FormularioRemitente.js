@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+
 import BottomNav from "./BottomNav";
 
-const FormularioRemitente = ({ id }) => {
+const FormularioRemitente = ({ id: _id }) => {
   const router = useRouter();
   const { data: session } = useSession();
   const [formData, setFormData] = useState({
@@ -57,7 +58,7 @@ const FormularioRemitente = ({ id }) => {
 
   // Cargar datos del localStorage cuando el componente se monta
   useEffect(() => {
-    if (!isClient) return;
+    if (!isClient) {return;}
 
     const savedData = loadFromLocalStorage();
     if (savedData) {
@@ -71,7 +72,7 @@ const FormularioRemitente = ({ id }) => {
 
   // Cargar datos del perfil del usuario actual desde la sesión
   useEffect(() => {
-    if (!session?.user?.email || !isClient) return;
+    if (!session?.user?.email || !isClient) {return;}
     
     const fetchUserProfile = async () => {
       try {
@@ -162,6 +163,7 @@ const FormularioRemitente = ({ id }) => {
     // Correo: obligatorio, formato válido
     if (!(data.correo || "").trim()) {
       errors.correo = "El correo electrónico es obligatorio.";
+      // eslint-disable-next-line security/detect-unsafe-regex
     } else if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(data.correo.trim())) {
       errors.correo = "Correo electrónico inválido.";
     }
@@ -169,12 +171,12 @@ const FormularioRemitente = ({ id }) => {
     // Dirección de recogida: obligatorio, permite letras, números y algunos símbolos
     if (!(data.direccionRecogida || "").trim()) {
       errors.direccionRecogida = "La dirección de recogida es obligatoria.";
-    } else if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s#\-\.,]+$/.test(data.direccionRecogida.trim())) {
+    } else if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s#\-.,]+$/.test(data.direccionRecogida.trim())) {
       errors.direccionRecogida = "La dirección solo debe contener letras, números y los símbolos # - . ,";
     }
 
     // Apartamento/Torre/Conjunto: opcional, pero si se llena, permite letras, números y algunos símbolos
-    if ((data.detalleDireccion || "").trim() && !/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s#\-\.,]+$/.test(data.detalleDireccion.trim())) {
+    if ((data.detalleDireccion || "").trim() && !/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s#\-.,]+$/.test(data.detalleDireccion.trim())) {
       errors.detalleDireccion = "Este campo solo debe contener letras, números y los símbolos # - . ,";
     }
 
@@ -221,7 +223,7 @@ const FormularioRemitente = ({ id }) => {
     router.push("/destinatario");
   };
 
-  const canProceed = isFormValid && !isLoading;
+  // const canProceed = isFormValid && !isLoading;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 px-4 py-8">

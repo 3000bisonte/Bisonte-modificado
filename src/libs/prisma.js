@@ -1,11 +1,14 @@
-import 'server-only'
+﻿import 'server-only'
+
 import { PrismaClient } from "@prisma/client";
+
 import { env } from "@/lib/env";
 
 // Advertencia clara si la cadena apunta a HOST genérico o placeholders comunes.
 const maybePlaceholder = typeof env.DATABASE_URL === 'string' && /HOST:5432|USER:PASSWORD|DBNAME/.test(env.DATABASE_URL);
 if (maybePlaceholder) {
-  console.warn('\[33m[PRISMA WARNING]\u001b[0m DATABASE_URL parece un placeholder o apunta a HOST:5432. Actualiza tu .env / .env.local. Valor actual:', env.DATABASE_URL);
+  // eslint-disable-next-line no-useless-escape
+  console.warn('[PRISMA WARNING] DATABASE_URL parece un placeholder o apunta a HOST:5432. Actualiza tu .env / .env.local. Valor actual:', env.DATABASE_URL);
 }
 
 const prismaClientSingleton = () => {

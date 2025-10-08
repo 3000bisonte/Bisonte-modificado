@@ -1,13 +1,15 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import BottomNav from "@/components/BottomNav";
 import dayjs from "dayjs";
+import { useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
+
+import BottomNav from "@/components/BottomNav";
+
 
 // Colores y estilos
 const ELECTRIC_BLUE = "#0099ff";
-const BG_DARK = "#18191A";
-const BG_CARD = "#23272b";
+// const _BG_DARK = "#18191A";
+// const _BG_CARD = "#23272b";
 const ACCENT = "#41e0b3";
 
 const STATUS_STYLES = {
@@ -79,7 +81,7 @@ export default function MisEnvios() {
   // Cargar historial de envíos del usuario
   useEffect(() => {
     const fetchEnvios = async () => {
-      if (!userEmail) return;
+      if (!userEmail) {return;}
       try {
         console.log("🔍 Consultando envíos para usuario:", userEmail);
 
@@ -105,7 +107,7 @@ export default function MisEnvios() {
 
   // Filtrado por búsqueda
   const filteredEnvios = envios.filter((envio) => {
-    if (!search) return true;
+    if (!search) {return true;}
 
     const searchTerm = search.toLowerCase().trim();
 
@@ -130,7 +132,7 @@ export default function MisEnvios() {
 
   // Función auxiliar para resaltar texto encontrado
   const highlightText = (text, searchTerm) => {
-    if (!searchTerm || !text) return text;
+    if (!searchTerm || !text) {return text;}
 
     const regex = new RegExp(`(${searchTerm})`, "gi");
     const parts = text.split(regex);
@@ -205,7 +207,7 @@ export default function MisEnvios() {
               </button>
               {Object.entries(STATUS_STYLES).map(([key, val]) => {
                 const count = envios.filter(e => e.Estado === key).length;
-                if (count === 0) return null;
+                if (count === 0) {return null;}
                 
                 return (
                   <button
@@ -250,7 +252,7 @@ export default function MisEnvios() {
                       const count = filteredEnvios.filter(
                         (e) => e.Estado === key
                       ).length;
-                      if (count === 0) return null;
+                      if (count === 0) {return null;}
                       return (
                         <span
                           key={key}

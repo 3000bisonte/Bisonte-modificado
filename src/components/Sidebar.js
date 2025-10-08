@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { useSession } from "next-auth/react";
-import PerfilCard from "@/components/PerfilCard";
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table";
+// import _Link from "next/link";
+import { useSession } from "next-auth/react";
+import React, { useState, useEffect } from "react";
+
+// import PerfilCard from "@/components/PerfilCard";
+
 
 // Función para hacer la llamada a la API
 async function fetchPerfil() {
@@ -58,11 +60,15 @@ function TanstackReactTable({ data, columns }) {
   );
 }
 
-function Sidebar({ isOpen, onClose }) {
+function Sidebar({ isOpen: _isOpen, onClose: _onClose }) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: session } = useSession(); // Obtener sesión del usuario
-  const [miperfil, setMiperfil] = useState([]); // Inicializar como un arreglo vacío
-  const [loading, setLoading] = useState(true); // Estado para manejar la carga
-  const [error, setError] = useState(null); // Estado para manejar errores
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_miperfil, setMiperfil] = useState([]); // Inicializar como un arreglo vacío
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_loading, setLoading] = useState(true); // Estado para manejar la carga
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_error, setError] = useState(null); // Estado para manejar errores
   // useEffect(() => {
   //   const guardarUsuario = async () => {
   //     try {

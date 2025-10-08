@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 function parseCookies(header: string | null) {
   const out: Record<string, string> = {};
-  if (!header) return out;
+  if (!header) {return out;}
   const parts = header.split(/;\s*/);
   for (const p of parts) {
     const idx = p.indexOf('=');
@@ -15,7 +15,7 @@ function parseCookies(header: string | null) {
   return out;
 }
 
-export async function GET(request: NextRequest) {
+export function GET(request: NextRequest) {
   const url = new URL(request.url);
   const ua = request.headers.get('user-agent') || '';
   const cookie = request.headers.get('cookie') || '';

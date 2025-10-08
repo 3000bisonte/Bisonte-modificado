@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { remitenteCreateSchema } from "./remitente";
+
 import { destinatarioCreateSchema } from "./destinatario";
+import { remitenteCreateSchema } from "./remitente";
 
 const detallesSchema = z.object({
   descripcion: z.string().trim().max(500).optional().default(""),
@@ -9,6 +10,7 @@ const detallesSchema = z.object({
     .transform((v) => (typeof v === "string" ? v.trim() : v))
     .optional(),
   valor: z
+    // eslint-disable-next-line security/detect-unsafe-regex
     .union([z.number(), z.string().regex(/^\d+(\.\d+)?$/)])
     .optional()
     .transform((v) => (typeof v === "string" ? Number(v) : v))

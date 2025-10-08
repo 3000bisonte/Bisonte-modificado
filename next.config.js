@@ -75,7 +75,7 @@ const nextConfig = {
     ];
   },
   // Configuración webpack para resolver módulos locales
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+  webpack: (config, { isServer }) => {
     // Excluir Firebase y Capacitor del bundle del servidor
     if (isServer) {
       config.externals = [

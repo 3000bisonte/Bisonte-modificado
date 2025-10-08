@@ -12,6 +12,7 @@ const ServiceWorkerRegister = () => {
 
           // Enviar el puerto al Service Worker al recibirlo
           const handleMessage = (event) => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const port = event.ports[0];
             // if (port) {
             //   // Enviar el puerto al Service Worker

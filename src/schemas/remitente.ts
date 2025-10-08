@@ -51,7 +51,7 @@ export const remitenteQuerySchema = z
     id: z.string().regex(/^\d+$/).optional(),
     email: z.string().trim().email().optional(),
   })
-  .refine((q) => true, {
+  .refine((_q) => true, {
     // Permit empty query to list all; this refine is a no-op placeholder for future rules
     message: "",
     path: [],

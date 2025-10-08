@@ -2,7 +2,8 @@ import { useState } from 'react';
 
 const Tracking = () => {
   // Simulamos los detalles de un pedido
-  const [shipment, setShipment] = useState({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [shipment, _setShipment] = useState({
     id: 1,
     origin: 'Carrera 10 #22-30, Bogotá',
     destination: 'Calle 50 #20-15, Bogotá',

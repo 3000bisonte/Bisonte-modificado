@@ -1,7 +1,7 @@
 "use client";
 
 export default function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirmar", cancelText = "Cancelar", type = "warning" }) {
-  if (!isOpen) return null;
+  if (!isOpen) {return null;}
 
   const getTypeStyles = () => {
     switch (type) {

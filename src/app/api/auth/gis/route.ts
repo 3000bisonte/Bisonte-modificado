@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function GET() {
+export function GET() {
   try {
     return NextResponse.json({
       success: true,
@@ -8,13 +8,13 @@ export async function GET() {
       status: "operational",
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error("Error en /auth/gis:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
       {
         success: false,
         error: "Error en GIS endpoint",
-        details: error?.message ?? String(error),
+        details: errorMessage,
       },
       { status: 500 }
     );
@@ -23,21 +23,20 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    console.log("GIS data received:", body);
+    const body: unknown = await request.json();
     return NextResponse.json({
       success: true,
       message: "Google Identity Services data processed",
       data: body,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error("Error en POST /auth/gis:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
       {
         success: false,
         error: "Error procesando datos de GIS",
-        details: error?.message ?? String(error),
+        details: errorMessage,
       },
       { status: 500 }
     );

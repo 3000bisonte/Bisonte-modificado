@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 // Usar el singleton central en lugar de instanciar PrismaClient aquí para evitar demasiadas conexiones.
 import prisma from "../../../lib/prisma";
 

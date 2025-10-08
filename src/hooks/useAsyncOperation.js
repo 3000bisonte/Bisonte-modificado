@@ -3,6 +3,8 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+
+// eslint-disable-next-line import/no-unresolved
 import { useAuth } from './AuthProvider';
 
 /**
@@ -386,7 +388,7 @@ export function useForm(initialValues = {}, options = {}) {
    * ✅ Validar formulario
    */
   const validate = useCallback(() => {
-    if (!validationSchema) return true;
+    if (!validationSchema) {return true;}
 
     try {
       validationSchema.parse(values);
@@ -409,7 +411,7 @@ export function useForm(initialValues = {}, options = {}) {
    * 📤 Manejar envío del formulario
    */
   const handleSubmit = useCallback(async (e) => {
-    if (e) e.preventDefault();
+    if (e) {e.preventDefault();}
 
     // Marcar todos los campos como tocados
     const allFields = Object.keys(values);

@@ -1,10 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
+
 import { compose, handle, withErrorBoundary, withValidation, withRateLimit } from "@/lib/http";
 import { mercadoPagoCreateSchema } from "@/schemas/mercadopago";
 
+interface PaymentData {
+  transaction_amount: number;
+  payment_method_id?: string;
+  payer: unknown;
+}
+
 // Para propósitos de testing, simulamos MercadoPago
 const mockMercadoPago = {
-  createPayment: (data: any) => ({
+  createPayment: (data: PaymentData) => ({
     id: 'payment_' + Date.now(),
     status: 'approved',
     transaction_amount: data.transaction_amount,
@@ -21,7 +28,7 @@ const mockMercadoPago = {
   })
 };
 
-export async function GET() {
+export function GET() {
   try {
     return NextResponse.json({
       success: true,
@@ -30,24 +37,31 @@ export async function GET() {
       version: "2.0.0",
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
-    console.error("Error en GET /mercadopago:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json({
       success: false,
       error: "Error en MercadoPago status",
-      details: error?.message ?? String(error)
+      details: errorMessage
     }, { status: 500 });
   }
 }
 
-export const POST = compose(withRateLimit({ limit: 10, windowSec: 60 }), withValidation(mercadoPagoCreateSchema), handle(), withErrorBoundary())(async (request: NextRequest, { body }) => {
+interface ContextWithBody {
+  body?: PaymentData;
+}
+
+export const POST = compose(withRateLimit({ limit: 10, windowSec: 60 }), withValidation(mercadoPagoCreateSchema), handle(), withErrorBoundary())(async (request: NextRequest, context: ContextWithBody) => {
+  const body = context.body || {} as PaymentData;
   const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || '';
   const realIp = (clientIp === "::1" || clientIp === "127.0.0.1") ? "186.86.33.18" : clientIp;
-  const paymentData = {
+  const paymentData: PaymentData & { ip: string } = {
     ...body,
     ip: realIp,
-  } as any;
+  };
 
+  // Simulate async processing
+  await Promise.resolve();
   const paymentResponse = mockMercadoPago.createPayment(paymentData);
 
   return NextResponse.json({

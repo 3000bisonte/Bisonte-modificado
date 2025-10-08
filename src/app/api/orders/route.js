@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+
 import prisma from '@/lib/prisma';
+import { crearEnvioSchema } from '@/schemas/envios';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -38,27 +40,42 @@ export async function POST(request) {
   try {
     const body = await request.json();
 
-    const created = await prisma.historial_envio.create({
-      data: {
-        NumeroGuia: body.NumeroGuia || `BST-${Date.now()}`,
-        Origen: body.Origen,
-        Destino: body.Destino,
-        Destinatario: body.Destinatario,
-        Remitente: body.Remitente,
-        Estado: body.Estado || 'Pendiente',
-        usuarioId: body.usuarioId || null,
-      },
-      select: {
-        id: true, NumeroGuia: true, Origen: true, Destino: true, Destinatario: true, Remitente: true, Estado: true, FechaSolicitud: true, usuarioId: true
-      }
+    // Validar datos de entrada con Zod
+    const validationResult = crearEnvioSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          message: 'Datos de envío inválidos', 
+          errors: validationResult.error.flatten().fieldErrors 
+        }, 
+        { status: 400 }
+      );
+    }
+
+    const validatedData = validationResult.data;
+
+    // Crear nuevo envío dentro de una transacción
+    const newOrder = await prisma.$transaction(async (tx) => {
+      return await tx.historial_envio.create({
+        data: {
+          NumeroGuia: validatedData.NumeroGuia,
+          Estado: validatedData.Estado,
+          Origen: validatedData.Origen,
+          Destino: validatedData.Destino,
+          Destinatario: validatedData.Destinatario,
+          Remitente: validatedData.Remitente,
+          Peso: validatedData.Peso,
+          Dimensiones: validatedData.Dimensiones,
+          ValorDeclarado: validatedData.ValorDeclarado,
+          FechaCreacion: validatedData.FechaCreacion || new Date(),
+          FechaActualizacion: validatedData.FechaActualizacion || new Date(),
+        },
+      });
     });
 
-    return NextResponse.json({ success: true, data: created }, { status: 201 });
+    return NextResponse.json(newOrder, { status: 201 });
   } catch (error) {
-    console.error('orders POST error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Error al crear orden', details: error.message },
-      { status: 500 }
-    );
+    console.error('Error creating order:', error);
+    return NextResponse.json({ message: 'Error creating order' }, { status: 500 });
   }
 }

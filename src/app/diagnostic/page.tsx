@@ -1,21 +1,44 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
-import { isWebViewRuntime, buildBridgeCallback } from "@/lib/ua";
+import { useEffect, useState } from "react";
+
+import { isWebViewRuntime } from "@/lib/ua";
+
+interface ClientState {
+  userAgent?: string;
+  isWebViewRuntime?: boolean;
+  hasRNWebView?: boolean;
+  hasWKBridge?: boolean;
+  hasCapacitor?: boolean;
+  isStandalone?: boolean;
+  cookieEnabled?: boolean;
+  localStorage?: boolean;
+  sessionStorage?: boolean;
+  hasServiceWorker?: boolean;
+  referrer?: string;
+  location?: string;
+  error?: string;
+}
+
+interface ServerEcho {
+  headers?: Record<string, string>;
+  cookies?: Record<string, string>;
+  [key: string]: unknown;
+}
 
 export default function DiagnosticPage() {
   const { status, data: session } = useSession();
-  const [client, setClient] = useState<any>({});
-  const [serverEcho, setServerEcho] = useState<any>(null);
+  const [client, setClient] = useState<ClientState>({});
+  const [serverEcho, setServerEcho] = useState<ServerEcho | null>(null);
   const [cookieValue, setCookieValue] = useState<string>("");
 
   useEffect(() => {
     try {
-      const nav = navigator as any;
+      const nav = navigator as Navigator & { standalone?: boolean };
       const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (nav.standalone === true);
-      const hasRNWebView = !!(window as any).ReactNativeWebView;
-      const hasWKBridge = !!((window as any).webkit && (window as any).webkit.messageHandlers);
-      const hasCapacitor = !!(window as any).Capacitor;
+      const hasRNWebView = !!(window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView;
+      const hasWKBridge = !!((window as Window & { webkit?: { messageHandlers?: unknown } }).webkit?.messageHandlers);
+      const hasCapacitor = !!(window as Window & { Capacitor?: unknown }).Capacitor;
       const hasSW = !!navigator.serviceWorker;
 
       // cookie test
@@ -23,12 +46,18 @@ export default function DiagnosticPage() {
       try {
         document.cookie = `diag_test=1; path=/`;
         cookieEnabled = document.cookie.indexOf('diag_test=1') !== -1;
-      } catch {}
+      } catch (cookieError) {
+        console.error('Cookie test failed:', cookieError);
+      }
 
       // storage tests
       let ls = false, ss = false;
-      try { localStorage.setItem('diag', '1'); ls = localStorage.getItem('diag') === '1'; localStorage.removeItem('diag'); } catch {}
-      try { sessionStorage.setItem('diag', '1'); ss = sessionStorage.getItem('diag') === '1'; sessionStorage.removeItem('diag'); } catch {}
+      try { localStorage.setItem('diag', '1'); ls = localStorage.getItem('diag') === '1'; localStorage.removeItem('diag'); } catch (lsError) {
+        console.error('localStorage test failed:', lsError);
+      }
+      try { sessionStorage.setItem('diag', '1'); ss = sessionStorage.getItem('diag') === '1'; sessionStorage.removeItem('diag'); } catch (ssError) {
+        console.error('sessionStorage test failed:', ssError);
+      }
 
       setClient({
         userAgent: navigator.userAgent,
@@ -45,18 +74,18 @@ export default function DiagnosticPage() {
         location: window.location.href,
       });
       setCookieValue(document.cookie || "");
-    } catch (e) {
-      setClient({ error: String(e) });
+    } catch (e: unknown) {
+      setClient({ error: e instanceof Error ? e.message : String(e) });
     }
   }, []);
 
   const fetchServer = async (opts?: { setCookie?: boolean; clear?: boolean }) => {
     const url = new URL('/api/diag', window.location.origin);
-    if (opts?.setCookie) url.searchParams.set('setcookie', '1');
-    if (opts?.clear) url.searchParams.set('clear', '1');
+    if (opts?.setCookie) {url.searchParams.set('setcookie', '1');}
+    if (opts?.clear) {url.searchParams.set('clear', '1');}
     const res = await fetch(url.toString(), { credentials: 'include' });
-    const data = await res.json();
-    setServerEcho(data);
+    const data: unknown = await res.json();
+    setServerEcho(data as ServerEcho);
     setCookieValue(document.cookie || "");
   };
 
@@ -67,7 +96,10 @@ export default function DiagnosticPage() {
     }
     const base = '/home';
     const url = new URL(base, window.location.origin);
-    await signIn('google', { callbackUrl: url.toString(), redirect: true });
+    const result = await signIn('google', { callbackUrl: url.toString(), redirect: true });
+    if (result?.error) {
+      console.error('SignIn error:', result.error);
+    }
   };
 
   const testSignInDirect = async () => {
@@ -75,7 +107,10 @@ export default function DiagnosticPage() {
       alert('En WebView deshabilitamos el OAuth web. Usa el flujo nativo.');
       return;
     }
-    await signIn('google', { callbackUrl: `${window.location.origin}/home`, redirect: true });
+    const result = await signIn('google', { callbackUrl: `${window.location.origin}/home`, redirect: true });
+    if (result?.error) {
+      console.error('SignIn error:', result.error);
+    }
   };
 
   return (
@@ -93,10 +128,10 @@ export default function DiagnosticPage() {
         <section className="bg-gray-800 rounded-lg p-4">
           <h2 className="text-lg font-medium mb-2">Servidor</h2>
           <div className="flex gap-2 mb-3 flex-wrap">
-            <button className="px-3 py-1 bg-teal-600 rounded" onClick={() => fetchServer()}>Server check</button>
-            <button className="px-3 py-1 bg-sky-600 rounded" onClick={() => fetchServer({ setCookie: true })}>Set test cookie (SameSite=None)</button>
+            <button className="px-3 py-1 bg-teal-600 rounded" onClick={() => void fetchServer()}>Server check</button>
+            <button className="px-3 py-1 bg-sky-600 rounded" onClick={() => void fetchServer({ setCookie: true })}>Set test cookie (SameSite=None)</button>
             <button className="px-3 py-1 bg-yellow-600 rounded" onClick={() => setCookieValue(document.cookie || "")}>Read cookies</button>
-            <button className="px-3 py-1 bg-rose-600 rounded" onClick={() => fetchServer({ clear: true })}>Clear test cookie</button>
+            <button className="px-3 py-1 bg-rose-600 rounded" onClick={() => void fetchServer({ clear: true })}>Clear test cookie</button>
           </div>
           <pre className="text-xs whitespace-pre-wrap break-all">{serverEcho ? JSON.stringify(serverEcho, null, 2) : '—'}</pre>
           <div className="mt-2">
@@ -108,8 +143,8 @@ export default function DiagnosticPage() {
       <section className="bg-gray-800 rounded-lg p-4 mt-6">
         <h2 className="text-lg font-medium mb-2">Pruebas de inicio de sesión</h2>
         <div className="flex gap-2 flex-wrap">
-          <button className="px-3 py-1 bg-blue-600 rounded" onClick={testSignInBridge}>Google Sign-In (Bridge)</button>
-          <button className="px-3 py-1 bg-indigo-600 rounded" onClick={testSignInDirect}>Google Sign-In (Direct)</button>
+          <button className="px-3 py-1 bg-blue-600 rounded" onClick={() => void testSignInBridge()}>Google Sign-In (Bridge)</button>
+          <button className="px-3 py-1 bg-indigo-600 rounded" onClick={() => void testSignInDirect()}>Google Sign-In (Direct)</button>
           <a className="px-3 py-1 bg-gray-700 rounded" href="/auth/bridge?to=%2Fhome">Abrir Bridge manual</a>
         </div>
         <p className="mt-2 text-xs text-gray-300">Usa esta página dentro del WebView y en el navegador del teléfono. Las diferencias te ayudarán a detectar por qué el WebView se comporta distinto.</p>

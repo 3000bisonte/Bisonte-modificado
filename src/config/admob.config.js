@@ -11,7 +11,7 @@ const GOOGLE_TEST = {
 
 function chooseId(kind, real, test) {
   if (IS_PRODUCTION) {
-    if (real && real.length > 10 && !real.includes('XXXX') && real !== test) return real;
+    if (real && real.length > 10 && !real.includes('XXXX') && real !== test) {return real;}
     return test;
   }
   return test;
@@ -39,9 +39,9 @@ export const ADMOB_CONFIG = {
 
 export function validateAdMobConfig() {
   const errors = [];
-  if (!ADMOB_CONFIG.APP_ID) errors.push('APP_ID vacío');
-  if (!ADMOB_CONFIG.REWARDED_AD_UNIT_ID) errors.push('REWARDED_AD_UNIT_ID vacío');
-  if (!ADMOB_CONFIG.BANNER_AD_UNIT_ID) errors.push('BANNER_AD_UNIT_ID vacío');
+  if (!ADMOB_CONFIG.APP_ID) {errors.push('APP_ID vacío');}
+  if (!ADMOB_CONFIG.REWARDED_AD_UNIT_ID) {errors.push('REWARDED_AD_UNIT_ID vacío');}
+  if (!ADMOB_CONFIG.BANNER_AD_UNIT_ID) {errors.push('BANNER_AD_UNIT_ID vacío');}
   const usingTestIds = [GOOGLE_TEST.APP, GOOGLE_TEST.REWARDED, GOOGLE_TEST.BANNER]
     .some((id) => Object.values(ADMOB_CONFIG).includes(id));
   return { isValid: errors.length === 0, errors, isProduction: IS_PRODUCTION, usingTestIds };

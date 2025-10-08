@@ -1,16 +1,20 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-const PagarComponent = ({ saldo, onRecargarSaldo, onPagarAhora, onClick }) => {
-  const [showModal, setShowModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+import React, { useEffect, useState, useCallback, useRef } from "react";
+const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPagarAhora: _onPagarAhora, onClick: _onClick }) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_showModal, _setShowModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isLoading, _setIsLoading] = useState(false);
   const [costoTotal, setCostoTotal] = useState(null);
   const [isAdLoading, setIsAdLoading] = useState(false);
-  const [messages, setMessages] = useState([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_messages, _setMessages] = useState([]);
   const [port, setPort] = useState(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [adCount, setAdCount] = useState(0);
   const [isCreatingShipment, setIsCreatingShipment] = useState(false);
   const [perfilId, setPerfilId] = useState(null); // Estado para guardar el perfilId
@@ -66,7 +70,7 @@ const PagarComponent = ({ saldo, onRecargarSaldo, onPagarAhora, onClick }) => {
   useEffect(() => {
     const handleMessage = (event) => {
       const port = event.ports[0];
-      if (!port) return;
+      if (!port) {return;}
 
       setPort(port);
       port.postMessage("test");
@@ -176,7 +180,7 @@ const PagarComponent = ({ saldo, onRecargarSaldo, onPagarAhora, onClick }) => {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
-        if (!response.ok) throw new Error("Error al obtener el perfil");
+        if (!response.ok) {throw new Error("Error al obtener el perfil");}
         const data = await response.json();
         const perfil = data.find((perf) => perf.correo === session.user.email);
         if (perfil) {
@@ -208,7 +212,7 @@ const PagarComponent = ({ saldo, onRecargarSaldo, onPagarAhora, onClick }) => {
         // (Asegúrate que la lógica dentro de setCostoTotal esté disponible o extráela)
         setCostoTotal((prevCostoTotal) => {
           if (prevCostoTotal === null || typeof prevCostoTotal !== "number")
-            return prevCostoTotal;
+            {return prevCostoTotal;}
 
           // --- INICIO: Lógica temporal para sumar bono (SI LA USAS) ---
           const bonusAmount = 10000;

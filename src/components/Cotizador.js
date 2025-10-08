@@ -1,9 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { signIn, useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+
 import BottomNav from "./BottomNav";
 
 // --- Helper Functions ---
@@ -35,35 +34,35 @@ const MAX_DECLARED_VALUE = 3000000; // 3 millones COP
 function validateCotizadorFields(formData, otraDescripcion = "") {
     const errors = {};
 
-    if (!formData.ciudadOrigen) errors.ciudadOrigen = "Selecciona la ciudad de origen.";
-    if (!formData.ciudadDestino) errors.ciudadDestino = "Selecciona la ciudad de destino.";
-    if (!formData.tipoEnvio) errors.tipoEnvio = "Selecciona el tipo de envío.";
+    if (!formData.ciudadOrigen) {errors.ciudadOrigen = "Selecciona la ciudad de origen.";}
+    if (!formData.ciudadDestino) {errors.ciudadDestino = "Selecciona la ciudad de destino.";}
+    if (!formData.tipoEnvio) {errors.tipoEnvio = "Selecciona el tipo de envío.";}
 
     // Alto
-    if (formData.alto === "") errors.alto = "El alto es obligatorio.";
-    else if (isNaN(formData.alto) || Number(formData.alto) <= 0) errors.alto = "El alto debe ser mayor a 0.";
-    else if (Number(formData.alto) > 200) errors.alto = "El alto no puede exceder 200 cm.";
+    if (formData.alto === "") {errors.alto = "El alto es obligatorio.";}
+    else if (isNaN(formData.alto) || Number(formData.alto) <= 0) {errors.alto = "El alto debe ser mayor a 0.";}
+    else if (Number(formData.alto) > 200) {errors.alto = "El alto no puede exceder 200 cm.";}
 
     // Ancho
-    if (formData.ancho === "") errors.ancho = "El ancho es obligatorio.";
-    else if (isNaN(formData.ancho) || Number(formData.ancho) <= 0) errors.ancho = "El ancho debe ser mayor a 0.";
-    else if (Number(formData.ancho) > 200) errors.ancho = "El ancho no puede exceder 200 cm.";
+    if (formData.ancho === "") {errors.ancho = "El ancho es obligatorio.";}
+    else if (isNaN(formData.ancho) || Number(formData.ancho) <= 0) {errors.ancho = "El ancho debe ser mayor a 0.";}
+    else if (Number(formData.ancho) > 200) {errors.ancho = "El ancho no puede exceder 200 cm.";}
 
     // Largo
-    if (formData.largo === "") errors.largo = "El largo es obligatorio.";
-    else if (isNaN(formData.largo) || Number(formData.largo) <= 0) errors.largo = "El largo debe ser mayor a 0.";
-    else if (Number(formData.largo) > 200) errors.largo = "El largo no puede exceder 200 cm.";
+    if (formData.largo === "") {errors.largo = "El largo es obligatorio.";}
+    else if (isNaN(formData.largo) || Number(formData.largo) <= 0) {errors.largo = "El largo debe ser mayor a 0.";}
+    else if (Number(formData.largo) > 200) {errors.largo = "El largo no puede exceder 200 cm.";}
 
     // Peso real
-    if (formData.peso === "") errors.peso = "El peso real es obligatorio.";
-    else if (isNaN(formData.peso) || Number(formData.peso) <= 0) errors.peso = "El peso real debe ser mayor a 0.";
-    else if (Number(formData.peso) > 50) errors.peso = "El peso real no puede exceder 50 kg.";
-    else if (!/^\d*\.?\d{0,2}$/.test(formData.peso)) errors.peso = "El peso real debe tener máximo 2 decimales.";
+    if (formData.peso === "") {errors.peso = "El peso real es obligatorio.";}
+    else if (isNaN(formData.peso) || Number(formData.peso) <= 0) {errors.peso = "El peso real debe ser mayor a 0.";}
+    else if (Number(formData.peso) > 50) {errors.peso = "El peso real no puede exceder 50 kg.";}
+    else if (!/^\d*\.?\d{0,2}$/.test(formData.peso)) {errors.peso = "El peso real debe tener máximo 2 decimales.";}
 
     // Valor declarado
-    if (formData.valorDeclarado === "") errors.valorDeclarado = "El valor declarado es obligatorio.";
-    else if (isNaN(formData.valorDeclarado) || Number(formData.valorDeclarado) < 0) errors.valorDeclarado = "El valor declarado debe ser un número positivo.";
-    else if (Number(formData.valorDeclarado) > MAX_DECLARED_VALUE) errors.valorDeclarado = `El valor declarado no puede exceder $${MAX_DECLARED_VALUE.toLocaleString('es-CO')}.`;
+    if (formData.valorDeclarado === "") {errors.valorDeclarado = "El valor declarado es obligatorio.";}
+    else if (isNaN(formData.valorDeclarado) || Number(formData.valorDeclarado) < 0) {errors.valorDeclarado = "El valor declarado debe ser un número positivo.";}
+    else if (Number(formData.valorDeclarado) > MAX_DECLARED_VALUE) {errors.valorDeclarado = `El valor declarado no puede exceder $${MAX_DECLARED_VALUE.toLocaleString('es-CO')}.`;}
 
     // Validación para "Dice Contener"
     if (!formData.recomendaciones) {
@@ -101,8 +100,8 @@ export default function Cotizador() {
 
     // --- State ---
     const [miperfil, setMiperfil] = useState([]);
-    const [loadingProfile, setLoadingProfile] = useState(true);
-    const [profileError, setProfileError] = useState(null);
+    const [, setLoadingProfile] = useState(true);
+    const [, setProfileError] = useState(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [isLoadingAction, setIsLoadingAction] = useState(false);
 
@@ -271,8 +270,8 @@ export default function Cotizador() {
         loadSavedData();
     }, []);
 
-    // Clear saved data
-    const clearSavedData = () => {
+    // Clear saved data - commented out as unused, uncomment if needed
+    /* const clearSavedData = () => {
         try {
             localStorage.removeItem("formCotizador");
             setFormData({
@@ -294,7 +293,7 @@ export default function Cotizador() {
         } catch (error) {
             console.error("Error al limpiar localStorage:", error);
         }
-    };
+    }; */
 
     // --- Handlers ---
     const handleChange = (e) => {
@@ -309,9 +308,9 @@ export default function Cotizador() {
         setIsLoadingAction(true);
 
         if (volumetricError || costoTotal === null || !session?.user) {
-            if (volumetricError) alert(volumetricError);
-            else if (!session?.user) alert("Debes iniciar sesión para continuar.");
-            else alert("Completa todos los campos requeridos para obtener una cotización válida.");
+            if (volumetricError) {alert(volumetricError);}
+            else if (!session?.user) {alert("Debes iniciar sesión para continuar.");}
+            else {alert("Completa todos los campos requeridos para obtener una cotización válida.");}
             setIsLoadingAction(false);
             return;
         }

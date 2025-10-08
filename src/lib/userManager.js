@@ -2,7 +2,7 @@
 // Asegura que no se dupliquen registros entre Google Auth y Email/Password
 
 import prisma from './prisma.js';
-import { hashPassword } from './security.js';
+import { hashPassword } from './security';
 
 /**
  * Función mejorada para crear o actualizar usuario con validación de duplicados
@@ -84,9 +84,9 @@ export async function upsertUser(userData, authMethod = 'email') {
       };
       
       // Solo actualizar campos si se proporcionan nuevos valores
-      if (nombre && nombre !== existingUser.nombre) updateData.nombre = nombre;
-      if (celular && celular !== existingUser.celular) updateData.celular = celular;
-      if (ciudad && ciudad !== existingUser.ciudad) updateData.ciudad = ciudad;
+      if (nombre && nombre !== existingUser.nombre) {updateData.nombre = nombre;}
+      if (celular && celular !== existingUser.celular) {updateData.celular = celular;}
+      if (ciudad && ciudad !== existingUser.ciudad) {updateData.ciudad = ciudad;}
       
       // Si es Google, asegurar que está verificado
       if (authMethod === 'google') {

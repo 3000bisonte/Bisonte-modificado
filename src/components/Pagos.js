@@ -2,8 +2,11 @@
 import React, { useEffect, useState } from "react";
 
 const PagarComponent = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [cotizador, setCotizador] = useState(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [remitente, setRemitente] = useState(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [destinatario, setDestinatario] = useState(null);
 
   useEffect(() => {

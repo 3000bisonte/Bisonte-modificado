@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { verifyRecoveryCode, validatePasswordStrength, checkRateLimit, getClientIP } from "../../../../lib/security";
+
 import { updateUserPasswordByEmail } from "../../../../lib/auth";
+import { verifyRecoveryCode, validatePasswordStrength, checkRateLimit, getClientIP } from "../../../../lib/security";
 import prisma from "../../../../libs/prisma";
 
 /**

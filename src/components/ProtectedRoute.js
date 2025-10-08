@@ -1,8 +1,9 @@
 // 🛡️ Componente de protección de rutas con autorización robusta
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
 import { useAuth } from './AuthProvider';
 import LoadingSpinner from './LoadingSpinner';
 

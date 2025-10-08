@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function ValidarToken() {
   const [email, setEmail] = useState("");
@@ -14,7 +14,7 @@ export default function ValidarToken() {
   const router = useRouter();
 
   // Expresión regular para contraseña segura
-  const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+  const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
   // ✅ FUNCIÓN ÚNICA PARA TODO EL PROCESO
   const handleSubmit = async (e) => {
@@ -106,10 +106,10 @@ export default function ValidarToken() {
   };
 
   const getPasswordStrength = (password) => {
-    if (password.length === 0) return { strength: 0, text: "" };
-    if (password.length < 6) return { strength: 1, text: "Muy débil", color: "text-red-500" };
-    if (password.length < 8) return { strength: 2, text: "Débil", color: "text-orange-500" };
-    if (passwordRegex.test(password)) return { strength: 4, text: "Fuerte", color: "text-green-500" };
+    if (password.length === 0) {return { strength: 0, text: "" };}
+    if (password.length < 6) {return { strength: 1, text: "Muy débil", color: "text-red-500" };}
+    if (password.length < 8) {return { strength: 2, text: "Débil", color: "text-orange-500" };}
+    if (passwordRegex.test(password)) {return { strength: 4, text: "Fuerte", color: "text-green-500" };}
     return { strength: 3, text: "Media", color: "text-yellow-500" };
   };
 
@@ -287,8 +287,8 @@ export default function ValidarToken() {
                   </svg>
                   Un número
                 </li>
-                <li className={`flex items-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) ? 'text-green-600' : ''}`}>
-                  <svg className={`w-3 h-3 mr-2 ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) ? 'text-green-600' : 'text-slate-400'}`} fill="currentColor" viewBox="0 0 20 20">
+                <li className={`flex items-center ${/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(newPassword) ? 'text-green-600' : ''}`}>
+                  <svg className={`w-3 h-3 mr-2 ${/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(newPassword) ? 'text-green-600' : 'text-slate-400'}`} fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                   Un carácter especial

@@ -1,16 +1,19 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
-import { initMercadoPago, Payment, StatusScreen } from "@mercadopago/sdk-react";
-import InternalProvider from "../app/ContextProvider";
-import Screen from "@/components/BrickStatusScreen";
+import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
 import classnames from "classnames";
+import { useSession } from "next-auth/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import Screen from "@/components/BrickStatusScreen";
+
+import InternalProvider from "../app/ContextProvider";
+
 import "../styles/mercadopago.css";
-import { signIn, useSession, signOut } from "next-auth/react";
 //import { guardarEnviosRequest } from "../../api/avu.api";// en mi csao guarar para el historial
 
 const initMPago = process.env.NEXT_PUBLIC_INIT_MERCADOPAGO;
 console.log("initMPago", initMPago);
-const apiServer = process.env.NEXT_PUBLIC_API_SERVER_URL;
+// const apiServer = process.env.NEXT_PUBLIC_API_SERVER_URL;
 initMercadoPago(initMPago, {
   locale: "es-CL",
 });
@@ -19,9 +22,9 @@ const MercadoPagoComponent = () => {
   const { data: session } = useSession();
   const [paymentId, setpaymentId] = useState(null);
   const [status, setstatus] = useState(null);
-  const [isVisiblePayments, setIsVisiblePayments] = React.useState(true);
-  const [miperfil, setMiperfil] = useState([]);
-  const [perfilId, setPerfilId] = useState(null);
+  const [isVisiblePayments, setIsVisiblePayments] = useState(true);
+  // const [miperfil, setMiperfil] = useState([]);
+  // const [perfilId, setPerfilId] = useState(null);
   const perfilIdRef = useRef(null); // Usa un ref para evitar re-renderizados
   const perfilLoaded = useRef(false);
 
@@ -97,7 +100,7 @@ const MercadoPagoComponent = () => {
           headers: { "Content-Type": "application/json" },
         });
 
-        if (!response.ok) throw new Error("Error al obtener el perfil");
+        if (!response.ok) {throw new Error("Error al obtener el perfil");}
 
         const data = await response.json();
         const perfil = data.find((perf) => perf.correo === userEmail);
@@ -117,7 +120,7 @@ const MercadoPagoComponent = () => {
     }
   }, [userEmail]);
 
-  const generarNumeroGuia = () => {
+  const generarNumeroGuia = useCallback(() => {
     // Obtener la fecha actual
     const fecha = new Date();
     const anio = fecha.getFullYear();
@@ -131,14 +134,14 @@ const MercadoPagoComponent = () => {
     const numeroGuia = `GUIA-${anio}${mes}${dia}-${parteAleatoria}`;
 
     return numeroGuia;
-  };
+  }, []);
   const paymentMethods = classnames("shopping-cart dark", {
     "shopping-cart--hidden": !isVisiblePayments,
   });
   useEffect(() => {
-    if (paymentId) setIsVisiblePayments(false);
+    if (paymentId) {setIsVisiblePayments(false);}
   }, [paymentId]);
-  const onSubmit = async ({ selectedPaymentMethod, formData }) => {
+  const onSubmit = async ({ selectedPaymentMethod: _selectedPaymentMethod, formData }) => {
     console.log("formData----->", formData);
 
     return new Promise((resolve, reject) => {
@@ -158,7 +161,7 @@ const MercadoPagoComponent = () => {
           //console.log("response-DESDE-FRONT**************************************************",payment)
           resolve();
         })
-        .catch((error) => {
+        .catch(() => {
           reject();
         });
     });
@@ -168,7 +171,7 @@ const MercadoPagoComponent = () => {
   }, [status]);
 
   // Función que maneja el envío aprobado
-  const manejarEnvioAprobado = React.useCallback(async () => {
+  const manejarEnvioAprobado = useCallback(async () => {
     const numeroGuia = generarNumeroGuia();
     
     try {
@@ -229,13 +232,13 @@ const MercadoPagoComponent = () => {
       console.error("Error al registrar el envío:", error);
       alert("Error de conexión al registrar el envío. Inténtalo nuevamente.");
     }
-  }, [paymentId, session?.user?.email]);
+  }, [generarNumeroGuia, paymentId, session?.user?.email]);
 
   useEffect(() => {
     if (status === "approved") {
-      manejarEnvioAprobado();
+      void manejarEnvioAprobado();
     }
-  }, [status]);
+  }, [manejarEnvioAprobado, status]);
   const onError = async (error) => {
     console.log(error);
   };

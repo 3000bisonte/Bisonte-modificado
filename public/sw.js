@@ -1,6 +1,3 @@
-// Almacena el puerto compartido
-let sharedPort = null;
-
 // Evento de instalación del Service Worker
 self.addEventListener("install", (event) => {
   console.log("Service Worker instalado.");

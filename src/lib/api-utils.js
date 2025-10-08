@@ -17,8 +17,8 @@ const ALLOWED_ORIGINS = [
  * Check if origin is allowed
  */
 function isOriginAllowed(origin) {
-  if (!origin) return false;
-  if (ALLOWED_ORIGINS.length === 0) return true;
+  if (!origin) {return false;}
+  if (ALLOWED_ORIGINS.length === 0) {return true;}
   return ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*');
 }
 

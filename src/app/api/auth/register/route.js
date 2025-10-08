@@ -1,8 +1,6 @@
-import { NextResponse } from "next/server";
+import { compose, handle, withErrorBoundary, withRateLimit, err, ok } from "@/lib/http";
 import { validatePasswordStrength } from "@/lib/security";
 import { handleEmailAuth } from "@/lib/userManager";
-import prisma from "@/lib/prisma";
-import { compose, handle, withErrorBoundary, withRateLimit, err, ok, getTraceId } from "@/lib/http";
 
 /**
  * Register new user

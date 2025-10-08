@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+
 import { UnauthorizedError, ForbiddenError } from './errorHandler';
 
 export async function requireAuth(request: NextRequest) {
@@ -22,7 +23,7 @@ export async function requireAdmin(request: NextRequest) {
   return token;
 }
 
-export async function withAuth(handler: (request: NextRequest, token: any) => Promise<any>) {
+export function withAuth(handler: (request: NextRequest, token: unknown) => Promise<unknown>) {
   return async (request: NextRequest) => {
     const token = await requireAuth(request);
     return handler(request, token);

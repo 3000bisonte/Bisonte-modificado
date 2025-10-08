@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { createPasswordRecovery, checkRateLimit } from "@/lib/security";
+
 import { sendPasswordRecoveryEmail } from "@/lib/email";
 import prisma from "@/lib/prisma";
+import { createPasswordRecovery, checkRateLimit } from "@/lib/security";
 
 /**
  * Request password reset

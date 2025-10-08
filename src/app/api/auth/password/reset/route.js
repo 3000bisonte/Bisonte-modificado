@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { verifyRecoveryCode, validatePasswordStrength, checkRateLimit } from "@/lib/security";
+
 import { updateUserPasswordByEmail } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { verifyRecoveryCode, validatePasswordStrength, checkRateLimit } from "@/lib/security";
 
 /**
  * Reset password with recovery code

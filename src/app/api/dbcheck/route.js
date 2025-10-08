@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+
 import { env } from '@/lib/env';
+import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -20,11 +21,16 @@ export async function GET() {
     await prisma.$connect();
     info.prismaReady = true;
     // tiny query
-    const one = await prisma.$queryRaw`SELECT 1 as ok`;
+    await prisma.$queryRaw`SELECT 1 as ok`;
   } catch (e) {
     info.errors = { name: e.constructor?.name, message: e.message, code: e.code };
   } finally {
-    try { await prisma.$disconnect(); } catch {}
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      // Silently ignore disconnect errors
+      console.error('Disconnect error:', disconnectError);
+    }
   }
 
   return NextResponse.json(info, { status: 200 });

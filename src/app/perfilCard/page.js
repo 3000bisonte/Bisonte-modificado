@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+
 import BottomNav from "@/components/BottomNav";
 
 
@@ -30,14 +31,14 @@ export default function PerfilCard() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    let newErrors = {};
+    const newErrors = {};
 
-    if (!form.nombre || !validarNombre(form.nombre)) newErrors.nombre = "Nombre inválido";
-    if (!form.tipoDocumento) newErrors.tipoDocumento = "Selecciona un tipo";
-    if (!form.numeroDocumento || !validarNumeroDocumento(form.numeroDocumento)) newErrors.numeroDocumento = "Número inválido";
-    if (!form.celular || !validarCelular(form.celular)) newErrors.celular = "Celular inválido";
-    if (!form.email || !validarEmail(form.email)) newErrors.email = "Correo inválido";
-    if (!form.direccion || !validarDireccion(form.direccion)) newErrors.direccion = "Dirección inválida";
+    if (!form.nombre || !validarNombre(form.nombre)) {newErrors.nombre = "Nombre inválido";}
+    if (!form.tipoDocumento) {newErrors.tipoDocumento = "Selecciona un tipo";}
+    if (!form.numeroDocumento || !validarNumeroDocumento(form.numeroDocumento)) {newErrors.numeroDocumento = "Número inválido";}
+    if (!form.celular || !validarCelular(form.celular)) {newErrors.celular = "Celular inválido";}
+    if (!form.email || !validarEmail(form.email)) {newErrors.email = "Correo inválido";}
+    if (!form.direccion || !validarDireccion(form.direccion)) {newErrors.direccion = "Dirección inválida";}
 
     setErrors(newErrors);
 

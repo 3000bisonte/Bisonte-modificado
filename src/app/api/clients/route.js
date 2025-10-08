@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/libs/prisma';
-import { validateRequest } from '@/lib/validation.ts';
+
 import { withErrorHandler } from '@/lib/errorHandler';
+import { validateRequest } from '@/lib/validation.ts';
+import prisma from '@/libs/prisma';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

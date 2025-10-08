@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useState } from "react";
+
 import { requestGoogleIdToken } from "@/lib/nativeBridge";
 import { buildBridgeCallback } from "@/lib/ua";
 
@@ -19,7 +20,10 @@ export default function NativeTestPage() {
     append(`idToken recibido (${token.length} chars). Iniciando sesión...`);
     const cb = new URL(buildBridgeCallback("/home"), window.location.origin);
     cb.searchParams.set("wv", "1");
-    await signIn("credentials", { idToken: token, redirect: true, callbackUrl: cb.toString() });
+    const result = await signIn("credentials", { idToken: token, redirect: true, callbackUrl: cb.toString() });
+    if (result?.error) {
+      append(`Error en signIn: ${result.error}`);
+    }
   };
 
   return (
@@ -27,7 +31,9 @@ export default function NativeTestPage() {
       <h1 className="text-2xl font-semibold mb-4">Prueba Nativa WebView</h1>
       <button
         className="px-4 py-2 bg-teal-600 rounded hover:bg-teal-700"
-        onClick={run}
+        onClick={() => {
+          void run();
+        }}
       >
         Probar Sign-In Nativo
       </button>

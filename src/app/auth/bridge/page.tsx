@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-const DiagnosticsWidget = dynamic(() => import("@/components/DiagnosticsWidget"), { ssr: false });
-import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useEffect, useMemo } from "react";
+
+const DiagnosticsWidget = dynamic(() => import("@/components/DiagnosticsWidget"), { ssr: false });
 
 export default function AuthBridge() {
   const { status } = useSession();
@@ -12,13 +13,13 @@ export default function AuthBridge() {
     const raw = search.get('to') || '/home';
     try {
       // Only allow same-origin internal paths that start with a single '/'
-      if (!raw || typeof raw !== 'string') return '/home';
-      if (!raw.startsWith('/')) return '/home';
-      if (raw.startsWith('//')) return '/home';
+      if (!raw || typeof raw !== 'string') {return '/home';}
+      if (!raw.startsWith('/')) {return '/home';}
+      if (raw.startsWith('//')) {return '/home';}
       // avoid api/auth/login loops
-      if (raw.startsWith('/api')) return '/home';
-      if (raw.startsWith('/auth')) return '/home';
-      if (raw.startsWith('/login')) return '/home';
+      if (raw.startsWith('/api')) {return '/home';}
+      if (raw.startsWith('/auth')) {return '/home';}
+      if (raw.startsWith('/login')) {return '/home';}
       return raw;
     } catch {
       return '/home';
@@ -27,45 +28,62 @@ export default function AuthBridge() {
 
   useEffect(() => {
     let cancelled = false;
-    const notify = (payload: any) => {
+    const notify = (payload: unknown) => {
       try {
         // React Native WebView
-        (window as any).ReactNativeWebView?.postMessage(JSON.stringify(payload));
-      } catch {}
+        const webView = (window as Window & { ReactNativeWebView?: { postMessage: (msg: string) => void } }).ReactNativeWebView;
+        webView?.postMessage(JSON.stringify(payload));
+      } catch (rnError) {
+        // Silently ignore RN WebView errors
+        console.error('RN WebView error:', rnError);
+      }
       try {
         // iOS WKWebView bridge example (if implemented)
-        (window as any).webkit?.messageHandlers?.bridge?.postMessage(payload);
-      } catch {}
+        const webkit = (window as Window & { webkit?: { messageHandlers?: { bridge?: { postMessage: (msg: unknown) => void } } } }).webkit;
+        webkit?.messageHandlers?.bridge?.postMessage(payload);
+      } catch (wkError) {
+        // Silently ignore WKWebView errors
+        console.error('WKWebView error:', wkError);
+      }
       try {
         // Fallback to parent frame (if embedded)
         window.parent?.postMessage(payload, '*');
-      } catch {}
+      } catch (postMessageError) {
+        // Silently ignore postMessage errors
+        console.error('postMessage error:', postMessageError);
+      }
     };
 
-    const finalize = () => {
+    const finalize = async () => {
       notify({ type: 'auth', status: 'success', target });
+      await Promise.resolve(); // Make async meaningful
       window.location.replace(target);
     };
 
-  const check = async (attempt = 0) => {
-      if (cancelled) return;
+  const check = async (attempt = 0): Promise<void> => {
+      if (cancelled) {return;}
       if (status === 'loading') {
         // poll a few times in case the session hydrates slowly in webview
         if (attempt < 40) {
-          setTimeout(() => check(attempt + 1), 200);
+          setTimeout(() => {
+            void check(attempt + 1);
+          }, 200);
         } else {
           // after retries, go to root
           window.location.replace('/');
         }
         return;
       }
-      if (status === 'authenticated') return finalize();
+      if (status === 'authenticated') {
+        await finalize();
+        return;
+      }
       if (status === 'unauthenticated') {
         window.location.replace('/');
       }
     };
 
-    check();
+    void check();
     return () => {
       cancelled = true;
     };

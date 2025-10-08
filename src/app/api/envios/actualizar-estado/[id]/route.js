@@ -1,27 +1,22 @@
 import { NextResponse } from "next/server";
+
+import { actualizarEstadoEnvioSchema, EstadoEnvio } from "@/schemas/envios";
+
 import prisma from "../../../../../libs/prisma";
 
-const VALID_STATUSES = [
-  "RECOLECCION_PENDIENTE",
-  "RECOGIDO_TRANSPORTADORA",
-  "EN_TRANSPORTE",
-  "ENTREGADO",
-  "DEVOLUCION",
-  "REPROGRAMAR",
-  "EN_CIUDAD_DESTINO",
-  "EN_DISTRIBUCION",
-  "NO_ENTREGADO",
-  "ENVIO_CANCELADO",
-  "DEVUELTO_ORIGEN",
-  "EN_ESPERA_CLIENTE",
+// Estados terminales que no pueden ser actualizados
+const ESTADOS_TERMINALES = [
+  EstadoEnvio.ENTREGADO,
+  EstadoEnvio.ENVIO_CANCELADO,
+  EstadoEnvio.DEVUELTO_ORIGEN,
 ];
 
 export async function PATCH(request, { params }) {
   try {
-    const id = Number(params.id); // ✅ Cambiar de guiaId a id
-    const { nuevoEstado } = await request.json();
+    const id = Number(params.id);
+    const body = await request.json();
 
-    console.log("🔄 Actualizando estado del envío:", { id, nuevoEstado });
+    console.log("🔄 Actualizando estado del envío:", { id, body });
 
     if (!id) {
       return NextResponse.json(
@@ -30,63 +25,92 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    if (!nuevoEstado || !VALID_STATUSES.includes(nuevoEstado)) {
+    // Validar datos de entrada con Zod
+    const validationResult = actualizarEstadoEnvioSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
         {
-          error: "Estado nuevo inválido o no proporcionado",
-          estadosValidos: VALID_STATUSES,
+          error: "Datos inválidos para actualización de estado",
+          errors: validationResult.error.flatten().fieldErrors,
         },
         { status: 400 }
       );
     }
 
-    // Buscar el envío existente
-    const envioExistente = await prisma.historial_envio.findUnique({
-      where: {
-        id: id,
-      },
+    const { nuevoEstado } = validationResult.data;
+
+    // Actualizar el estado dentro de una transacción
+    const result = await prisma.$transaction(async (tx) => {
+      // Buscar el envío existente
+      const envioExistente = await tx.historial_envio.findUnique({
+        where: { id },
+      });
+
+      if (!envioExistente) {
+        throw { code: "NOT_FOUND", message: "Envío no encontrado" };
+      }
+
+      const estadoActual = envioExistente.Estado;
+
+      // Verificar si el estado actual es terminal
+      if (ESTADOS_TERMINALES.includes(estadoActual)) {
+        throw {
+          code: "INVALID_STATE",
+          message: `No se puede actualizar un envío en estado terminal: ${estadoActual}`,
+        };
+      }
+
+      // Verificar si ya está en ese estado
+      if (estadoActual === nuevoEstado) {
+        return {
+          unchanged: true,
+          envio: envioExistente,
+        };
+      }
+
+      // Actualizar el estado
+      const updatedEnvio = await tx.historial_envio.update({
+        where: { id },
+        data: {
+          Estado: nuevoEstado,
+          FechaActualizacion: new Date(),
+        },
+      });
+
+      return {
+        unchanged: false,
+        envio: updatedEnvio,
+      };
     });
 
-    if (!envioExistente) {
-      return NextResponse.json(
-        { error: "Envío no encontrado" },
-        { status: 404 }
-      );
-    }
-
-    const estadoActual = envioExistente.Estado;
-
-    // Verificar si ya está en ese estado
-    if (estadoActual === nuevoEstado) {
+    if (result.unchanged) {
       return NextResponse.json(
         {
           message:
             "El envío ya se encuentra en este estado. No se requiere actualización.",
-          envio: envioExistente,
+          envio: result.envio,
         },
         { status: 200 }
       );
     }
 
-    // Actualizar el estado
-    const updatedEnvio = await prisma.historial_envio.update({
-      where: {
-        id: id,
-      },
-      data: {
-        Estado: nuevoEstado,
-      },
-    });
-
-    console.log("✅ Envío actualizado exitosamente:", updatedEnvio);
+    console.log("✅ Envío actualizado exitosamente:", result.envio);
 
     return NextResponse.json({
       success: true,
-      envio: updatedEnvio,
+      envio: result.envio,
       message: "Estado actualizado exitosamente",
     });
   } catch (error) {
     console.error("❌ Error al actualizar el estado del envío:", error);
+
+    if (error.code === "NOT_FOUND") {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+
+    if (error.code === "INVALID_STATE") {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
 
     if (error.code === "P2025") {
       return NextResponse.json(

@@ -13,6 +13,7 @@ export const mpPayerSchema = z.object({
 
 export const mercadoPagoCreateSchema = z.object({
   transaction_amount: z
+    // eslint-disable-next-line security/detect-unsafe-regex
     .union([z.number(), z.string().regex(/^\d+(\.\d+)?$/)])
     .transform((v) => (typeof v === "string" ? Number(v) : v))
     .pipe(z.number().positive().max(5_000_000)),

@@ -1,21 +1,21 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 
-import { GoogleAuthButton } from "./GoogleAuthButton";
-import { requestGoogleIdToken } from "../lib/nativeBridge";
-import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
 import { validateApiInput, loginSchema } from "../lib/validation";
 import {
-  getLastActivity,
-  setLastActivity,
   clearLastActivity,
-  INACTIVITY_MIN_MS,
+  getLastActivity,
   INACTIVITY_MAX_MS,
+  INACTIVITY_MIN_MS,
+  setLastActivity,
 } from "../utils/homeStickyStorage";
+
+import { GoogleAuthButton } from "./GoogleAuthButton";
 // NOTE: Do not import server-only modules here (like ../lib/security) because it pulls prisma/env into the client bundle
 
 const LoginForm = ({ callbackUrl }) => {
@@ -25,7 +25,6 @@ const LoginForm = ({ callbackUrl }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
-  const [loginAttempts, setLoginAttempts] = useState(0);
   const router = useRouter();
   const { data: session } = useSession();
   // Comprobar inactividad para redirigir según el tiempo transcurrido desde la última actividad
@@ -101,12 +100,14 @@ const LoginForm = ({ callbackUrl }) => {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const lastUser = localStorage.getItem("lastUser");
-      if (lastUser) setEmail(lastUser);
+      if (lastUser) {
+        setEmail(lastUser);
+      }
     }
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setIsLoading(true);
     setErrorMessage("");
     setFieldErrors({});
@@ -117,8 +118,12 @@ const LoginForm = ({ callbackUrl }) => {
       const newErrors = {};
       (validation.error?.details || []).forEach((issue) => {
         const field = issue?.path?.[0] || issue?.field;
-        if (field) {
-          newErrors[field] = issue.message || 'Dato inválido';
+        const message = issue.message || "Dato inválido";
+
+        if (field === "email") {
+          newErrors.email = message;
+        } else if (field === "password") {
+          newErrors.password = message;
         }
       });
       setFieldErrors(newErrors);
@@ -134,8 +139,6 @@ const LoginForm = ({ callbackUrl }) => {
       });
 
       if (res?.error) {
-        setLoginAttempts(prev => prev + 1);
-        
         // 🛡️ Enhanced error handling with specific messages
         if (res.error.toLowerCase().includes("rate limit") || 
             res.error.toLowerCase().includes("demasiados intentos")) {
@@ -186,81 +189,6 @@ const LoginForm = ({ callbackUrl }) => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    setErrorMessage("");
-    try {
-      let safeTarget = "/home";
-      try {
-        const raw = callbackUrl || "/home";
-        if (typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/api') && !raw.startsWith('/auth') && !raw.startsWith('/login')) {
-          safeTarget = raw;
-        }
-      } catch {}
-      
-      // Detecta WebView por heurística
-      const ua = (navigator.userAgent || "").toLowerCase();
-      const isWV = /\bwv\b|webview|; wv\)|gsa\//i.test(ua);
-      
-      if (isWV || isWebViewRuntime()) {
-        // Prioriza nuevo plugin BisonteAuth en WebView
-        try {
-          const w = window;
-          const BA = w.Capacitor?.Plugins?.BisonteAuth || w.BisonteAuth;
-          if (BA && typeof BA.googleSignInCCT === "function") {
-            console.log("Usando BisonteAuth plugin para Google Sign-In");
-            const res = await BA.googleSignInCCT();
-            if (res?.idToken) {
-              // Use credentials provider with idToken
-              const bridge = buildBridgeCallback(safeTarget);
-              const url = new URL(bridge, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
-              url.searchParams.set('wv', '1');
-              const authRes = await signIn("credentials", { redirect: true, idToken: res.idToken, callbackUrl: url.toString() });
-              // If redirect true succeeds, we won't reach here; only handle failure
-              if (authRes && authRes.error) {
-                throw new Error(authRes.error);
-              }
-              return;
-            }
-            throw new Error("No se recibió idToken del plugin BisonteAuth");
-          }
-          
-          // Fallback al bridge anterior si BisonteAuth no está disponible
-          const idToken = await requestGoogleIdToken(12000);
-          if (idToken) {
-            const bridge = buildBridgeCallback(safeTarget);
-            const url = new URL(bridge, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
-            url.searchParams.set('wv', '1');
-            const res = await signIn("credentials", { redirect: true, idToken, callbackUrl: url.toString() });
-            if (res && res.error) {
-              throw new Error(res.error);
-            }
-            return;
-          }
-        } catch (nativeError) {
-          console.error("Error en flujo nativo:", nativeError);
-          setErrorMessage(`Error en autenticación nativa: ${nativeError.message}`);
-          setIsLoading(false);
-          return;
-        }
-        
-        // En WebView, no permitir fallback OAuth si no hay plugin
-        alert('Dentro de la app (WebView) debes iniciar con el plugin nativo. Verifica la integración de Capacitor.');
-        setIsLoading(false);
-        return;
-      }
-      
-      // En navegador, usar OAuth normal
-      const cb = safeTarget;
-      const url = new URL(cb, typeof window !== 'undefined' ? window.location.origin : 'https://www.bisonteapp.com');
-      await signIn("google", { callbackUrl: url.toString() });
-    } catch (error) {
-      console.error("Error con Google:", error);
-      setErrorMessage(`Error con Google: ${error.message || error}`);
-      setIsLoading(false);
-    }
-  };
-
   const ADMIN_EMAILS = [
     "3000bisonte@gmail.com",
     "bisonteangela@gmail.com",
@@ -285,10 +213,13 @@ const LoginForm = ({ callbackUrl }) => {
           <div className="text-center mb-8">
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-gradient-to-r from-teal-400 to-cyan-500 rounded-full blur opacity-40"></div>
-              <img
+              <Image
                 src="/LogoNew.jpeg"
                 alt="Bisonte Logo"
-                className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-white/20 shadow-lg"
+                width={96}
+                height={96}
+                className="relative h-20 w-20 rounded-full object-cover border-2 border-white/20 shadow-lg sm:h-24 sm:w-24"
+                priority
               />
             </div>
             <h1 className="text-white text-2xl sm:text-3xl font-bold mt-4 tracking-wider">
@@ -305,10 +236,20 @@ const LoginForm = ({ callbackUrl }) => {
             <p className="text-gray-400 text-sm sm:text-base">
               Ingresa tus credenciales para continuar
             </p>
+            {isAdmin && (
+              <p className="mt-2 text-xs font-medium text-amber-300">
+                Acceso administrativo detectado. Serás redirigido al panel correspondiente.
+              </p>
+            )}
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form
+            onSubmit={(event) => {
+              void handleSubmit(event);
+            }}
+            className="space-y-6"
+          >
             {/* Email Field */}
             <div className="space-y-2">
               <label className="block text-gray-300 text-sm font-medium">

@@ -1,8 +1,8 @@
 "use client";
-import React from "react";
-import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import React, { useCallback, useEffect, useState } from "react";
+
 import BottomNav from "@/components/BottomNav";
 
 export default function AdminEnvios() {
@@ -15,32 +15,13 @@ export default function AdminEnvios() {
   
   // ✅ SISTEMA DE NOTIFICACIONES LOCAL SIMPLE
   const [notification, setNotification] = useState(null);
-  
-  const showNotification = (message, type = 'info') => {
+
+  const showNotification = useCallback((message, type = 'info') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
-  };
+  }, []);
 
-  useEffect(() => {
-    const ADMIN_EMAILS = [
-      "3000bisonte@gmail.com",
-      "bisonteangela@gmail.com",
-      "bisonteoskar@gmail.com",
-    ];
-
-    if (status === "loading") {
-      return;
-    }
-
-    const userEmail = session?.user?.email;
-    if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
-      router.push("/");
-    } else {
-      loadEnvios();
-    }
-  }, [session, status, router]);
-
-  const loadEnvios = () => {
+  const loadEnvios = useCallback(() => {
     setLoading(true);
     fetch("/api/envios", { cache: "no-store" })
       .then((res) => {
@@ -65,7 +46,26 @@ export default function AdminEnvios() {
         showNotification('❌ Error al cargar envíos', 'error');
         setLoading(false);
       });
-  };
+  }, [showNotification]);
+
+  useEffect(() => {
+    const ADMIN_EMAILS = [
+      "3000bisonte@gmail.com",
+      "bisonteangela@gmail.com",
+      "bisonteoskar@gmail.com",
+    ];
+
+    if (status === "loading") {
+      return;
+    }
+
+    const userEmail = session?.user?.email;
+    if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
+      router.push("/");
+    } else {
+      void loadEnvios();
+    }
+  }, [loadEnvios, router, session, status]);
 
   const handleStatusChange = async (id, nuevoEstado) => {
     console.log('🔄 Cambiando estado:', { id, nuevoEstado });
@@ -474,7 +474,9 @@ export default function AdminEnvios() {
                                 key={`${envio.id}-${envio.Estado}`}
                                 disabled={actualizando === envio.id}
                                 value={envio.Estado}
-                                onChange={(ev) => handleStatusChange(envio.id, ev.target.value)}
+                                onChange={(ev) => {
+                                  void handleStatusChange(envio.id, ev.target.value);
+                                }}
                                 className="appearance-none border border-slate-300 rounded-lg px-2 sm:px-3 py-1 sm:py-2 pr-6 sm:pr-8 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed bg-white min-w-[120px] sm:min-w-[180px] font-medium"
                                 style={{ 
                                   backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,

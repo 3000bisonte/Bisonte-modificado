@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
 import CapacitorGoogleAuth, { GoogleAuthResult } from '@/lib/capacitor-google-auth';
 
 interface UseGoogleAuthReturn {
@@ -29,7 +30,7 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
       }
 
       try {
-        await CapacitorGoogleAuth.initialize();
+        CapacitorGoogleAuth.initialize();
         await refreshUser();
       } catch (error) {
         console.error('Failed to initialize Google Auth:', error);
@@ -38,11 +39,11 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
       }
     };
 
-    initializeAuth();
+    void initializeAuth();
   }, [isCapacitor]);
 
   const refreshUser = async () => {
-    if (!isCapacitor) return;
+    if (!isCapacitor) {return;}
 
     try {
       const result = await CapacitorGoogleAuth.getCurrentUser();
@@ -78,11 +79,11 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
       }
       
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sign in failed:', error);
       return {
         success: false,
-        error: error.message || 'Sign in failed'
+        error: error instanceof Error ? error.message : 'Sign in failed'
       };
     } finally {
       setIsLoading(false);
@@ -90,7 +91,7 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
   };
 
   const signOut = async (): Promise<boolean> => {
-    if (!isCapacitor) return false;
+    if (!isCapacitor) {return false;}
 
     setIsLoading(true);
     try {

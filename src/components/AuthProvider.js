@@ -1,18 +1,10 @@
 // 🛡️ Contexto de autenticación robusto con manejo de seguridad avanzado
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { useSession, signOut, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useSession, signOut, getSession } from 'next-auth/react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
-
-// Tipos de eventos de seguridad
-const SecurityEvents = {
-  SESSION_EXPIRED: 'session_expired',
-  CONCURRENT_SESSION: 'concurrent_session',
-  SUSPICIOUS_ACTIVITY: 'suspicious_activity',
-  FORCED_LOGOUT: 'forced_logout'
-};
 
 // Estados de autenticación
 const AuthStates = {
@@ -68,7 +60,7 @@ export function AuthProvider({ children }) {
    */
   const verifySessionIntegrity = useCallback(async () => {
     try {
-      if (!session?.user?.id) return false;
+      if (!session?.user?.id) {return false;}
 
       const response = await fetch('/api/auth/verify-session', {
         method: 'POST',
@@ -160,7 +152,7 @@ export function AuthProvider({ children }) {
    * 🔄 Refrescar sesión si está próxima a expirar
    */
   const refreshSessionIfNeeded = useCallback(async () => {
-    if (!session) return;
+    if (!session) {return;}
 
     try {
       const currentTime = Date.now();
@@ -181,7 +173,7 @@ export function AuthProvider({ children }) {
    * 🔒 Verificación periódica de seguridad
    */
   const performSecurityCheck = useCallback(async () => {
-    if (!session || authState !== AuthStates.AUTHENTICATED) return;
+    if (!session || authState !== AuthStates.AUTHENTICATED) {return;}
 
     try {
       // Verificar integridad de la sesión
@@ -345,7 +337,7 @@ export function AuthProvider({ children }) {
    * ✅ Verificar si el usuario tiene un rol específico
    */
   const hasRole = useCallback((requiredRole) => {
-    if (!user?.role) return false;
+    if (!user?.role) {return false;}
     
     const roleHierarchy = {
       'user': 1,
@@ -362,8 +354,8 @@ export function AuthProvider({ children }) {
   /**
    * 🛡️ Verificar permisos para una acción
    */
-  const canPerform = useCallback((action, resource) => {
-    if (!user) return false;
+  const canPerform = useCallback((action, _resource) => {
+    if (!user) {return false;}
     
     // Definir permisos por rol
     const permissions = {

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { updateUserPassword } from "@/lib/auth";
-import { validatePasswordStrength, verifyPassword } from "@/lib/security";
+
+import { authOptions, updateUserPassword } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { validatePasswordStrength, verifyPassword } from "@/lib/security";
 
 /**
  * Change password for authenticated user

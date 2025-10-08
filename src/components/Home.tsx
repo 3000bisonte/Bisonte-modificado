@@ -3,12 +3,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
-import type {
-  JSX,
-  MouseEvent as ReactMouseEvent,
-  SVGProps,
-  TouchEvent as ReactTouchEvent,
+import {
+  useEffect,
+  useRef,
+  useState,
+  type JSX,
+  type MouseEvent as ReactMouseEvent,
+  type SVGProps,
+  type TouchEvent as ReactTouchEvent,
 } from "react";
 
 import CapacitorGoogleAuth from "@/lib/capacitor-google-auth";
@@ -271,7 +273,7 @@ const Home = (): JSX.Element => {
     let cancelled = false;
 
     const fetchStats = async () => {
-      if (cancelled) return;
+      if (cancelled) {return;}
       try {
         const res = await fetch("/api/admin/stats", { cache: "no-store" });
         if (!res.ok) {
@@ -279,7 +281,7 @@ const Home = (): JSX.Element => {
         }
 
         const json = (await res.json()) as unknown;
-        if (cancelled) return;
+        if (cancelled) {return;}
         const parsedStats = parseStatsSummary(json);
         if (parsedStats) {
           setStats(parsedStats);

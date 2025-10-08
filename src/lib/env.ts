@@ -5,7 +5,7 @@ import { cleanEnv, str, url, num, bool, email, makeValidator } from 'envalid'
 
 // Custom validators
 const commaSeparated = makeValidator<string[]>((input) => {
-  if (typeof input !== 'string') return []
+  if (typeof input !== 'string') {return []}
   return input.split(',').map((s) => s.trim()).filter(Boolean)
 })
 

@@ -1,16 +1,21 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
-import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+
+import Image from "next/image";
 import Link from "next/link";
-import BottomNav from "./BottomNav";
+import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
+import React, { useEffect, useRef, useState } from "react";
+
 import CapacitorGoogleAuth from "@/lib/capacitor-google-auth";
+
 import {
-  extendHomeSticky,
   clearHomeSticky,
-  setLastActivity,
   clearLastActivity,
+  extendHomeSticky,
+  setLastActivity,
 } from "../utils/homeStickyStorage";
+
+import BottomNav from "./BottomNav";
 
 // Iconos SVG
 const IconUser = () => (
@@ -65,27 +70,9 @@ const IconLightning = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
-const IconHome = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-    <path d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-  </svg>
-);
-
-const IconEnvios = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-    <path d="M8.25 18.75a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0zM19.5 18.75a1.5 1.5 0 01-3 0 1.5 1.5 0 013 0zM3 4.5h2.25l.75 12.75c.094.621.568 1.125 1.19 1.125h11.555c.621 0 1.134-.504 1.19-1.125L21 7.5H6" />
-  </svg>
-);
-
 const IconPerfil = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
     <path d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
-  </svg>
-);
-
-const IconContact = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-    <path d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.760 1.614-2.760 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.740.194V21l4.155-4.155" />
   </svg>
 );
 
@@ -129,8 +116,14 @@ const Home = () => {
 
   // Obtener nombre o usuario del correo
   const getUserName = () => {
-    if (session?.user?.name) return session.user.name;
-    if (session?.user?.email) return session.user.email.split("@")[0];
+    if (session?.user?.name) {
+      return session.user.name;
+    }
+
+    if (session?.user?.email) {
+      return session.user.email.split("@")[0];
+    }
+
     return "Usuario";
   };
 
@@ -138,7 +131,9 @@ const Home = () => {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const bienvenida = localStorage.getItem("bienvenidaMostrada");
-      if (!bienvenida) setShowWelcome(true);
+      if (!bienvenida) {
+        setShowWelcome(true);
+      }
     }
   }, []);
 
@@ -175,22 +170,22 @@ const Home = () => {
 
   const handleLogout = async () => {
     setShowProfileMenu(false);
-  clearHomeSticky();
-  clearLastActivity();
+    clearHomeSticky();
+    clearLastActivity();
     try {
       await CapacitorGoogleAuth.signOut();
     } catch (error) {
-      console.warn('Home: Error during native Google sign-out', error);
+      console.warn("Home: Error during native Google sign-out", error);
     }
 
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
       });
     } catch (error) {
-      console.warn('Home: Failed to call /api/auth/logout', error);
+      console.warn("Home: Failed to call /api/auth/logout", error);
     }
 
     await signOut({ redirect: false });
@@ -198,31 +193,62 @@ const Home = () => {
   };
 
   const handleTouchStart = (e) => {
-    sliderTrackRef.current.touchStartX = e.touches[0].clientX;
+    const track = sliderTrackRef.current;
+    if (!track) {
+      return;
+    }
+
+    track.touchStartX = e.touches[0].clientX;
   };
   const handleTouchEnd = (e) => {
+    const track = sliderTrackRef.current;
+    if (!track) {
+      return;
+    }
+
     const touchEndX = e.changedTouches[0].clientX;
-    const swipeDistance = sliderTrackRef.current.touchStartX - touchEndX;
+    const swipeDistance = track.touchStartX - touchEndX;
     if (Math.abs(swipeDistance) > 50) {
-      if (swipeDistance > 0) nextSlide();
-      else prevSlide();
+      if (swipeDistance > 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
     }
   };
   const handleMouseDown = (e) => {
-    sliderTrackRef.current.mouseStartX = e.clientX;
-    sliderTrackRef.current.style.cursor = "grabbing";
+    const track = sliderTrackRef.current;
+    if (!track) {
+      return;
+    }
+
+    track.mouseStartX = e.clientX;
+    track.style.cursor = "grabbing";
   };
   const handleMouseUp = (e) => {
-    const mouseEndX = e.clientX;
-    const swipeDistance = sliderTrackRef.current.mouseStartX - mouseEndX;
-    if (Math.abs(swipeDistance) > 50) {
-      if (swipeDistance > 0) nextSlide();
-      else prevSlide();
+    const track = sliderTrackRef.current;
+    if (!track) {
+      return;
     }
-    sliderTrackRef.current.style.cursor = "grab";
+
+    const mouseEndX = e.clientX;
+    const swipeDistance = track.mouseStartX - mouseEndX;
+    if (Math.abs(swipeDistance) > 50) {
+      if (swipeDistance > 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
+    }
+    track.style.cursor = "grab";
   };
   const handleMouseLeave = () => {
-    sliderTrackRef.current.style.cursor = "default";
+    const track = sliderTrackRef.current;
+    if (!track) {
+      return;
+    }
+
+    track.style.cursor = "default";
   };
 
   const ADMIN_EMAILS = [
@@ -244,7 +270,9 @@ const Home = () => {
     let cancelled = false;
 
     const fetchStats = async () => {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       try {
         const res = await fetch("/api/admin/stats", { cache: "no-store" });
         if (!res.ok) {
@@ -315,7 +343,14 @@ const Home = () => {
       <header className="w-full max-w-md flex items-center justify-between px-6 py-4 bg-[#18191A] shadow-xl rounded-b-3xl border-b-4 border-[#41e0b3] fixed top-0 left-1/2 -translate-x-1/2 z-30 animate-fade-in-down">
         <div className="flex items-center gap-3">
           <Link href="/home">
-            <img src="/LogoNew.jpeg" alt="Logo" className="w-12 h-12 rounded-xl shadow-lg hover:scale-110 transition-transform duration-300" />
+            <Image
+              src="/LogoNew.jpeg"
+              alt="Logo"
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded-xl shadow-lg hover:scale-110 transition-transform duration-300"
+              priority
+            />
           </Link>
           <span className="text-[#41e0b3] font-extrabold text-2xl tracking-wide drop-shadow">Bisonte</span>
         </div>
@@ -420,11 +455,14 @@ const Home = () => {
                     key={idx}
                     className={`min-w-full h-full relative slide ${slide === idx ? "active" : ""}`}
                   >
-                    <img
+                    <Image
                       src={slideItem.img}
-                      alt={slideItem.title}
-                      className="w-full h-full object-cover block"
+                      alt={slideItem.title ?? `Slide ${idx + 1}`}
+                      fill
+                      className="object-cover"
                       draggable={false}
+                      priority={idx === 0}
+                      sizes="(max-width: 768px) 100vw, 400px"
                     />
                     <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-transparent to-transparent text-white px-6 py-6 transition-transform duration-300 ${slide === idx ? "translate-y-0" : "translate-y-full"} slide-overlay`}>
                       <div className="text-lg font-semibold mb-1 slide-title">{slideItem.title}</div>

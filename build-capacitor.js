@@ -18,7 +18,7 @@ if (fs.existsSync('./out')) {
 console.log('📦 Construyendo aplicación...');
 process.env.CAPACITOR_BUILD = 'true';
 
-exec('npx next build', (error, stdout, stderr) => {
+exec('npx next build', (error, stdout, _stderr) => {
   if (error) {
     console.error('❌ Error en build:', error);
     return;
@@ -43,7 +43,7 @@ exec('npx next build', (error, stdout, stderr) => {
   
   // Paso 4: Sincronizar con Capacitor
   console.log('\n⚡ Sincronizando con Capacitor...');
-  exec('npx cap sync', (syncError, syncStdout, syncStderr) => {
+  exec('npx cap sync', (syncError, syncStdout, _syncStderr) => {
     if (syncError) {
       console.error('❌ Error sincronizando Capacitor:', syncError);
       return;

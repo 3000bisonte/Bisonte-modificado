@@ -1,18 +1,19 @@
 "use client";
+import type { BuiltInProviderType } from "next-auth/providers/index";
+import { getProviders, type ClientSafeProvider, type LiteralUnion } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { getProviders } from "next-auth/react";
 
 export default function ProvidersDebugPage() {
-  const [providers, setProviders] = useState<any>(null);
+  const [providers, setProviders] = useState<Record<LiteralUnion<BuiltInProviderType>, ClientSafeProvider> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const p = await getProviders();
         setProviders(p);
-      } catch (e: any) {
-        setError(e?.message || String(e));
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : String(e));
       }
     })();
   }, []);

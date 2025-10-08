@@ -110,7 +110,7 @@ export const authOptions = {
             });
             
             const payload = ticket.getPayload();
-            if (!payload) throw new Error("ID token inválido");
+            if (!payload) {throw new Error("ID token inválido");}
             
             const email = (payload.email || "").toLowerCase();
             if (!email || payload.email_verified === false) {
@@ -173,6 +173,7 @@ export const authOptions = {
           throw new Error(`Datos inválidos: ${errorMessages}`);
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { email: normalizedEmail, password } = validation.data;
 
         // 🛡️ Enhanced rate limiting (IP + Email)
@@ -188,7 +189,7 @@ export const authOptions = {
             error: rateLimitError.message
           });
           
-          console.warn(`[Auth] Rate limit exceeded for ${email} from IP: ${clientIP}`);
+          console.warn(`[Auth] Rate limit exceeded for ${normalizedEmail} from IP: ${clientIP}`);
           throw rateLimitError;
         }
 
@@ -485,8 +486,10 @@ export const authOptions = {
           const target = p && !p.startsWith('/api') ? p : '/home';
           return `${baseUrl}/auth/bridge?to=${encodeURIComponent(target)}`;
         }
-        if (parsed.origin === baseUrl) return parsed.toString();
-      } catch {}
+        if (parsed.origin === baseUrl) {return parsed.toString();}
+      } catch {
+        // Ignore URL parsing errors and fall through to default
+      }
       return `${baseUrl}/home`;
     }
   },

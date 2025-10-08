@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function Recuperar() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function Recuperar() {
       });
 
       if (res.ok) {
-        const data = await res.json();
+        await res.json();
         setMsg("Si el correo está registrado, recibirás un mensaje para recuperar tu contraseña.");
         // Redirige automáticamente
         router.push("/recuperar/validar-token");

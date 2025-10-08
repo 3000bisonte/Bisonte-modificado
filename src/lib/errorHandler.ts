@@ -4,37 +4,45 @@ export function withErrorHandler(handler: (request: NextRequest) => Promise<Next
   return async (request: NextRequest): Promise<NextResponse> => {
     try {
       return await handler(request);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('API Error:', error);
       
       // Handle known error types
-      if (error.name === 'ValidationError') {
+      if (error instanceof Error) {
+        if (error.name === 'ValidationError') {
+          return NextResponse.json(
+            { error: 'Validation failed', details: error.message },
+            { status: 400 }
+          );
+        }
+        
+        if (error.name === 'UnauthorizedError') {
+          return NextResponse.json(
+            { error: 'Unauthorized' },
+            { status: 401 }
+          );
+        }
+        
+        if (error.name === 'ForbiddenError') {
+          return NextResponse.json(
+            { error: 'Forbidden' },
+            { status: 403 }
+          );
+        }
+
+        // Generic error response with message
         return NextResponse.json(
-          { error: 'Validation failed', details: error.message },
-          { status: 400 }
-        );
-      }
-      
-      if (error.name === 'UnauthorizedError') {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      
-      if (error.name === 'ForbiddenError') {
-        return NextResponse.json(
-          { error: 'Forbidden' },
-          { status: 403 }
+          { 
+            error: 'Internal server error',
+            ...(process.env.NODE_ENV === 'development' && { details: error.message })
+          },
+          { status: 500 }
         );
       }
 
-      // Generic error response
+      // Non-Error type
       return NextResponse.json(
-        { 
-          error: 'Internal server error',
-          ...(process.env.NODE_ENV === 'development' && { details: error.message })
-        },
+        { error: 'Internal server error' },
         { status: 500 }
       );
     }

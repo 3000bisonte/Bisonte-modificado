@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { env } from '@/lib/env';
 import prisma from '@/libs/prisma';
 
@@ -23,7 +24,7 @@ export async function GET() {
 
   try {
     // Test basic Prisma connection
-    const testQuery = await prisma.$queryRaw`SELECT 1 as test`;
+    await prisma.$queryRaw`SELECT 1 as test`;
     diagnostics.prisma.connected = true;
 
     // Test main tables

@@ -9,3 +9,32 @@ archive/
 legacy/
 **/*.original.js
 **/*.diag.js
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+android/
+ios/
+*.min.js
+*_buildManifest.js
+*_ssgManifest.js
+
+# Dependencies
+node_modules/
+
+# Environment and config
+.env*
+!.env.example
+
+# Coverage
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+
+# Test snapshots
+**/__snapshots__/

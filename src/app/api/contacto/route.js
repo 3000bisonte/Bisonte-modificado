@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import prisma from "../../../libs/prisma";
-// New server-layer helpers
+
 import { withValidation } from "@/server/http/withValidation";
 import { contactoCreateSchema } from "@/server/schemas/contacto";
-import { createContacto } from "@/server/controllers/contactoController";
+
+import prisma from "../../../libs/prisma";
 
 export async function GET() {
   try {

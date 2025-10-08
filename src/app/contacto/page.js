@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useState } from "react";
+
 import BottomNav from "@/components/BottomNav";
 
 export default function Contacto() {
@@ -36,20 +37,20 @@ export default function Contacto() {
     // Validaciones
     const newErrors = {};
     if (!form.nombre || !validarNombre(form.nombre))
-      newErrors.nombre = "Nombre inválido";
+      {newErrors.nombre = "Nombre inválido";}
     if (!form.tipoDocumento)
-      newErrors.tipoDocumento = "Selecciona un tipo de documento";
+      {newErrors.tipoDocumento = "Selecciona un tipo de documento";}
     if (
       !form.numeroDocumento ||
       !validarNumeroDocumento(form.numeroDocumento)
     )
-      newErrors.numeroDocumento = "Número de documento inválido";
+      {newErrors.numeroDocumento = "Número de documento inválido";}
     if (!form.celular || !validarCelular(form.celular))
-      newErrors.celular = "Celular inválido";
+      {newErrors.celular = "Celular inválido";}
     if (!form.ciudad || !validarCiudad(form.ciudad))
-      newErrors.ciudad = "Ciudad inválida";
+      {newErrors.ciudad = "Ciudad inválida";}
     if (!form.mensaje || !validarMensaje(form.mensaje))
-      newErrors.mensaje = "El mensaje es obligatorio";
+      {newErrors.mensaje = "El mensaje es obligatorio";}
 
     setErrors(newErrors);
 

@@ -1,8 +1,9 @@
 // Middleware avanzado de autenticación y autorización
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
 import { z } from "zod";
+
+import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { logSecurityEvent, SecurityEvents } from "@/lib/security";
 

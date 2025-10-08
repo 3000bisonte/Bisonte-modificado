@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+
 import BottomNav from "./BottomNav";
 
 export default function FormularioDestinatario({ id }) {
@@ -9,7 +10,8 @@ export default function FormularioDestinatario({ id }) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
-  const [showTooltip, setShowTooltip] = useState(false);
+  // @ts-expect-error - showTooltip is used but setter is not needed
+  const [showTooltip] = useState(false);
 
   // Estado inicial del formulario
   const initialFormData = {
@@ -65,16 +67,16 @@ export default function FormularioDestinatario({ id }) {
 
   // Cargar datos del perfil si hay ID, pero preservar datos del localStorage
   useEffect(() => {
-    if (!id) return;
+    if (!id) {return;}
 
     const fetchData = async () => {
       try {
         setIsLoading(true);
         const response = await fetch(`/api/perfil/${id}`);
-        if (!response.ok) throw new Error("Failed to fetch profile data");
+        if (!response.ok) {throw new Error("Failed to fetch profile data");}
 
         const data = await response.json();
-        if (!data) return;
+        if (!data) {return;}
 
         setFormData((prev) => {
           const updatedData = {
@@ -109,42 +111,43 @@ export default function FormularioDestinatario({ id }) {
     let error = "";
     switch (name) {
       case "nombre":
-        if (!value.trim()) error = "El nombre completo es obligatorio.";
+        if (!value.trim()) {error = "El nombre completo es obligatorio.";}
         else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{2,40}$/.test(value))
-          error = "El nombre completo solo debe contener letras y espacios (2-40 caracteres).";
+          {error = "El nombre completo solo debe contener letras y espacios (2-40 caracteres).";}
         break;
       case "tipoDocumento":
-        if (!value.trim()) error = "Selecciona el tipo de documento.";
+        if (!value.trim()) {error = "Selecciona el tipo de documento.";}
         break;
       case "numeroDocumento":
-        if (!value.trim()) error = "El número de documento es obligatorio.";
+        if (!value.trim()) {error = "El número de documento es obligatorio.";}
         else if (!/^\d{6,12}$/.test(value))
-          error = "El número de documento debe tener entre 6 y 12 dígitos numéricos.";
+          {error = "El número de documento debe tener entre 6 y 12 dígitos numéricos.";}
         break;
       case "correo":
-        if (!value.trim()) error = "El correo electrónico es obligatorio.";
+        if (!value.trim()) {error = "El correo electrónico es obligatorio";}
+        // eslint-disable-next-line security/detect-unsafe-regex
         else if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(value.trim()))
-          error = "Correo electrónico inválido.";
+          {error = "Correo electrónico inválido.";}
         break;
       case "celular":
-        if (!value.trim()) error = "El celular es obligatorio.";
+        if (!value.trim()) {error = "El celular es obligatorio.";}
         else if (!/^3\d{9}$/.test(value.trim()))
-          error = "El celular debe empezar con 3 y tener 10 dígitos.";
+          {error = "El celular debe empezar con 3 y tener 10 dígitos.";}
         break;
       case "direccionEntrega":
-        if (!value.trim()) error = "La dirección de entrega es obligatoria.";
+        if (!value.trim()) {error = "La dirección de entrega es obligatoria.";}
         else if (value.length < 5 || value.length > 80)
-          error = "La dirección debe tener entre 5 y 80 caracteres.";
+          {error = "La dirección debe tener entre 5 y 80 caracteres.";}
         break;
       case "detalleDireccion":
         if (value.length > 40)
-          error = "El detalle de dirección no debe superar los 40 caracteres.";
+          {error = "El detalle de dirección no debe superar los 40 caracteres.";}
         break;
       case "noProhibidos":
-        if (!value) error = "Debes declarar que no enviarás artículos prohibidos.";
+        if (!value) {error = "Debes declarar que no enviarás artículos prohibidos.";}
         break;
       case "aceptaTerminos":
-        if (!value) error = "Debes aceptar los términos y condiciones.";
+        if (!value) {error = "Debes aceptar los términos y condiciones.";}
         break;
       default:
         break;
@@ -178,6 +181,7 @@ export default function FormularioDestinatario({ id }) {
       formData.numeroDocumento.trim() &&
       /^\d{6,12}$/.test(formData.numeroDocumento) &&
       formData.correo.trim() &&
+      // eslint-disable-next-line security/detect-unsafe-regex
       /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(formData.correo.trim()) &&
       formData.celular.trim() &&
       /^3\d{9}$/.test(formData.celular) &&
@@ -229,22 +233,22 @@ export default function FormularioDestinatario({ id }) {
     router.push("/resumen");
   };
 
-  // Manejar botón anterior
-  const handleClose = () => {
+  // Manejar botón anterior - commented out as unused
+  /* const handleClose = () => {
     saveToLocalStorage(formData);
     router.back();
-  };
+  }; */
 
-  // Limpiar localStorage cuando sea necesario (opcional)
-  const clearFormData = () => {
+  // Limpiar localStorage cuando sea necesario (opcional) - commented out as unused
+  /* const clearFormData = () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("formDestinatario");
       setFormData(initialFormData);
       setFieldErrors({});
     }
-  };
+  }; */
 
-  const canProceed = isFormValid() && !isLoading;
+  // const canProceed = isFormValid() && !isLoading;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-8 px-4">

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
+import { useState } from "react";
+
 import { requestGoogleIdToken } from "../lib/nativeBridge";
+import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
 
 export default function GoogleButtonRegister() {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,14 +18,13 @@ export default function GoogleButtonRegister() {
       // signIn con redirect: true (comportamiento por defecto si no se especifica redirect)
       // no devuelve una promesa que resuelva aquí si la redirección es exitosa.
       // Simplemente navega. Si hay un error ANTES de la redirección, puede devolver un error.
-  let target = "/home?showProfileModal=true";
-  try {
-    // basic client-side guard: force internal route
-    if (!target.startsWith('/') || target.startsWith('//') || target.startsWith('/api') || target.startsWith('/auth') || target.startsWith('/login')) {
-      target = '/home?showProfileModal=true';
-    }
-  } catch {}
-  if (isWebViewRuntime()) {
+      let target = "/home?showProfileModal=true";
+      // basic client-side guard: force internal route
+      if (!target.startsWith('/') || target.startsWith('//') || target.startsWith('/api') || target.startsWith('/auth') || target.startsWith('/login')) {
+        target = '/home?showProfileModal=true';
+      }
+
+      if (isWebViewRuntime()) {
         const idToken = await requestGoogleIdToken(15000);
         if (idToken) {
           const bridge = buildBridgeCallback(target);
@@ -64,7 +64,9 @@ export default function GoogleButtonRegister() {
   return (
     <button
       className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-70"
-      onClick={handleSignIn}
+      onClick={() => {
+        void handleSignIn();
+      }}
       disabled={isLoading}
     >
       {isLoading ? (

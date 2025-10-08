@@ -49,7 +49,7 @@ export const destinatarioQuerySchema = z
     id: z.string().regex(/^\d+$/).optional(),
     email: z.string().trim().email().optional(),
   })
-  .refine((q) => true, {
+  .refine((_q) => true, {
     message: "",
     path: [],
   });

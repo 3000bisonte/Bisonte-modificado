@@ -1,8 +1,9 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
+
 import { requestGoogleIdToken } from "../lib/nativeBridge";
+import { isWebViewRuntime, buildBridgeCallback } from "../lib/ua";
 
 export default function GoogleButton() {
   return (

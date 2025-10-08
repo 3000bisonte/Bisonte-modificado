@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from "next-auth/middleware";
-// Importar funciones de seguridad
-import { SecurityHeadersService } from './src/lib/securityHeaders.js';
 
 // Combined middleware: handles auth protection + WebView fixes + canonical host
 // Nota: Para Capacitor, el flujo de Google es SIEMPRE nativo (sin OAuth). Este middleware solo maneja errores genéricos.
@@ -27,7 +25,6 @@ function mainMiddleware(request) {
 
 	// If user lands on API/UI error endpoint with OAuthCallback, force bridge to home (drastic, unconditional)
 	if (url.pathname.startsWith('/api/auth/error') || url.pathname.startsWith('/auth/error')) {
-		const qs = url.search || '';
 		// Unconditional: any API error goes to bridge home
 		const bridge = new URL('/auth/bridge', url);
 		bridge.search = '?to=%2Fhome';
@@ -261,13 +258,12 @@ function isBlockedPath(pathname) {
 
 function hasBlockedPatterns(request) {
   const { pathname, search } = request.nextUrl;
-  const userAgent = request.headers.get('user-agent') || '';
   
   const maliciousPatterns = [
     /(\bUNION\b|\bSELECT\b|\bINSERT\b|\bDROP\b|\bDELETE\b)/i,
     /<script|javascript:/i,
     /\.\.\/|%2e%2e%2f/i,
-    /(\||\;|\&|\$\(|\`)/
+    /[|;&$(`]/
   ];
 
   const fullUrl = pathname + search;

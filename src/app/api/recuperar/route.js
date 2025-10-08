@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createPasswordRecovery, checkRateLimit, getClientIP, getClientUserAgent } from "../../../lib/security";
+
 import { sendPasswordRecoveryEmail } from "../../../lib/email";
+import { createPasswordRecovery, checkRateLimit, getClientIP, getClientUserAgent } from "../../../lib/security";
 import prisma from "../../../libs/prisma";
 
 /**

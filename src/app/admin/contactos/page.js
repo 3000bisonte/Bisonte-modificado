@@ -1,12 +1,13 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import Notification from "@/components/Notification";
-import ConfirmModal from "@/components/ConfirmModal";
-import { useNotification } from "@/context/NotificationContext";
-import { useConfirmModal } from "@/context/ConfirmModalContext";
+
 import BottomNav from "@/components/BottomNav";
+import ConfirmModal from "@/components/ConfirmModal";
+import Notification from "@/components/Notification";
+import { useConfirmModal } from "@/context/ConfirmModalContext";
+import { useNotification } from "@/context/NotificationContext";
 
 export default function AdminContactos() {
   const { data: session, status } = useSession();
@@ -174,7 +175,7 @@ export default function AdminContactos() {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "Sin fecha";
+    if (!dateString) {return "Sin fecha";}
     try {
       return new Date(dateString).toLocaleDateString("es-ES", {
         year: "numeric",
@@ -189,22 +190,22 @@ export default function AdminContactos() {
   };
 
   const truncateText = (text, maxLength = 100) => {
-    if (!text) return "";
-    if (text.length <= maxLength) return text;
+    if (!text) {return "";}
+    if (text.length <= maxLength) {return text;}
     return text.substring(0, maxLength) + "...";
   };
 
   const getPriorityColor = (email) => {
-    if (email?.includes("@gmail.com")) return "bg-blue-100 text-blue-800";
-    if (email?.includes("@hotmail.com")) return "bg-purple-100 text-purple-800";
-    if (email?.includes("@yahoo.com")) return "bg-yellow-100 text-yellow-800";
+    if (email?.includes("@gmail.com")) {return "bg-blue-100 text-blue-800";}
+    if (email?.includes("@hotmail.com")) {return "bg-purple-100 text-purple-800";}
+    if (email?.includes("@yahoo.com")) {return "bg-yellow-100 text-yellow-800";}
     return "bg-gray-100 text-gray-800";
   };
 
   const getMessageStats = () => {
     const total = mensajes.length;
     const recent = mensajes.filter(m => {
-      if (!m.creadoEn) return false;
+      if (!m.creadoEn) {return false;}
       const messageDate = new Date(m.creadoEn);
       const dayAgo = new Date();
       dayAgo.setDate(dayAgo.getDate() - 1);

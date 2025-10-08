@@ -10,7 +10,7 @@ export default function WithDelayLoader({ children, min = 5000, max = 10000 }) {
     return () => clearTimeout(timer);
   }, [min, max]);
 
-  if (loading) return null; // Next.js mostrará loading.js global
+  if (loading) {return null;} // Next.js mostrará loading.js global
 
   return children;
 }

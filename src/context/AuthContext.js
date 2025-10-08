@@ -1,5 +1,7 @@
 'use client';
 import { createContext, useContext } from 'react';
+
+// eslint-disable-next-line import/no-unresolved
 import { useAuthSession } from '@/hooks/useAuthSession';
 
 const AuthContext = createContext();

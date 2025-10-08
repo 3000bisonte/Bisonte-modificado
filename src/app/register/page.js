@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function Register() {
   const [nombre, setNombre] = useState("");
@@ -31,60 +31,60 @@ export default function Register() {
 
   // Handlers de validación en vivo
   const handleNombreBlur = () => {
-    if (!nombre) setNombreError("El nombre es obligatorio.");
-    else if (!validarNombre(nombre)) setNombreError("Solo letras y espacios.");
-    else setNombreError("");
+    if (!nombre) {setNombreError("El nombre es obligatorio.");}
+    else if (!validarNombre(nombre)) {setNombreError("Solo letras y espacios.");}
+    else {setNombreError("");}
   };
   const handleCelularBlur = () => {
-    if (!celular) setCelularError("El celular es obligatorio.");
-    else if (!validarCelular(celular)) setCelularError("Ejemplo: +573001234567");
-    else setCelularError("");
+    if (!celular) {setCelularError("El celular es obligatorio.");}
+    else if (!validarCelular(celular)) {setCelularError("Ejemplo: +573001234567");}
+    else {setCelularError("");}
   };
   const handleCiudadBlur = () => {
-    if (!ciudad) setCiudadError("La ciudad es obligatoria.");
-    else if (!validarCiudad(ciudad)) setCiudadError("Solo letras y espacios.");
-    else setCiudadError("");
+    if (!ciudad) {setCiudadError("La ciudad es obligatoria.");}
+    else if (!validarCiudad(ciudad)) {setCiudadError("Solo letras y espacios.");}
+    else {setCiudadError("");}
   };
   const handleEmailBlur = () => {
-    if (!email) setEmailError("El correo es obligatorio.");
-    else if (!validarEmail(email)) setEmailError("Correo no válido.");
-    else setEmailError("");
+    if (!email) {setEmailError("El correo es obligatorio.");}
+    else if (!validarEmail(email)) {setEmailError("Correo no válido.");}
+    else {setEmailError("");}
   };
   const handlePasswordBlur = () => {
-    if (!password) setPasswordError("La contraseña es obligatoria.");
-    else if (!validarPassword(password)) setPasswordError("Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 caracter especial.");
-    else setPasswordError("");
+    if (!password) {setPasswordError("La contraseña es obligatoria.");}
+    else if (!validarPassword(password)) {setPasswordError("Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 caracter especial.");}
+    else {setPasswordError("");}
   };
 
   // Limpiar errores automáticamente al corregir
   const handleNombreChange = (e) => {
     setNombre(e.target.value);
     if (nombreError) {
-      if (e.target.value && validarNombre(e.target.value)) setNombreError("");
+      if (e.target.value && validarNombre(e.target.value)) {setNombreError("");}
     }
   };
   const handleCelularChange = (e) => {
     setCelular(e.target.value);
     if (celularError) {
-      if (e.target.value && validarCelular(e.target.value)) setCelularError("");
+      if (e.target.value && validarCelular(e.target.value)) {setCelularError("");}
     }
   };
   const handleCiudadChange = (e) => {
     setCiudad(e.target.value);
     if (ciudadError) {
-      if (e.target.value && validarCiudad(e.target.value)) setCiudadError("");
+      if (e.target.value && validarCiudad(e.target.value)) {setCiudadError("");}
     }
   };
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
     if (emailError) {
-      if (e.target.value && validarEmail(e.target.value)) setEmailError("");
+      if (e.target.value && validarEmail(e.target.value)) {setEmailError("");}
     }
   };
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
     if (passwordError) {
-      if (e.target.value && validarPassword(e.target.value)) setPasswordError("");
+      if (e.target.value && validarPassword(e.target.value)) {setPasswordError("");}
     }
   };
 
@@ -247,14 +247,14 @@ export default function Register() {
           <label htmlFor="acepta" className="text-gray-300 text-xs">
             Acepto{" "}
             <a
-              href="#"
+              href="/terminos"
               className="text-[#41e0b3] underline"
             >
               términos y condiciones
             </a>{" "}
             y la{" "}
             <a
-              href="#"
+              href="/privacidad"
               className="text-[#41e0b3] underline"
             >
               política de privacidad

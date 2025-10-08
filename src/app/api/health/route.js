@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { compose, handle, withErrorBoundary } from "@/lib/http";
 
 /**
@@ -25,7 +26,7 @@ export const GET = compose(
   return res;
 });
 
-export async function OPTIONS(request) {
+export function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {

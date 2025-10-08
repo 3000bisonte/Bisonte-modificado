@@ -5,7 +5,7 @@ import { ZodSchema } from "zod";
 
 // Types
 export type TraceId = string;
-export type HandlerContext<TBody = any, TSession = any> = {
+export type HandlerContext<TBody = unknown, TSession = unknown> = {
   traceId: TraceId;
   body?: TBody;
   session?: TSession;
@@ -13,7 +13,7 @@ export type HandlerContext<TBody = any, TSession = any> = {
   meta?: Record<string, unknown>;
 };
 
-export type HandlerResult<T = any> =
+export type HandlerResult<T = unknown> =
   | NextResponse
   | {
       data?: T;
@@ -23,7 +23,7 @@ export type HandlerResult<T = any> =
       headers?: Record<string, string>;
     };
 
-export type Handler<TBody = any, TOut = any> = (
+export type Handler<TBody = unknown, TOut = unknown> = (
   req: NextRequest,
   ctx: HandlerContext<TBody>
 ) => Promise<HandlerResult<TOut>>;
@@ -32,7 +32,7 @@ export type Middleware = (handler: Handler) => Handler;
 
 // Utilities
 const toErrorString = (err: unknown): string => {
-  if (err instanceof Error) return err.message;
+  if (err instanceof Error) {return err.message;}
   try {
     return typeof err === "string" ? err : JSON.stringify(err);
   } catch {
@@ -43,21 +43,22 @@ const toErrorString = (err: unknown): string => {
 export const getTraceId = (req?: NextRequest): TraceId => {
   const headerId = req?.headers.get("x-trace-id");
   // crypto.randomUUID is available in Node 18+
-  const uuid = (globalThis as any).crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  type GlobalWithCrypto = typeof globalThis & { crypto?: { randomUUID?: () => string } };
+  const uuid = (globalThis as GlobalWithCrypto).crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   return headerId || uuid;
 };
 
 export const getClientIp = (req: NextRequest): string => {
   const xfwd = req.headers.get("x-forwarded-for");
-  if (xfwd) return xfwd.split(",")[0].trim();
+  if (xfwd) {return xfwd.split(",")[0].trim();}
   const realIp = req.headers.get("x-real-ip");
-  if (realIp) return realIp.trim();
+  if (realIp) {return realIp.trim();}
   // Next.js local dev often exposes 127.0.0.1
   return "127.0.0.1";
 };
 
 // Response helpers with standard shape
-export function ok<T = any>(
+export function ok<T = unknown>(
   traceId: TraceId,
   data: T,
   init?: { status?: number; message?: string; headers?: Record<string, string> }
@@ -76,15 +77,15 @@ export function err(
   init?: { message?: string; headers?: Record<string, string> }
 ) {
   const { message, headers = {} } = init || {};
-  const payload: any = {
+  const payload: Record<string, unknown> = {
     success: false,
     error: typeof error === "string" ? error : toErrorString(error),
     message,
     traceId,
   };
   // If it's a zod-like object, include issues
-  if (typeof error === "object" && error && (error as any).issues) {
-    payload.issues = (error as any).issues;
+  if (typeof error === "object" && error && 'issues' in error) {
+    payload.issues = (error as { issues: unknown }).issues;
   }
   return NextResponse.json(payload, {
     status,
@@ -107,7 +108,14 @@ export const handle = (options?: { defaultStatus?: number }): Middleware => {
           return result;
         }
 
-        const { data, error, message, status, headers } = (result || {}) as any;
+        type ResultObject = {
+          data?: unknown;
+          error?: unknown;
+          message?: string;
+          status?: number;
+          headers?: Record<string, string>;
+        };
+        const { data, error, message, status, headers } = (result || {}) as ResultObject;
         if (error !== undefined) {
           const code = typeof status === "number" ? status : 400;
           return err(traceId, code, error, { message, headers });
@@ -171,7 +179,7 @@ export const withValidation = <T>(
         return err(traceId, 400, { message: "Invalid input", issues }, { message: "Invalid input" });
       }
 
-      return next(req, { ...ctx, traceId, body: parsed.data as any });
+      return next(req, { ...ctx, traceId, body: parsed.data });
     };
   };
 };
@@ -183,17 +191,20 @@ export const withAuth = (options?: { roles?: string[] }): Middleware => {
     return async (req, ctx) => {
       const traceId = ctx.traceId || getTraceId(req);
       // Lazy import next-auth and our auth options to avoid module-scope side effects
-      const [{ getServerSession }, { authOptions }] = await Promise.all([
+      const [{ getServerSession }, authModule] = await Promise.all([
         import("next-auth"),
-        import("@/lib/auth"),
+        import("@/lib/auth.js"),
       ]);
-      const session = await getServerSession(authOptions as any);
+      // @ts-expect-error - authOptions exists in auth.js but types don't reflect it
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument
+      const session = await getServerSession(authModule.authOptions);
       if (!session) {
         return err(traceId, 401, "Unauthorized", { message: "Not authenticated" });
       }
       if (roles && roles.length > 0) {
-        const role = (session as any).user?.role;
-        if (!roles.includes(role)) {
+        type SessionWithRole = { user?: { role?: string } };
+        const role = (session as SessionWithRole).user?.role;
+        if (!role || !roles.includes(role)) {
           return err(traceId, 403, "Forbidden", { message: "Insufficient permissions" });
         }
       }
@@ -204,8 +215,10 @@ export const withAuth = (options?: { roles?: string[] }): Middleware => {
 
 // Simple in-memory rate limiter (per-process)
 type RateBucket = { count: number; resetAt: number };
-const globalRateStore: Map<string, RateBucket> = (globalThis as any).__rateStore || new Map();
-(globalThis as any).__rateStore = globalRateStore;
+type GlobalWithRateStore = typeof globalThis & { __rateStore?: Map<string, RateBucket> };
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+const globalRateStore: Map<string, RateBucket> = (globalThis as GlobalWithRateStore).__rateStore || new Map();
+(globalThis as GlobalWithRateStore).__rateStore = globalRateStore;
 
 export const withRateLimit = (options: {
   key?: (req: NextRequest) => string;
@@ -251,7 +264,7 @@ export const compose = (...middlewares: Middleware[]) => (handler: Handler): Han
 };
 
 // Convenience to build a standard success response inside handlers
-export const success = <T = any>(data: T, init?: { message?: string; status?: number; headers?: Record<string, string> }): HandlerResult<T> => ({
+export const success = <T = unknown>(data: T, init?: { message?: string; status?: number; headers?: Record<string, string> }): HandlerResult<T> => ({
   data,
   message: init?.message,
   status: init?.status,

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 const ModalFormularioPerfil = ({ isOpen, onClose, perf }) => {
   console.log("perf-modal-guar-pwef", perf);
-  const router = useRouter();
+  // const _router = useRouter();
   const [formData, setFormData] = useState({
     nombrePerfil: "",
     numeroDocumento: "",
@@ -17,7 +18,8 @@ const ModalFormularioPerfil = ({ isOpen, onClose, perf }) => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_successMessage, setSuccessMessage] = useState("");
 
   // useEffect(() => {
   //   const fetchData = async () => {
@@ -90,7 +92,7 @@ const ModalFormularioPerfil = ({ isOpen, onClose, perf }) => {
       );
     }
   };
-  if (!isOpen) return null;
+  if (!isOpen) {return null;}
   return (
     <>
       {/* Fondo oscuro detrás del modal */}
