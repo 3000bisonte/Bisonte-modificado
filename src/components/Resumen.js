@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 
-
 import { ADMOB_CONFIG } from "../config/admob.config";
+import { useMultipleLoadingMonitor } from "../hooks/useLoadingMonitor";
 import { useAdMob } from "../services/AdMobService";
 
 import BottomNav from "./BottomNav";
@@ -73,6 +73,13 @@ export default function Resumen() {
   const adTimeoutRef = useRef(null);
   const messagePortRef = useRef(null);
   const MAX_RETRIES = 3;
+
+  // 🎯 Monitorear múltiples estados de loading
+  useMultipleLoadingMonitor({
+    'shipment-creation': isCreatingShipment,
+    'admob-loading': adMobLoading,
+    'ad-loading': adState === 'loading'
+  }, 'Procesando tu solicitud...');
   const DEFAULT_REWARD_AMOUNT = Number(
     ADMOB_CONFIG?.REWARD_SETTINGS?.DISCOUNT_AMOUNT ?? 0
   );

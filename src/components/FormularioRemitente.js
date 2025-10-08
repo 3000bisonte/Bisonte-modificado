@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
+import { useLoadingMonitor } from "../hooks/useLoadingMonitor";
+
 import BottomNav from "./BottomNav";
 
 const FormularioRemitente = ({ id: _id }) => {
@@ -23,6 +25,9 @@ const FormularioRemitente = ({ id: _id }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
+
+  // 🎯 Monitorear estado isLoading - activa pantalla global después de 3 segundos
+  useLoadingMonitor(isLoading, 'formulario-remitente', 'Guardando información del remitente...');
 
   // Verificar que estamos en el cliente para evitar errores de hidratación
   useEffect(() => {

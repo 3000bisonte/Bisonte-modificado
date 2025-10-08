@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 
+import { useLoadingMonitor } from "../hooks/useLoadingMonitor";
 import { validateApiInput, loginSchema } from "../lib/validation";
 import {
   clearLastActivity,
@@ -23,6 +24,9 @@ const LoginForm = ({ callbackUrl }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // 🎯 Monitorear estado isLoading - activa pantalla global después de 3 segundos
+  useLoadingMonitor(isLoading, 'login-form', 'Iniciando sesión...');
   const [errorMessage, setErrorMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const router = useRouter();

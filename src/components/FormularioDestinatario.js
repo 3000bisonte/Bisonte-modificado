@@ -3,11 +3,16 @@
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
+import { useLoadingMonitor } from "../hooks/useLoadingMonitor";
+
 import BottomNav from "./BottomNav";
 
 export default function FormularioDestinatario({ id }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+
+  // 🎯 Monitorear estado isLoading - activa pantalla global después de 3 segundos
+  useLoadingMonitor(isLoading, 'formulario-destinatario', 'Guardando información del destinatario...');
   const [errorMessage, setErrorMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   // @ts-expect-error - showTooltip is used but setter is not needed

@@ -3,6 +3,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
+import { useLoadingMonitor } from "../hooks/useLoadingMonitor";
+
 import BottomNav from "./BottomNav";
 
 // --- Helper Functions ---
@@ -104,6 +106,9 @@ export default function Cotizador() {
     const [, setProfileError] = useState(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [isLoadingAction, setIsLoadingAction] = useState(false);
+
+    // 🎯 Monitorear estado isLoadingAction - activa pantalla global después de 3 segundos
+    useLoadingMonitor(isLoadingAction, 'cotizador-action', 'Procesando cotización...');
 
     const [formData, setFormData] = useState({
         ciudadOrigen: "",
