@@ -5,7 +5,9 @@ import type { FirebaseAuthenticationPlugin } from '@capacitor-firebase/authentic
 import React, { useEffect, useState } from 'react';
 
 import CapacitorGoogleAuth from '@/lib/capacitor-google-auth';
+// @ts-ignore - Importing from mixed JS/TS files
 import NotificationModal from './NotificationModal';
+// @ts-ignore - useNotification is a JS file
 import { useNotification } from '../hooks/useNotification';
 
 interface CapacitorWindow extends Window {

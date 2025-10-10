@@ -67,8 +67,8 @@ interface ContextWithBody {
   body?: PaymentData;
 }
 
-export const POST = compose(withRateLimit({ limit: 10, windowSec: 60 }), withValidation(mercadoPagoCreateSchema), handle(), withErrorBoundary())(async (request: NextRequest, context: ContextWithBody) => {
-  const body = context.body || {} as PaymentData;
+export const POST = compose(withRateLimit({ limit: 10, windowSec: 60 }), withValidation(mercadoPagoCreateSchema), handle(), withErrorBoundary())(async (request: NextRequest, context: any) => {
+  const body = (context.body || {}) as PaymentData;
   const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || '';
   const realIp = (clientIp === "::1" || clientIp === "127.0.0.1") ? "186.86.33.18" : clientIp;
   const paymentData: PaymentData & { ip: string } = {
