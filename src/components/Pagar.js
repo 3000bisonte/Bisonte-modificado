@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import NotificationModal from "./NotificationModal";
+import { useNotification } from "../hooks/useNotification";
 const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPagarAhora: _onPagarAhora, onClick: _onClick }) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_showModal, _setShowModal] = useState(false);
@@ -22,6 +24,9 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
 
   const router = useRouter();
   const { data: session } = useSession();
+
+  // 🎨 Modal de notificaciones
+  const { modalState, showSuccess, showError, showWarning, showInfo, closeModal } = useNotification();
 
   useEffect(() => {
     const savedAdCount = localStorage.getItem("adCount");
@@ -259,7 +264,7 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
   const handleFreeShipment = useCallback(async () => {
     if (!perfilId) {
       console.error("No se puede registrar el envío: Falta perfilId.");
-      alert("Error al obtener tus datos de perfil. Intenta recargar la página.");
+      showError('Error de Perfil', 'Error al obtener tus datos de perfil. Intenta recargar la página.');
       setIsCreatingShipment(false);
       return;
     }
@@ -318,7 +323,7 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
         localStorage.setItem("envioDatos", JSON.stringify(responseData));
         localStorage.setItem("envioExitoso", "true");
         
-        alert("¡Envío gratuito realizado exitosamente! Espere pronta actualización.");
+        showSuccess('¡Envío Registrado! 🎉', '¡Envío gratuito realizado exitosamente! Serás redirigido a Mis Envíos.');
         
         setTimeout(() => {
           router.push("/misenvios");
@@ -328,15 +333,15 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
         console.error("❌ Error al registrar el envío gratuito: Status", response.status);
         const errorData = await response.text();
         console.error("Detalle del error:", errorData);
-        alert(`Hubo un problema al registrar tu envío (Estado: ${response.status}). Por favor, contacta a soporte.`);
+        showError('Error al Registrar', `Hubo un problema al registrar tu envío (Estado: ${response.status}). Por favor, contacta a soporte.`);
       }
     } catch (error) {
       console.error("❌ Error de red al registrar el envío gratuito:", error);
-      alert("Hubo un problema de conexión al registrar tu envío. Por favor, inténtalo de nuevo.");
+      showError('Error de Conexión', 'Hubo un problema de conexión al registrar tu envío. Por favor, inténtalo de nuevo.');
     } finally {
       setIsCreatingShipment(false);
     }
-  }, [perfilId, router, costoTotal, session?.user?.email]);
+  }, [perfilId, router, costoTotal, session?.user?.email, showSuccess, showError]);
   const handleClick = () => {
     // Asegurarse que costoTotal no sea null antes de comparar
     if (costoTotal !== null && costoTotal <= 0) {
@@ -354,9 +359,7 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
     } else {
       // costoTotal es null (aún cargando o error al cargar)
       console.warn("Intento de pagar con costoTotal nulo.");
-      alert(
-        "Espera a que cargue el costo del envío o calcula el costo primero."
-      );
+      showWarning('Costo No Disponible', 'Espera a que cargue el costo del envío o calcula el costo primero.');
     }
   };
   return (
@@ -455,6 +458,16 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
 )}
         </div>
       </div>
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        type={modalState.type}
+        title={modalState.title}
+        message={modalState.message}
+        details={modalState.details}
+      />
     </div>
   );
 };

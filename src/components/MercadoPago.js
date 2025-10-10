@@ -7,6 +7,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Screen from "@/components/BrickStatusScreen";
 
 import InternalProvider from "../app/ContextProvider";
+import NotificationModal from "./NotificationModal";
+import { useNotification } from "../hooks/useNotification";
 
 import "../styles/mercadopago.css";
 //import { guardarEnviosRequest } from "../../api/avu.api";// en mi csao guarar para el historial
@@ -29,6 +31,9 @@ const MercadoPagoComponent = () => {
   const perfilLoaded = useRef(false);
 
   const userEmail = session?.user?.email; // Extrae el email al inicio del componente
+
+  // 🎨 Modal de notificaciones
+  const { modalState, showSuccess, showError, showWarning, showInfo, closeModal } = useNotification();
   const [initializationConfig, setInitializationConfig] = useState(null); // Para guardar { amount: XXX }
   const [isLoadingAmount, setIsLoadingAmount] = useState(true); // Para mostrar "Cargando..."
   const [initError, setInitError] = useState(null);
@@ -217,7 +222,7 @@ const MercadoPagoComponent = () => {
         localStorage.setItem("envioExitoso", "true");
         
         // Mostrar mensaje de éxito y redirigir
-        alert("¡Envío realizado exitosamente! Espere pronta actualización.");
+        showSuccess('¡Pago Exitoso! 🎉', '¡Envío realizado exitosamente! Serás redirigido a Mis Envíos.');
         
         // Redirigir a mis envíos después de un breve delay
         setTimeout(() => {
@@ -226,13 +231,13 @@ const MercadoPagoComponent = () => {
         
       } else {
         console.error("Error al registrar el envío:", responseData);
-        alert("Hubo un error al registrar tu envío. Por favor contacta soporte.");
+        showError('Error al Registrar', 'Hubo un error al registrar tu envío. Por favor contacta soporte.');
       }
     } catch (error) {
       console.error("Error al registrar el envío:", error);
-      alert("Error de conexión al registrar el envío. Inténtalo nuevamente.");
+      showError('Error de Conexión', 'Error de conexión al registrar el envío. Inténtalo nuevamente.');
     }
-  }, [generarNumeroGuia, paymentId, session?.user?.email]);
+  }, [generarNumeroGuia, paymentId, session?.user?.email, showSuccess, showError]);
 
   useEffect(() => {
     if (status === "approved") {
@@ -280,6 +285,16 @@ const MercadoPagoComponent = () => {
       )}
 
       <Screen />
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        type={modalState.type}
+        title={modalState.title}
+        message={modalState.message}
+        details={modalState.details}
+      />
     </InternalProvider>
   );
 };
