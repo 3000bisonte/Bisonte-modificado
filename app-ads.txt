@@ -1,0 +1,6 @@
+# app-ads.txt para Bisonte Logística
+# Este archivo autoriza a Google AdMob a vender inventario publicitario en esta app
+# Más info: https://iabtechlab.com/ads-txt/
+
+# Google AdMob
+google.com, pub-1352045169606160, DIRECT, f08c47fec0942fa0
