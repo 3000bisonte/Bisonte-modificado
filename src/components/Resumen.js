@@ -237,6 +237,12 @@ export default function Resumen() {
   }, []);
 
   const preloadAd = useCallback(() => {
+    // No precargar si es envío gratuito
+    if (costoTotal === 0) {
+      console.log("⏭️ Envío gratuito detectado, no se precarga anuncio");
+      return;
+    }
+
     if (adState === "preloading" || adState === "loading" || adState === "watching") {
       return;
     }
@@ -247,12 +253,15 @@ export default function Resumen() {
         return;
       }
 
+      console.log("📺 Precargando anuncio recompensado (AdMob)...");
       setAdState("preloading");
       void prepareRewardedAd()
         .then((ready) => {
           setAdState(ready ? "ready" : "idle");
           if (!ready) {
             handleAdError("prepare_failed");
+          } else {
+            console.log("✅ Anuncio precargado y listo");
           }
         })
         .catch((error) => {
@@ -263,7 +272,7 @@ export default function Resumen() {
     }
 
     if (window.AndroidInterface?.preloadRewardedAd) {
-      console.log("📺 Precargando anuncio recompensado...");
+      console.log("📺 Precargando anuncio recompensado (Android)...");
       setAdState("preloading");
       try {
         window.AndroidInterface.preloadRewardedAd();
@@ -275,7 +284,7 @@ export default function Resumen() {
       console.log("⚠️ Interfaz de anuncios no disponible.");
       setAdState("idle");
     }
-  }, [adState, adMobSupported, isRewardedReady, prepareRewardedAd, handleAdError]);
+  }, [adState, adMobSupported, isRewardedReady, prepareRewardedAd, handleAdError, costoTotal]);
 
   const showAd = useCallback(async () => {
     if (costoTotal <= 0) {
@@ -604,16 +613,19 @@ export default function Resumen() {
   // Precarga inicial y muestra del modal de oferta
   useEffect(() => {
     if (cotizador && remitente && destinatario && costoTotal > 0) {
-      const timer = setTimeout(preloadAd, 500);
+      // Precarga más temprana para que esté listo antes
+      const timer = setTimeout(preloadAd, 200);
       return () => clearTimeout(timer);
     }
   }, [cotizador, remitente, destinatario, costoTotal, preloadAd]);
 
+  // Precarga inmediata cuando AdMob esté listo
   useEffect(() => {
-    if (adMobSupported && adMobInitialized) {
+    if (adMobSupported && adMobInitialized && costoTotal > 0) {
+      console.log("🚀 AdMob listo, iniciando precarga inmediata del anuncio...");
       preloadAd();
     }
-  }, [adMobSupported, adMobInitialized, preloadAd]);
+  }, [adMobSupported, adMobInitialized, costoTotal, preloadAd]);
 
   useEffect(() => {
     if (adState === "ready" && costoTotal > 0) {
@@ -689,8 +701,8 @@ export default function Resumen() {
       Peso: parseFloat(cotizador.peso) || 1,
       Dimensiones: `${cotizador.largo || 0}x${cotizador.ancho || 0}x${cotizador.alto || 0}`,
       ValorDeclarado: parseFloat(cotizador.valorDeclarado) || 0,
-      FechaCreacion: new Date().toISOString(),
-      FechaActualizacion: new Date().toISOString(),
+      FechaCreacion: new Date(),
+      FechaActualizacion: new Date(),
       // Campos adicionales para tracking
       usuarioEmail: session.user.email,
       metodoPago: "GRATUITO",
@@ -1135,8 +1147,8 @@ export default function Resumen() {
           onWatchAd={handleWatchAdFromModal}
         />
 
-        {/* Feedback visual de AdMob */}
-        {(adState === "loading" || adState === "preloading") && (
+        {/* Feedback visual de AdMob - Solo mostrar si NO es envío gratuito */}
+        {costoTotal > 0 && (adState === "loading" || adState === "preloading") && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
             <div className="bg-white rounded-xl p-8 shadow text-center">
               <span className="block mb-4 text-lg font-bold text-[#41e0b3]">Cargando anuncio...</span>
