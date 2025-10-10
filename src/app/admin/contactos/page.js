@@ -18,6 +18,8 @@ export default function AdminContactos() {
   const [modalRespuesta, setModalRespuesta] = useState(null);
   const [respuesta, setRespuesta] = useState("");
   const [enviandoRespuesta, setEnviandoRespuesta] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
   
   // Estados para notificaciones y modales
   const [notification, setNotification] = useState(null);
@@ -202,9 +204,25 @@ export default function AdminContactos() {
     return "bg-gray-100 text-gray-800";
   };
 
+  // Filtrar mensajes
+  const mensajesFiltrados = mensajes.filter(mensaje => {
+    const matchSearch = (
+      mensaje.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mensaje.correo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mensaje.mensaje?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mensaje.ciudad?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const matchStatus = filterStatus === "all" || 
+      (filterStatus === "nuevo" && !mensaje.leido && !mensaje.respondido) ||
+      (filterStatus === "leido" && mensaje.leido && !mensaje.respondido) ||
+      (filterStatus === "respondido" && mensaje.respondido) ||
+      (filterStatus === "archivado" && mensaje.archivado);
+    return matchSearch && matchStatus;
+  });
+
   const getMessageStats = () => {
-    const total = mensajes.length;
-    const recent = mensajes.filter(m => {
+    const total = mensajesFiltrados.length;
+    const recent = mensajesFiltrados.filter(m => {
       if (!m.creadoEn) {return false;}
       const messageDate = new Date(m.creadoEn);
       const dayAgo = new Date();
@@ -218,10 +236,17 @@ export default function AdminContactos() {
   if (status === "loading" || loading) {
     return (
       <>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 flex items-center justify-center px-4 pb-24">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-600 font-medium text-center">Cargando mensajes...</p>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center px-4 pb-24">
+          <div className="flex flex-col items-center space-y-5">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+              <div className="absolute inset-0 w-16 h-16 border-4 border-pink-200 border-b-pink-600 rounded-full animate-spin" 
+                   style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+            </div>
+            <div className="text-center">
+              <p className="text-slate-700 font-semibold text-lg mb-1">Cargando mensajes...</p>
+              <p className="text-slate-500 text-sm">Preparando centro de comunicación</p>
+            </div>
           </div>
         </div>
         <BottomNav />
@@ -234,68 +259,130 @@ export default function AdminContactos() {
   return (
     <>
       {/* Contenido principal con padding bottom para BottomNav */}
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 pb-24">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          {/* Header */}
-          <div className="mb-8 mt-12 sm:mt-16">
-            <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pb-24">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+          {/* Header Mejorado */}
+          <div className="mb-6 sm:mb-8 mt-6 sm:mt-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6 mb-4 sm:mb-6">
+              <div className="flex items-center space-x-3 sm:space-x-4">
+                <div className="relative">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xl transform hover:scale-110 transition-transform duration-300">
+                    <svg className="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-pink-400 rounded-full border-2 border-white animate-pulse"></div>
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent leading-tight">
+                    Centro de Mensajes
+                  </h1>
+                  <p className="text-slate-600 text-sm sm:text-base mt-1">Panel de gestión de comunicaciones</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800 leading-tight">
-                  Centro de Mensajes
-                </h1>
-                <p className="text-slate-600 text-sm sm:text-base mt-1">
-                  Gestiona todos los mensajes de contacto recibidos
-                </p>
+
+              {/* Buscador y Filtros */}
+              <div className="flex flex-col sm:flex-row gap-3 flex-1 lg:max-w-2xl">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, correo, mensaje..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 text-slate-700 placeholder-slate-400 text-sm"
+                  />
+                  <svg className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                
+                <div className="flex gap-2">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200 text-slate-700 text-sm font-medium cursor-pointer"
+                  >
+                    <option value="all">Todos los estados</option>
+                    <option value="nuevo">🆕 Nuevos</option>
+                    <option value="leido">👁️ Leídos</option>
+                    <option value="respondido">✅ Respondidos</option>
+                    <option value="archivado">📁 Archivados</option>
+                  </select>
+                  
+                  <button
+                    onClick={loadMensajes}
+                    disabled={loading}
+                    className="flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+                  >
+                    <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-10">
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6 hover:shadow-xl transition-shadow duration-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Total de Mensajes</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-slate-800">{stats.total}</p>
-                </div>
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+          {/* Estadísticas Mejoradas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 mb-6 sm:mb-8">
+            <div className="group bg-gradient-to-br from-purple-50 to-white rounded-2xl shadow-lg border border-purple-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-purple-400 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
+                <div className="flex items-center space-x-1 text-xs font-semibold text-purple-600 bg-purple-100 px-2.5 py-1 rounded-full">
+                  <span>Total</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">Total Mensajes</p>
+                <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.total}</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6 hover:shadow-xl transition-shadow duration-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Últimas 24h</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-green-600">{stats.recent}</p>
-                </div>
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <div className="group bg-gradient-to-br from-green-50 to-white rounded-2xl shadow-lg border border-green-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
+                <div className="flex items-center space-x-1 text-xs font-semibold text-green-700 bg-green-100 px-2.5 py-1 rounded-full">
+                  <span>{stats.total > 0 ? Math.round((stats.recent / stats.total) * 100) : 0}%</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">Últimas 24h</p>
+                <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{stats.recent}</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6 hover:shadow-xl transition-shadow duration-200 sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1">Tasa de Respuesta</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-blue-600">95%</p>
-                </div>
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <div className="group bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-lg border border-blue-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer sm:col-span-2 lg:col-span-1">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-400 to-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
+                <div className="flex items-center space-x-1 text-xs font-semibold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full">
+                  <span>{mensajes.length > 0 ? Math.round((mensajes.filter(m => m.respondido).length / mensajes.length) * 100) : 0}%</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">Respondidos</p>
+                <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">{mensajes.filter(m => m.respondido).length}</p>
               </div>
             </div>
           </div>
@@ -317,19 +404,23 @@ export default function AdminContactos() {
               </div>
             </div>
             
-            {mensajes.length === 0 ? (
+            {mensajesFiltrados.length === 0 ? (
               <div className="p-8 sm:p-12 text-center">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-slate-100 to-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <p className="text-slate-600 font-medium text-base sm:text-lg">No hay mensajes de contacto</p>
-                <p className="text-slate-500 text-sm mt-2">Los mensajes aparecerán aquí cuando los usuarios contacten</p>
+                <p className="text-slate-700 font-semibold text-base sm:text-lg mb-1">
+                  {searchTerm || filterStatus !== "all" ? "No se encontraron resultados" : "No hay mensajes de contacto"}
+                </p>
+                <p className="text-slate-500 text-sm">
+                  {searchTerm || filterStatus !== "all" ? "Intenta con otros términos de búsqueda o filtros" : "Los mensajes aparecerán aquí cuando los usuarios contacten"}
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-slate-200">
-                {mensajes.map((mensaje, index) => (
+                {mensajesFiltrados.map((mensaje, index) => (
                   <div key={mensaje.id || index} className={`p-4 sm:p-6 hover:bg-slate-50 transition-colors duration-150 ${
                     mensaje.leido ? 'bg-gray-50' : 'bg-white'
                   } ${mensaje.archivado ? 'opacity-60' : ''}`}>

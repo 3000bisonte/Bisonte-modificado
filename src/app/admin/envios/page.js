@@ -12,6 +12,8 @@ export default function AdminEnvios() {
   const [actualizando, setActualizando] = useState(null);
   const [loading, setLoading] = useState(true);
   const [envioExpandido, setEnvioExpandido] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterEstado, setFilterEstado] = useState("all");
   
   // ✅ SISTEMA DE NOTIFICACIONES LOCAL SIMPLE
   const [notification, setNotification] = useState(null);
@@ -251,12 +253,29 @@ export default function AdminEnvios() {
     });
   };
 
+  // Filtrar envíos según búsqueda y estado
+  const enviosFiltrados = envios.filter(envio => {
+    const matchSearch = (
+      envio.NumeroGuia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      envio.Remitente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      envio.Destinatario?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      envio.Origen?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      envio.Destino?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const matchEstado = filterEstado === "all" || envio.Estado === filterEstado;
+    return matchSearch && matchEstado;
+  });
+
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-600 font-medium">Cargando envíos...</p>
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-teal-200 border-b-teal-600 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+          </div>
+          <p className="text-slate-700 font-semibold text-lg">Cargando envíos...</p>
+          <p className="text-slate-500 text-sm">Obteniendo información del sistema</p>
         </div>
       </div>
     );
@@ -265,103 +284,151 @@ export default function AdminEnvios() {
   const estadisticas = getEstadisticas();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       {/* ✅ CONTAINER PRINCIPAL CON PADDING RESPONSIVO */}
-      <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8 pb-24">
         
         {/* ✅ HEADER MEJORADO Y AJUSTADO */}
         <div className="mb-6 sm:mb-8 mt-6 sm:mt-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6 mb-4 sm:mb-6">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="relative">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xl transform hover:scale-110 transition-transform duration-300">
+                  <svg className="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 leading-tight drop-shadow">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent leading-tight">
                   Gestión de Envíos
                 </h1>
-                <p className="text-slate-600 text-sm sm:text-base mt-1 hidden sm:block">
-                  Administra y actualiza el estado de todos los envíos
-                </p>
+                <p className="text-slate-600 text-sm sm:text-base mt-1">Panel de control y seguimiento de envíos</p>
               </div>
             </div>
-            {/* Botón de actualización */}
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={loadEnvios}
-                disabled={loading}
-                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-emerald-600 hover:text-white bg-emerald-50 hover:bg-emerald-500 rounded-lg shadow transition-colors disabled:opacity-50"
-              >
-                <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+
+            {/* Buscador y Filtros */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-1 lg:max-w-2xl">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Buscar por guía, remitente, destinatario..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 text-slate-700 placeholder-slate-400 text-sm"
+                />
+                <svg className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <span>Actualizar</span>
-              </button>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              
+              <div className="flex gap-2">
+                <select
+                  value={filterEstado}
+                  onChange={(e) => setFilterEstado(e.target.value)}
+                  className="px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 text-slate-700 text-sm font-medium cursor-pointer"
+                >
+                  <option value="all">Todos los estados</option>
+                  <option value="RECOLECCION_PENDIENTE">🕐 Recolección pendiente</option>
+                  <option value="RECOGIDO_TRANSPORTADORA">✅ Recogido</option>
+                  <option value="EN_TRANSPORTE">🚛 En transporte</option>
+                  <option value="EN_CIUDAD_DESTINO">🏙️ En destino</option>
+                  <option value="EN_DISTRIBUCION">📦 En distribución</option>
+                  <option value="ENTREGADO">✅ Entregado</option>
+                </select>
+                
+                <button
+                  onClick={loadEnvios}
+                  disabled={loading}
+                  className="flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+                >
+                  <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-          {/* Descripción móvil */}
-          <p className="text-slate-600 text-sm sm:hidden">
-            Administra y actualiza el estado de todos los envíos
-          </p>
         </div>
 
-        {/* ✅ STATS CARDS CON PADDING MEJORADO */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-3 sm:p-4 lg:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1 truncate">Total Envíos</p>
-                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-800">{envios.length}</p>
-              </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl lg:rounded-2xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* ✅ ESTADÍSTICAS MEJORADAS CON ANIMACIONES */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-6 sm:mb-8">
+          <div className="group bg-gradient-to-br from-emerald-50 to-white rounded-2xl shadow-lg border border-emerald-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-emerald-400 to-green-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
               </div>
+              <div className="flex items-center space-x-1 text-xs font-semibold text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full">
+                <span>Total</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">Total Envíos</p>
+              <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">{enviosFiltrados.length}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-3 sm:p-4 lg:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1 truncate">Pendientes</p>
-                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-amber-600">{estadisticas.RECOLECCION_PENDIENTE || 0}</p>
-              </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl lg:rounded-2xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="group bg-gradient-to-br from-yellow-50 to-white rounded-2xl shadow-lg border border-yellow-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
+              <div className="flex items-center space-x-1 text-xs font-semibold text-yellow-700 bg-yellow-100 px-2.5 py-1 rounded-full">
+                <span>{enviosFiltrados.length > 0 ? Math.round((enviosFiltrados.filter(e => e.Estado === 'RECOLECCION_PENDIENTE').length / enviosFiltrados.length) * 100) : 0}%</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">Pendientes</p>
+              <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">{estadisticas.RECOLECCION_PENDIENTE || 0}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-3 sm:p-4 lg:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1 truncate">En Transporte</p>
-                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-600">{estadisticas.EN_TRANSPORTE || 0}</p>
-              </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl lg:rounded-2xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="group bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-lg border border-blue-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-400 to-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
+              <div className="flex items-center space-x-1 text-xs font-semibold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full">
+                <span>{enviosFiltrados.length > 0 ? Math.round((enviosFiltrados.filter(e => e.Estado === 'EN_TRANSPORTE').length / enviosFiltrados.length) * 100) : 0}%</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">En Tránsito</p>
+              <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">{estadisticas.EN_TRANSPORTE || 0}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-3 sm:p-4 lg:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 mb-1 truncate">Entregados</p>
-                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">{estadisticas.ENTREGADO || 0}</p>
-              </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl lg:rounded-2xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          <div className="group bg-gradient-to-br from-green-50 to-white rounded-2xl shadow-lg border border-green-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
+              <div className="flex items-center space-x-1 text-xs font-semibold text-green-700 bg-green-100 px-2.5 py-1 rounded-full">
+                <span>{enviosFiltrados.length > 0 ? Math.round((enviosFiltrados.filter(e => e.Estado === 'ENTREGADO').length / enviosFiltrados.length) * 100) : 0}%</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">Entregados</p>
+              <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{estadisticas.ENTREGADO || 0}</p>
             </div>
           </div>
         </div>
@@ -372,14 +439,19 @@ export default function AdminEnvios() {
             <h2 className="text-lg sm:text-xl font-semibold text-slate-800">Lista de Envíos</h2>
           </div>
           
-          {envios.length === 0 ? (
+          {enviosFiltrados.length === 0 ? (
             <div className="p-8 sm:p-12 text-center">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-slate-100 to-emerald-50 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6 sm:w-8 sm:h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              <p className="text-slate-600 font-medium text-sm sm:text-base">No hay envíos registrados</p>
+              <p className="text-slate-700 font-semibold text-base sm:text-lg mb-1">
+                {searchTerm || filterEstado !== "all" ? "No se encontraron resultados" : "No hay envíos registrados"}
+              </p>
+              <p className="text-slate-500 text-sm">
+                {searchTerm || filterEstado !== "all" ? "Intenta con otros términos de búsqueda o filtros" : "Los envíos aparecerán aquí cuando se registren"}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -407,7 +479,7 @@ export default function AdminEnvios() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {envios.map((envio) => (
+                  {enviosFiltrados.map((envio) => (
                     <React.Fragment key={envio.id}>
                       <tr className="hover:bg-slate-50 transition-colors duration-150">
                         <td className="px-3 sm:px-6 py-3 sm:py-4">
