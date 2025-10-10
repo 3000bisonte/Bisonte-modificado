@@ -10,6 +10,8 @@ import { useAdMob } from "../services/AdMobService";
 
 import BottomNav from "./BottomNav";
 import MegaSaleModal from "./MegaSaleModal";
+import NotificationModal from "./NotificationModal";
+import { useNotification } from "../hooks/useNotification";
 
 // --- Helper Functions ---
 function formatDate(date) {
@@ -36,80 +38,6 @@ const ciudades = {
 const REWARDED_CHAIN_MIN = 2;
 const REWARDED_CHAIN_MAX = 3;
 
-// --- Modal Component ---
-function NotificationModal({ isOpen, onClose, type, title, message, details }) {
-  if (!isOpen) return null;
-
-  const typeConfig = {
-    success: {
-      bg: "bg-green-100",
-      border: "border-green-500",
-      icon: "text-green-600",
-      iconPath: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
-    },
-    error: {
-      bg: "bg-red-100",
-      border: "border-red-500",
-      icon: "text-red-600",
-      iconPath: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z",
-    },
-    warning: {
-      bg: "bg-amber-100",
-      border: "border-amber-500",
-      icon: "text-amber-600",
-      iconPath: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
-    },
-    info: {
-      bg: "bg-blue-100",
-      border: "border-blue-500",
-      icon: "text-blue-600",
-      iconPath: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-    },
-  };
-
-  const config = typeConfig[type] || typeConfig.info;
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl border-2 border-gray-200 p-8 max-w-md w-full mx-4 transform animate-scale-in">
-        {/* Icon */}
-        <div className={`w-20 h-20 ${config.bg} rounded-full flex items-center justify-center mx-auto mb-6 border-4 ${config.border} shadow-lg`}>
-          <svg className={`w-10 h-10 ${config.icon}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d={config.iconPath} />
-          </svg>
-        </div>
-
-        {/* Title */}
-        <h3 className="text-2xl font-bold text-gray-900 text-center mb-3">
-          {title}
-        </h3>
-
-        {/* Message */}
-        <p className="text-gray-700 text-center mb-4 text-base leading-relaxed">
-          {message}
-        </p>
-
-        {/* Details (optional) */}
-        {details && (
-          <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200 max-h-48 overflow-y-auto">
-            <p className="text-sm text-gray-600 whitespace-pre-line font-mono">
-              {details}
-            </p>
-          </div>
-        )}
-
-        {/* Button */}
-        <button
-          onClick={onClose}
-          className="w-full bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] hover:from-[#2bbd8c] hover:to-[#41e0b3] text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-        >
-          Entendido
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // --- Main Component ---
 export default function Resumen() {
   const { data: session } = useSession();
@@ -130,28 +58,8 @@ export default function Resumen() {
   const [showDestinatario, setShowDestinatario] = useState(false);
   const [showMegaSale, setShowMegaSale] = useState(false);
 
-  // Modal State
-  const [modalState, setModalState] = useState({
-    isOpen: false,
-    type: 'info',
-    title: '',
-    message: '',
-    details: null,
-  });
-
-  const showModal = useCallback((type, title, message, details = null) => {
-    setModalState({
-      isOpen: true,
-      type,
-      title,
-      message,
-      details,
-    });
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setModalState((prev) => ({ ...prev, isOpen: false }));
-  }, []);
+  // Notification Modal
+  const { modalState, showSuccess, showError, showWarning, showInfo, closeModal } = useNotification();
 
   // AdMob Integration
   const { 
@@ -371,7 +279,7 @@ export default function Resumen() {
 
   const showAd = useCallback(async () => {
     if (costoTotal <= 0) {
-      showModal('success', '¡Felicidades!', 'Tu envío ya es gratuito. No necesitas ver más anuncios. 🎉');
+      showSuccess('¡Felicidades!', 'Tu envío ya es gratuito. No necesitas ver más anuncios. 🎉');
       return;
     }
 
@@ -482,7 +390,7 @@ export default function Resumen() {
     if (window.AndroidInterface?.showRewardedAd) {
       if (window.AndroidInterface?.preloadRewardedAd && adState !== "ready") {
         preloadAd();
-        showModal('info', 'Preparando anuncio', 'Por favor, espera unos segundos e inténtalo de nuevo. 📱');
+        showInfo('Preparando anuncio', 'Por favor, espera unos segundos e inténtalo de nuevo. 📱');
         return;
       }
 
@@ -503,10 +411,10 @@ export default function Resumen() {
     }
 
     if (!adMobSupported) {
-      showModal('info', 'Anuncios no disponibles', 'Los anuncios solo están disponibles en la app móvil. 📱\n\n💡 Descarga la app para obtener descuentos increíbles.');
+      showInfo('Anuncios no disponibles', 'Los anuncios solo están disponibles en la app móvil. 📱\n\n💡 Descarga la app para obtener descuentos increíbles.');
       return;
     }
-  }, [adState, costoTotal, adMobInitialized, adMobSupported, isRewardedReady, showRewardedAd, prepareRewardedAd, preloadAd, handleAdError, applyRewardDiscount, resolveRewardAmount, pickRewardChainLength, showModal]);
+  }, [adState, costoTotal, adMobInitialized, adMobSupported, isRewardedReady, showRewardedAd, prepareRewardedAd, preloadAd, handleAdError, applyRewardDiscount, resolveRewardAmount, pickRewardChainLength, showInfo, showSuccess]);
 
   // --- Effects ---
 
@@ -742,7 +650,7 @@ export default function Resumen() {
 
   const handleFreeShipment = useCallback(async () => {
     if (!session?.user?.email) {
-      showModal('error', 'Error de Sesión', 'No se detectó una sesión activa. Por favor, inicia sesión para continuar.');
+      showError('Error de Sesión', 'No se detectó una sesión activa. Por favor, inicia sesión para continuar.');
       return;
     }
     if (costoTotal > 0) {
@@ -751,31 +659,35 @@ export default function Resumen() {
 
     // Validar que tenemos todos los datos necesarios
     if (!remitente || !destinatario || !cotizador) {
-      showModal('warning', 'Datos Incompletos', 'Faltan datos del envío. Por favor, regresa y completa toda la información requerida.');
+      showWarning('Datos Incompletos', 'Faltan datos del envío. Por favor, regresa y completa toda la información requerida.');
       return;
     }
 
     setIsCreatingShipment(true);
     const numeroGuia = generarNumeroGuia();
 
+    // Obtener nombres de ciudades
+    const ciudadOrigenNombre = ciudades["11001"] || "Bogotá D.C.";
+    const ciudadDestinoNombre = ciudades[cotizador.ciudadDestino] || cotizador.ciudadDestino || "Destino";
+
     // Preparar los datos según el schema esperado por /api/orders
     const envioData = {
       NumeroGuia: numeroGuia,
       Estado: "RECOLECCION_PENDIENTE",
-      Origen: cotizador.origen || remitente.ciudad || "",
-      Destino: cotizador.destino || destinatario.ciudad || "",
+      Origen: ciudadOrigenNombre,
+      Destino: ciudadDestinoNombre,
       Destinatario: {
-        Nombre: destinatario.nombre || "",
-        Direccion: destinatario.direccionEntrega || "",
-        Telefono: destinatario.telefono || "",
+        Nombre: destinatario.nombre || "Sin nombre",
+        Direccion: destinatario.direccionEntrega || "Sin dirección",
+        Telefono: destinatario.telefono || destinatario.celular || "0000000000",
       },
       Remitente: {
-        Nombre: remitente.nombre || "",
-        Direccion: remitente.direccionRecogida || "",
-        Telefono: remitente.telefono || "",
+        Nombre: remitente.nombre || "Sin nombre",
+        Direccion: remitente.direccionRecogida || "Sin dirección",
+        Telefono: remitente.telefono || remitente.celular || "0000000000",
       },
       Peso: parseFloat(cotizador.peso) || 1,
-      Dimensiones: cotizador.dimensiones || "N/A",
+      Dimensiones: `${cotizador.largo || 0}x${cotizador.ancho || 0}x${cotizador.alto || 0}`,
       ValorDeclarado: parseFloat(cotizador.valorDeclarado) || 0,
       FechaCreacion: new Date().toISOString(),
       FechaActualizacion: new Date().toISOString(),
@@ -816,7 +728,7 @@ export default function Resumen() {
         localStorage.removeItem("formRemitente");
         localStorage.removeItem("formDestinatario");
         
-        showModal('success', '¡Envío Registrado! 🎉', 'Tu envío gratuito ha sido registrado exitosamente. Serás redirigido a Mis Envíos.');
+        showSuccess('¡Envío Registrado! 🎉', 'Tu envío gratuito ha sido registrado exitosamente. Serás redirigido a Mis Envíos.');
         setTimeout(() => {
           router.push("/misenvios");
         }, 2000);
@@ -828,18 +740,18 @@ export default function Resumen() {
           const errors = Object.entries(responseData.errors)
             .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
             .join("\n");
-          showModal('error', 'Error de Validación', 'No se pudo registrar el envío. Revisa los siguientes errores:', errors);
+          showError('Error de Validación', 'No se pudo registrar el envío. Revisa los siguientes errores:', errors);
         } else {
-          showModal('error', 'Error al Registrar', `No se pudo registrar el envío: ${errorMsg}`);
+          showError('Error al Registrar', `No se pudo registrar el envío: ${errorMsg}`);
         }
       }
     } catch (error) {
       console.error("❌ Error al registrar el envío gratuito:", error);
-      showModal('error', 'Error de Conexión', 'Hubo un problema de conexión al registrar tu envío. Por favor, verifica tu internet e intenta nuevamente.');
+      showError('Error de Conexión', 'Hubo un problema de conexión al registrar tu envío. Por favor, verifica tu internet e intenta nuevamente.');
     } finally {
       setIsCreatingShipment(false);
     }
-  }, [router, costoTotal, session, remitente, destinatario, cotizador, showModal]);
+  }, [router, costoTotal, session, remitente, destinatario, cotizador, showSuccess, showError]);
 
   const handleWatchAdFromModal = () => {
     setShowMegaSale(false);

@@ -4,8 +4,10 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 import { useLoadingMonitor } from "../hooks/useLoadingMonitor";
+import { useNotification } from "../hooks/useNotification";
 
 import BottomNav from "./BottomNav";
+import NotificationModal from "./NotificationModal";
 
 // --- Helper Functions ---
 async function fetchPerfil() {
@@ -109,6 +111,9 @@ export default function Cotizador() {
 
     // 🎯 Monitorear estado isLoadingAction - activa pantalla global después de 3 segundos
     useLoadingMonitor(isLoadingAction, 'cotizador-action', 'Procesando cotización...');
+
+    // 🎨 Modal de notificaciones
+    const { modalState, showSuccess, showError, showWarning, showInfo, closeModal } = useNotification();
 
     const [formData, setFormData] = useState({
         ciudadOrigen: "",
@@ -313,9 +318,15 @@ export default function Cotizador() {
         setIsLoadingAction(true);
 
         if (volumetricError || costoTotal === null || !session?.user) {
-            if (volumetricError) {alert(volumetricError);}
-            else if (!session?.user) {alert("Debes iniciar sesión para continuar.");}
-            else {alert("Completa todos los campos requeridos para obtener una cotización válida.");}
+            if (volumetricError) {
+                showWarning('Error de Volumen', volumetricError);
+            }
+            else if (!session?.user) {
+                showWarning('Sesión Requerida', 'Debes iniciar sesión para continuar con la cotización.');
+            }
+            else {
+                showWarning('Formulario Incompleto', 'Completa todos los campos requeridos para obtener una cotización válida.');
+            }
             setIsLoadingAction(false);
             return;
         }
@@ -345,7 +356,7 @@ export default function Cotizador() {
             }
         } catch (error) {
             console.error("Error:", error);
-            alert("Error al procesar la cotización. Inténtalo de nuevo.");
+            showError('Error de Procesamiento', 'Error al procesar la cotización. Inténtalo de nuevo.');
             setIsLoadingAction(false);
         }
     };
@@ -788,6 +799,16 @@ export default function Cotizador() {
 
                     {/* Footer */}
                     <BottomNav />
+
+                    {/* Notification Modal */}
+                    <NotificationModal
+                      isOpen={modalState.isOpen}
+                      onClose={closeModal}
+                      type={modalState.type}
+                      title={modalState.title}
+                      message={modalState.message}
+                      details={modalState.details}
+                    />
                   </div>
                 </div>
               );
