@@ -652,42 +652,95 @@ export default function Resumen() {
       return;
     }
 
+    // Validar que tenemos todos los datos necesarios
+    if (!remitente || !destinatario || !cotizador) {
+      alert("Error: Faltan datos del envío. Por favor, regresa y completa la información.");
+      return;
+    }
+
     setIsCreatingShipment(true);
     const numeroGuia = generarNumeroGuia();
+
+    // Preparar los datos según el schema esperado por /api/orders
     const envioData = {
-      numeroGuia,
-      paymentId: `FREE-${Date.now()}`,
-      origen: remitente.direccionRecogida,
-      destino: destinatario.direccionEntrega,
-      destinatario: destinatario.nombre,
-      remitente: remitente.nombre,
+      NumeroGuia: numeroGuia,
+      Estado: "RECOLECCION_PENDIENTE",
+      Origen: cotizador.origen || remitente.ciudad || "",
+      Destino: cotizador.destino || destinatario.ciudad || "",
+      Destinatario: {
+        Nombre: destinatario.nombre || "",
+        Direccion: destinatario.direccionEntrega || "",
+        Telefono: destinatario.telefono || "",
+      },
+      Remitente: {
+        Nombre: remitente.nombre || "",
+        Direccion: remitente.direccionRecogida || "",
+        Telefono: remitente.telefono || "",
+      },
+      Peso: parseFloat(cotizador.peso) || 1,
+      Dimensiones: cotizador.dimensiones || "N/A",
+      ValorDeclarado: parseFloat(cotizador.valorDeclarado) || 0,
+      FechaCreacion: new Date().toISOString(),
+      FechaActualizacion: new Date().toISOString(),
+      // Campos adicionales para tracking
       usuarioEmail: session.user.email,
-      tipo: "gratuito"
+      metodoPago: "GRATUITO",
+      pagado: true,
+      pagoId: `FREE-${Date.now()}`,
+      montoTotal: 0,
     };
 
+    console.log("📦 Creando envío gratuito:", envioData);
+
     try {
-      const response = await fetch("/api/guardarenvio", {
+      const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(envioData),
       });
 
+      const responseData = await response.json();
+
       if (response.ok) {
-        const responseData = await response.json();
-        localStorage.setItem("envioDatos", JSON.stringify(responseData));
+        console.log("✅ Envío gratuito creado exitosamente:", responseData);
+        
+        // Guardar información del envío en localStorage
+        localStorage.setItem("envioDatos", JSON.stringify({
+          ...responseData,
+          numeroGuia,
+          tipo: "gratuito",
+          metodoPago: "GRATUITO",
+        }));
         localStorage.setItem("envioExitoso", "true");
-        alert("¡Envío gratuito realizado exitosamente!");
+        
+        // Limpiar datos del formulario
+        localStorage.removeItem("formCotizador");
+        localStorage.removeItem("cotizacion");
+        localStorage.removeItem("formRemitente");
+        localStorage.removeItem("formDestinatario");
+        
+        alert("¡Envío gratuito registrado exitosamente! 🎉");
         router.push("/misenvios");
       } else {
-        throw new Error(`Server responded with ${response.status}`);
+        console.error("❌ Error del servidor:", responseData);
+        const errorMsg = responseData.message || responseData.error || "Error desconocido";
+        
+        if (responseData.errors) {
+          const errors = Object.entries(responseData.errors)
+            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(", ") : msgs}`)
+            .join("\n");
+          alert(`Error al registrar el envío:\n\n${errors}`);
+        } else {
+          alert(`Error al registrar el envío: ${errorMsg}`);
+        }
       }
     } catch (error) {
       console.error("❌ Error al registrar el envío gratuito:", error);
-      alert("Hubo un problema al registrar tu envío. Por favor, contacta a soporte.");
+      alert("Hubo un problema de conexión al registrar tu envío. Por favor, verifica tu internet e intenta nuevamente.");
     } finally {
       setIsCreatingShipment(false);
     }
-  }, [router, costoTotal, session, remitente, destinatario]);
+  }, [router, costoTotal, session, remitente, destinatario, cotizador]);
 
   const handleWatchAdFromModal = () => {
     setShowMegaSale(false);
