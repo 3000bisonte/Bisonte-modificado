@@ -778,6 +778,91 @@ export default function Resumen() {
     return () => clearTimeout(timeoutId);
   }, [rewardBanner]);
 
+  // Detectar cambios en localStorage cuando el usuario regresa después de editar
+  useEffect(() => {
+    const handleStorageChange = () => {
+      console.log("🔄 Detectado cambio en localStorage, actualizando datos...");
+      
+      const safeRead = (key) => {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+          console.error(`[Resumen] Error leyendo ${key}:`, error);
+          return null;
+        }
+      };
+
+      // Actualizar cotizador y precio
+      const cotizadorData = safeRead("formCotizador");
+      const cotizacionData = safeRead("cotizacion");
+      
+      if (cotizadorData || cotizacionData) {
+        let mergedCotizador = null;
+        if (cotizadorData && cotizacionData) {
+          const costoCandidates = [cotizadorData.costoTotal, cotizacionData.costoTotal]
+            .filter((value) => typeof value === "number");
+
+          const selectedCosto =
+            costoCandidates.length > 0 ? Math.min(...costoCandidates) : undefined;
+
+          mergedCotizador = {
+            ...cotizadorData,
+            ...cotizacionData,
+            ...(typeof selectedCosto === "number" ? { costoTotal: selectedCosto } : {}),
+          };
+        } else {
+          mergedCotizador = cotizadorData || cotizacionData;
+        }
+
+        if (mergedCotizador) {
+          setCotizador(mergedCotizador);
+          if (typeof mergedCotizador.costoTotal === "number") {
+            setCostoTotal(mergedCotizador.costoTotal);
+            console.log("✅ Precio actualizado a:", mergedCotizador.costoTotal);
+          }
+          syncCotizacionStores(mergedCotizador);
+        }
+      }
+
+      // Actualizar remitente
+      const remitenteData = safeRead("formRemitente");
+      if (remitenteData) {
+        setRemitente(remitenteData);
+        console.log("✅ Datos de remitente actualizados");
+      }
+
+      // Actualizar destinatario
+      const destinatarioData = safeRead("formDestinatario");
+      if (destinatarioData) {
+        setDestinatario(destinatarioData);
+        console.log("✅ Datos de destinatario actualizados");
+      }
+    };
+
+    // Escuchar evento storage (para cambios desde otras pestañas)
+    window.addEventListener("storage", handleStorageChange);
+
+    // Escuchar cuando la página se vuelve visible (usuario regresa a la pestaña)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("👁️ Página visible nuevamente, verificando cambios...");
+        handleStorageChange();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Escuchar evento focus (cuando el usuario hace click en la ventana)
+    window.addEventListener("focus", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleStorageChange);
+    };
+  }, [syncCotizacionStores]);
+
   // --- Render Logic ---
 
   if (!cotizador || !remitente || !destinatario) {
@@ -800,9 +885,25 @@ export default function Resumen() {
     <div className="min-h-screen bg-gradient-to-br from-[#e3dfde] via-[#f8fafc] to-[#41e0b3]/10 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 relative">
           <h1 className="text-3xl font-extrabold text-[#18191A] mb-2 drop-shadow">Resumen del envío</h1>
           <p className="text-[#41e0b3] font-medium">Revisa los detalles antes de proceder al pago</p>
+          
+          {/* Botón de actualización manual */}
+          <button
+            onClick={() => {
+              console.log("🔄 Actualizando datos manualmente...");
+              window.dispatchEvent(new Event('storage'));
+              showInfo('Datos actualizados', 'Se han recargado todos los datos desde el formulario.');
+            }}
+            className="absolute top-0 right-0 flex items-center gap-2 px-4 py-2 bg-white border-2 border-[#41e0b3] text-[#18191A] rounded-xl hover:bg-[#41e0b3] hover:text-white transition-all duration-200 shadow-sm hover:shadow-lg"
+            title="Actualizar datos del formulario"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span className="hidden sm:inline font-semibold">Actualizar</span>
+          </button>
         </div>
 
         {rewardBanner && (
