@@ -701,8 +701,7 @@ export default function Resumen() {
       Peso: parseFloat(cotizador.peso) || 1,
       Dimensiones: `${cotizador.largo || 0}x${cotizador.ancho || 0}x${cotizador.alto || 0}`,
       ValorDeclarado: parseFloat(cotizador.valorDeclarado) || 0,
-      FechaCreacion: new Date(),
-      FechaActualizacion: new Date(),
+      // FechaCreacion y FechaActualizacion se manejan automáticamente en el backend
       // Campos adicionales para tracking
       usuarioEmail: session.user.email,
       metodoPago: "GRATUITO",
