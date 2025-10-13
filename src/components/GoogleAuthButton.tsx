@@ -2,13 +2,13 @@
 
 import type { CapacitorGlobal } from '@capacitor/core';
 import type { FirebaseAuthenticationPlugin } from '@capacitor-firebase/authentication';
+
 import React, { useEffect, useState } from 'react';
 
 import CapacitorGoogleAuth from '@/lib/capacitor-google-auth';
-// @ts-ignore - Importing from mixed JS/TS files
-import NotificationModal from './NotificationModal';
-// @ts-ignore - useNotification is a JS file
 import { useNotification } from '../hooks/useNotification';
+
+import NotificationModal from './NotificationModal';
 
 interface CapacitorWindow extends Window {
   Capacitor?: (CapacitorGlobal & {
@@ -62,12 +62,29 @@ const getErrorMessage = (error: unknown): string => {
  * Exclusivo para móvil: usa Firebase Authentication nativo mediante Capacitor
  * En web el botón queda deshabilitado para evitar rutas incompatibles
  */
+type NotificationModalType = 'success' | 'error' | 'warning' | 'info';
+
+type NotificationModalState = {
+  isOpen: boolean;
+  type: NotificationModalType;
+  title: string;
+  message: string;
+  details?: string | null;
+};
+
+type NotificationHandlers = {
+  modalState: NotificationModalState;
+  showError: (title: string, message: string, details?: string | null) => void;
+  showInfo: (title: string, message: string, details?: string | null) => void;
+  closeModal: () => void;
+};
+
 export function GoogleAuthButton() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCapacitor, setIsCapacitor] = useState(false);
 
   // 🎨 Modal de notificaciones
-  const { modalState, showSuccess, showError, showWarning, showInfo, closeModal } = useNotification();
+  const { modalState, showError, showInfo, closeModal } = useNotification() as NotificationHandlers;
 
   useEffect(() => {
     if (typeof window === 'undefined') {

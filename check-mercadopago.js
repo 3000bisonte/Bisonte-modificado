@@ -38,9 +38,15 @@ function checkEnvVar(name, value) {
 }
 
 function detectEnvironment(accessToken) {
-  if (!accessToken) return 'not_configured';
-  if (accessToken.includes('APP_USR')) return 'production';
-  if (accessToken.includes('TEST')) return 'test';
+  if (!accessToken) {
+    return 'not_configured';
+  }
+  if (accessToken.includes('APP_USR')) {
+    return 'production';
+  }
+  if (accessToken.includes('TEST')) {
+    return 'test';
+  }
   return 'unknown';
 }
 

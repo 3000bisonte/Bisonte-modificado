@@ -11,7 +11,9 @@ import React from "react";
  * @param {string|null} details - Detalles adicionales opcionales (errores técnicos, validaciones, etc.)
  */
 export default function NotificationModal({ isOpen, onClose, type, title, message, details }) {
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   const typeConfig = {
     success: {

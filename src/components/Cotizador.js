@@ -113,7 +113,7 @@ export default function Cotizador() {
     useLoadingMonitor(isLoadingAction, 'cotizador-action', 'Procesando cotización...');
 
     // 🎨 Modal de notificaciones
-    const { modalState, showSuccess, showError, showWarning, showInfo, closeModal } = useNotification();
+    const { modalState, showError, showWarning, closeModal } = useNotification();
 
     const [formData, setFormData] = useState({
         ciudadOrigen: "",

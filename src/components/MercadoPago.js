@@ -7,8 +7,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Screen from "@/components/BrickStatusScreen";
 
 import InternalProvider from "../app/ContextProvider";
-import NotificationModal from "./NotificationModal";
 import { useNotification } from "../hooks/useNotification";
+
+import NotificationModal from "./NotificationModal";
 
 import "../styles/mercadopago.css";
 //import { guardarEnviosRequest } from "../../api/avu.api";// en mi csao guarar para el historial
@@ -33,7 +34,7 @@ const MercadoPagoComponent = () => {
   const userEmail = session?.user?.email; // Extrae el email al inicio del componente
 
   // 🎨 Modal de notificaciones
-  const { modalState, showSuccess, showError, showWarning, showInfo, closeModal } = useNotification();
+  const { modalState, showSuccess, showError, closeModal } = useNotification();
   const [initializationConfig, setInitializationConfig] = useState(null); // Para guardar { amount: XXX }
   const [isLoadingAmount, setIsLoadingAmount] = useState(true); // Para mostrar "Cargando..."
   const [initError, setInitError] = useState(null);
@@ -180,58 +181,118 @@ const MercadoPagoComponent = () => {
     const numeroGuia = generarNumeroGuia();
     
     try {
-      const datosLocalStorage = JSON.parse(localStorage.getItem("destinatarioInfo"));
-      const datosLocalStorageformDataRemitente = JSON.parse(
-        localStorage.getItem("formDataRemitente")
+      const destinatarioString = localStorage.getItem("destinatarioInfo");
+      const remitenteString = localStorage.getItem("formDataRemitente");
+
+      if (!destinatarioString || !remitenteString) {
+        throw new Error("Faltan datos de destinatario o remitente para registrar el envío.");
+      }
+
+      const datosLocalStorage = JSON.parse(destinatarioString);
+      const datosLocalStorageformDataRemitente = JSON.parse(remitenteString);
+      const cotizacionString = localStorage.getItem("cotizacion");
+      const cotizacionLocal = cotizacionString ? JSON.parse(cotizacionString) : {};
+
+      const sanitizeTelefono = (raw) => {
+        if (!raw) {return "0000000000";}
+        const digits = String(raw).replace(/\D/g, "");
+        if (!digits) {return "0000000000";}
+        return (digits.length >= 10 ? digits.slice(0, 10) : digits.padEnd(10, "0"));
+      };
+
+      const ensureText = (value, fallback, minLength) => {
+        const text = typeof value === "string" ? value.trim() : "";
+        if (text.length >= minLength) {return text;}
+        return fallback;
+      };
+
+      const destinatarioNombre = ensureText(
+        `${datosLocalStorage?.nombre ?? ""} ${datosLocalStorage?.apellido ?? ""}`.trim(),
+        "Destinatario",
+        2
       );
-      const nombreCompleto = `${datosLocalStorage?.nombre} ${datosLocalStorage?.apellido}`;
-      const direccionEntrega = `${datosLocalStorage?.direccionEntrega}`;
-      const direccionRecogida = `${datosLocalStorageformDataRemitente?.direccionRecogida}`;
 
-      console.log("Registrando envío con datos:", {
-        numeroGuia,
-        paymentId,
-        origen: direccionRecogida,
-        destino: direccionEntrega,
-        destinatario: nombreCompleto,
-        usuarioEmail: session?.user?.email,
-      });
+      const remitenteNombre = ensureText(
+        `${datosLocalStorageformDataRemitente?.nombre ?? ""} ${datosLocalStorageformDataRemitente?.apellido ?? ""}`.trim(),
+        "Remitente",
+        2
+      );
 
-      const response = await fetch("/api/guardarenvio", {
+      const destinoDireccion = ensureText(
+        datosLocalStorage?.direccionEntrega,
+        "Dirección destino pendiente",
+        5
+      );
+
+      const origenDireccion = ensureText(
+        datosLocalStorageformDataRemitente?.direccionRecogida,
+        "Dirección origen pendiente",
+        5
+      );
+
+      const peso = Number(cotizacionLocal?.peso) > 0 ? Number(cotizacionLocal.peso) : 1;
+      const valorDeclarado = Number(cotizacionLocal?.valorDeclarado) >= 0 ? Number(cotizacionLocal.valorDeclarado) : 0;
+      const dimensiones = [cotizacionLocal?.largo, cotizacionLocal?.ancho, cotizacionLocal?.alto]
+        .map((value) => {
+          const numeric = Number(value);
+          return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0;
+        })
+        .join("x");
+
+      const montoTotal = Number.isFinite(Number(cotizacionLocal?.costoTotal)) ? Number(cotizacionLocal.costoTotal) : 0;
+
+      const envioData = {
+        NumeroGuia: numeroGuia,
+        Estado: "RECOLECCION_PENDIENTE",
+        Origen: origenDireccion,
+        Destino: destinoDireccion,
+        Destinatario: {
+          Nombre: destinatarioNombre,
+          Direccion: destinoDireccion,
+          Telefono: sanitizeTelefono(datosLocalStorage?.telefono || datosLocalStorage?.celular),
+        },
+        Remitente: {
+          Nombre: remitenteNombre,
+          Direccion: origenDireccion,
+          Telefono: sanitizeTelefono(datosLocalStorageformDataRemitente?.telefono || datosLocalStorageformDataRemitente?.celular),
+        },
+        Peso: peso,
+        Dimensiones: dimensiones,
+        ValorDeclarado: valorDeclarado,
+        usuarioEmail: session?.user?.email ?? null,
+        metodoPago: "MERCADO_PAGO",
+        pagado: true,
+        montoTotal,
+        paymentId: paymentId ?? `MP-${Date.now()}`,
+      };
+
+      console.log("Registrando envío con datos:", envioData);
+
+      const response = await fetch("/api/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          numeroGuia,
-          paymentId,
-          origen: direccionRecogida,
-          destino: direccionEntrega,
-          destinatario: nombreCompleto,
-          usuarioEmail: session?.user?.email,
-        }),
+        body: JSON.stringify(envioData),
       });
 
       const responseData = await response.json();
 
       if (response.ok) {
         console.log("Envío registrado exitosamente:", responseData);
-        
-        // Guardar datos del envío
+
         localStorage.setItem("envioDatos", JSON.stringify(responseData));
         localStorage.setItem("envioExitoso", "true");
-        
-        // Mostrar mensaje de éxito y redirigir
+
         showSuccess('¡Pago Exitoso! 🎉', '¡Envío realizado exitosamente! Serás redirigido a Mis Envíos.');
-        
-        // Redirigir a mis envíos después de un breve delay
+
         setTimeout(() => {
           window.location.href = "/misenvios";
         }, 2000);
-        
       } else {
-        console.error("Error al registrar el envío:", responseData);
-        showError('Error al Registrar', 'Hubo un error al registrar tu envío. Por favor contacta soporte.');
+        console.error("Error al registrar el envío:", response.status, responseData);
+        const errorMessage = responseData?.message || responseData?.error || 'Hubo un error al registrar tu envío. Por favor contacta soporte.';
+        showError('Error al Registrar', errorMessage);
       }
     } catch (error) {
       console.error("Error al registrar el envío:", error);

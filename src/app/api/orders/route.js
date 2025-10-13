@@ -53,6 +53,17 @@ export async function POST(request) {
     }
 
     const validatedData = validationResult.data;
+    const userEmail = typeof body.usuarioEmail === 'string' ? body.usuarioEmail.trim() : null;
+    const paymentIdRaw = body.paymentId ?? body.PaymentId ?? body.pagoId ?? body.PagoId ?? null;
+
+    let usuario = null;
+    if (userEmail) {
+      try {
+        usuario = await prisma.usuarios.findUnique({ where: { email: userEmail } });
+      } catch (error) {
+        console.error('Error buscando usuario por email:', error);
+      }
+    }
 
     const serializeValue = (value) => {
       if (value === null || value === undefined) {
@@ -74,21 +85,34 @@ export async function POST(request) {
 
     // Crear nuevo envío dentro de una transacción
     const newOrder = await prisma.$transaction(async (tx) => {
+      const data = {
+        NumeroGuia: validatedData.NumeroGuia,
+        Estado: validatedData.Estado,
+        Origen: validatedData.Origen,
+        Destino: validatedData.Destino,
+        Destinatario: destinatarioValue ?? '',
+        Remitente: remitenteValue ?? '',
+        usuarioId: usuario?.id ?? null,
+      };
+
+      if (paymentIdRaw) {
+        data.PaymentId = String(paymentIdRaw);
+      }
+
       return await tx.historial_envio.create({
-        data: {
-          NumeroGuia: validatedData.NumeroGuia,
-          Estado: validatedData.Estado,
-          Origen: validatedData.Origen,
-          Destino: validatedData.Destino,
-          Destinatario: destinatarioValue ?? '',
-          Remitente: remitenteValue ?? '',
-        },
+        data,
       });
     });
 
     return NextResponse.json(newOrder, { status: 201 });
   } catch (error) {
     console.error('Error creating order:', error);
+    if (error?.code === 'P2002' && Array.isArray(error?.meta?.target) && error.meta.target.includes('NumeroGuia')) {
+      return NextResponse.json({
+        message: 'El número de guía ya existe',
+        code: 'ORDER_DUPLICATE_TRACKING',
+      }, { status: 409 });
+    }
     return NextResponse.json({ 
       message: 'Error creating order',
       details: error instanceof Error ? error.message : 'Unknown error'

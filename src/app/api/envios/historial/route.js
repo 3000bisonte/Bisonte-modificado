@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 // Ensure this route is always dynamic (uses request.url)
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-import prisma from '../../../../libs/prisma';
+import prisma from "@/lib/prisma";
 
 export async function GET(request) {
   try {
@@ -28,28 +28,31 @@ export async function GET(request) {
 
     console.log('👤 Usuario encontrado:', usuario.id);
 
-    // ✅ STEP 2: Usar HistorialEnvio (con H mayúscula) como está en tu schema
-  // Modelo Prisma: HistorialEnvio -> cliente: prisma.historialEnvio
-  const envios = await prisma.historialEnvio.findMany({
+    const envios = await prisma.historial_envio.findMany({
       where: {
-        usuarioId: usuario.id  // Según tu schema
+        usuarioId: usuario.id,
       },
       orderBy: {
-        FechaSolicitud: 'desc'  // PascalCase como en tu schema
+        FechaSolicitud: 'desc',
       },
       include: {
-        usuario: {
+        usuarios: {
           select: {
             nombre: true,
-            email: true
-          }
-        }
-      }
+            email: true,
+          },
+        },
+      },
     });
 
     console.log(`✅ Encontrados ${envios.length} envíos para usuario ID ${usuario.id}`);
 
-    return NextResponse.json(envios);
+    const formatted = envios.map(({ usuarios, ...rest }) => ({
+      ...rest,
+      usuario: usuarios ?? null,
+    }));
+
+    return NextResponse.json(formatted);
 
   } catch (error) {
     console.error('❌ Error consultando historial:', error);

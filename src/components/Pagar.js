@@ -4,8 +4,10 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import NotificationModal from "./NotificationModal";
+
 import { useNotification } from "../hooks/useNotification";
+
+import NotificationModal from "./NotificationModal";
 const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPagarAhora: _onPagarAhora, onClick: _onClick }) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_showModal, _setShowModal] = useState(false);
@@ -26,7 +28,7 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
   const { data: session } = useSession();
 
   // 🎨 Modal de notificaciones
-  const { modalState, showSuccess, showError, showWarning, showInfo, closeModal } = useNotification();
+  const { modalState, showSuccess, showError, showWarning, closeModal } = useNotification();
 
   useEffect(() => {
     const savedAdCount = localStorage.getItem("adCount");
@@ -283,57 +285,114 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
     try {
       const formDataString = localStorage.getItem("destinatarioInfo");
       const remitenteString = localStorage.getItem("formDataRemitente");
-      
+      const cotizacionString = localStorage.getItem("cotizacion");
+
       if (!formDataString || !remitenteString) {
         throw new Error("Faltan datos necesarios del envío en localStorage.");
       }
 
-      const datosLocalStorage = JSON.parse(formDataString);
-      const datosLocalStorageformDataRemitente = JSON.parse(remitenteString);
+      const destinatarioLocal = JSON.parse(formDataString);
+      const remitenteLocal = JSON.parse(remitenteString);
+      const cotizacionLocal = cotizacionString ? JSON.parse(cotizacionString) : {};
 
-      const nombreCompleto = `${datosLocalStorage.nombre} ${datosLocalStorage.apellido}`;
-      const direccionEntrega = datosLocalStorage.direccionEntrega;
-      const direccionRecogida = datosLocalStorageformDataRemitente.direccionRecogida;
+      const sanitizeTelefono = (raw) => {
+        if (!raw) {return "0000000000";}
+        const digits = String(raw).replace(/\D/g, "");
+        if (!digits) {return "0000000000";}
+        return (digits.length >= 10 ? digits.slice(0, 10) : digits.padEnd(10, "0"));
+      };
 
-      console.log("📋 Datos del envío gratuito:", {
-        numeroGuia,
-        origen: direccionRecogida,
-        destino: direccionEntrega,
-        destinatario: nombreCompleto,
-        usuarioEmail: session?.user?.email,
-      });
+      const ensureText = (value, fallback, minLength) => {
+        const text = typeof value === "string" ? value.trim() : "";
+        if (text.length >= minLength) {return text;}
+        return fallback;
+      };
 
-      const response = await fetch("/api/guardarenvio", {
+      const destinatarioNombre = ensureText(
+        `${destinatarioLocal?.nombre ?? ""} ${destinatarioLocal?.apellido ?? ""}`.trim(),
+        "Destinatario",
+        2
+      );
+
+      const remitenteNombre = ensureText(
+        `${remitenteLocal?.nombre ?? ""} ${remitenteLocal?.apellido ?? ""}`.trim(),
+        "Remitente",
+        2
+      );
+
+      const destinoDireccion = ensureText(
+        destinatarioLocal?.direccionEntrega,
+        "Dirección destino pendiente",
+        5
+      );
+
+      const origenDireccion = ensureText(
+        remitenteLocal?.direccionRecogida,
+        "Dirección origen pendiente",
+        5
+      );
+
+      const peso = Number(cotizacionLocal?.peso) > 0 ? Number(cotizacionLocal.peso) : 1;
+      const valorDeclarado = Number(cotizacionLocal?.valorDeclarado) >= 0 ? Number(cotizacionLocal.valorDeclarado) : 0;
+      const dimensiones = [cotizacionLocal?.largo, cotizacionLocal?.ancho, cotizacionLocal?.alto]
+        .map((value) => {
+          const numeric = Number(value);
+          return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0;
+        })
+        .join("x");
+
+      const montoTotal = Number.isFinite(Number(cotizacionLocal?.costoTotal)) ? Number(cotizacionLocal.costoTotal) : 0;
+
+      const envioData = {
+        NumeroGuia: numeroGuia,
+        Estado: "RECOLECCION_PENDIENTE",
+        Origen: origenDireccion,
+        Destino: destinoDireccion,
+        Destinatario: {
+          Nombre: destinatarioNombre,
+          Direccion: destinoDireccion,
+          Telefono: sanitizeTelefono(destinatarioLocal?.telefono || destinatarioLocal?.celular),
+        },
+        Remitente: {
+          Nombre: remitenteNombre,
+          Direccion: origenDireccion,
+          Telefono: sanitizeTelefono(remitenteLocal?.telefono || remitenteLocal?.celular),
+        },
+        Peso: peso,
+        Dimensiones: dimensiones,
+        ValorDeclarado: valorDeclarado,
+        usuarioEmail: session?.user?.email ?? null,
+        metodoPago: "GRATUITO",
+        pagado: true,
+        montoTotal,
+        paymentId: `FREE-${Date.now()}`,
+      };
+
+      console.log("📋 Datos del envío gratuito:", envioData);
+
+      const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          numeroGuia,
-          paymentId: `FREE-${Date.now()}`,
-          origen: direccionRecogida,
-          destino: direccionEntrega,
-          destinatario: nombreCompleto,
-          usuarioEmail: session?.user?.email,
-        }),
+        body: JSON.stringify(envioData),
       });
 
+      const responseData = await response.json();
+
       if (response.ok) {
-        const responseData = await response.json();
         console.log("✅ Envío gratuito registrado exitosamente:", responseData);
-        
+
         localStorage.setItem("envioDatos", JSON.stringify(responseData));
         localStorage.setItem("envioExitoso", "true");
-        
+
         showSuccess('¡Envío Registrado! 🎉', '¡Envío gratuito realizado exitosamente! Serás redirigido a Mis Envíos.');
-        
+
         setTimeout(() => {
           router.push("/misenvios");
         }, 2000);
-        
       } else {
-        console.error("❌ Error al registrar el envío gratuito: Status", response.status);
-        const errorData = await response.text();
-        console.error("Detalle del error:", errorData);
-        showError('Error al Registrar', `Hubo un problema al registrar tu envío (Estado: ${response.status}). Por favor, contacta a soporte.`);
+        console.error("❌ Error al registrar el envío gratuito: Status", response.status, responseData);
+        const errorMessage = responseData?.message || responseData?.error || 'Hubo un problema al registrar tu envío.';
+        showError('Error al Registrar', `Hubo un problema al registrar tu envío (Estado: ${response.status}). ${errorMessage}`);
       }
     } catch (error) {
       console.error("❌ Error de red al registrar el envío gratuito:", error);

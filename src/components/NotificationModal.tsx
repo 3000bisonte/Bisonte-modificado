@@ -20,7 +20,9 @@ export default function NotificationModal({
   message, 
   details 
 }: NotificationModalProps) {
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   const typeConfig = {
     success: {

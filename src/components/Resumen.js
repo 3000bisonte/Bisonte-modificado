@@ -6,12 +6,12 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 
 import { ADMOB_CONFIG } from "../config/admob.config";
 import { useMultipleLoadingMonitor } from "../hooks/useLoadingMonitor";
+import { useNotification } from "../hooks/useNotification";
 import { useAdMob } from "../services/AdMobService";
 
 import BottomNav from "./BottomNav";
 import MegaSaleModal from "./MegaSaleModal";
 import NotificationModal from "./NotificationModal";
-import { useNotification } from "../hooks/useNotification";
 
 // --- Helper Functions ---
 function formatDate(date) {

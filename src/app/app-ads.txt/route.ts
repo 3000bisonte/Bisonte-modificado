@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export function GET() {
   const publisherId = 'pub-1352045169606160';
   
   const appAdsTxt = `# app-ads.txt para Bisonte Logística

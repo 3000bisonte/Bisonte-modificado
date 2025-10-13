@@ -8,8 +8,7 @@ import { renderHook } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
-// @ts-ignore - Type resolution issue with hooks
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../../src/hooks/useAuth';
 
 // Mock de los hooks de Next.js
 jest.mock('next-auth/react');

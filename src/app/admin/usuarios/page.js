@@ -11,7 +11,6 @@ export default function AdminUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
 
   useEffect(() => {
     const ADMIN_EMAILS = [
