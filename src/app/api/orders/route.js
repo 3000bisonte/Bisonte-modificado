@@ -54,6 +54,24 @@ export async function POST(request) {
 
     const validatedData = validationResult.data;
 
+    const serializeValue = (value) => {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      if (typeof value === 'string') {
+        return value;
+      }
+      try {
+        return JSON.stringify(value);
+      } catch (error) {
+        console.warn('No se pudo serializar el valor, se usará cadena vacía:', error);
+        return '';
+      }
+    };
+
+    const destinatarioValue = serializeValue(validatedData.Destinatario);
+    const remitenteValue = serializeValue(validatedData.Remitente);
+
     // Crear nuevo envío dentro de una transacción
     const newOrder = await prisma.$transaction(async (tx) => {
       return await tx.historial_envio.create({
@@ -62,13 +80,8 @@ export async function POST(request) {
           Estado: validatedData.Estado,
           Origen: validatedData.Origen,
           Destino: validatedData.Destino,
-          Destinatario: validatedData.Destinatario,
-          Remitente: validatedData.Remitente,
-          Peso: validatedData.Peso,
-          Dimensiones: validatedData.Dimensiones,
-          ValorDeclarado: validatedData.ValorDeclarado,
-          FechaCreacion: validatedData.FechaCreacion || new Date(),
-          FechaActualizacion: validatedData.FechaActualizacion || new Date(),
+          Destinatario: destinatarioValue ?? '',
+          Remitente: remitenteValue ?? '',
         },
       });
     });
@@ -76,6 +89,9 @@ export async function POST(request) {
     return NextResponse.json(newOrder, { status: 201 });
   } catch (error) {
     console.error('Error creating order:', error);
-    return NextResponse.json({ message: 'Error creating order' }, { status: 500 });
+    return NextResponse.json({ 
+      message: 'Error creating order',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
