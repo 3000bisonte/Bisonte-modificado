@@ -26,12 +26,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-eval' 'unsafe-inline' accounts.google.com gstatic.com;
+              script-src 'self' 'unsafe-eval' 'unsafe-inline' accounts.google.com gstatic.com https://sdk.mercadopago.com https://www.mercadopago.com https://*.mercadopago.com;
               style-src 'self' 'unsafe-inline' fonts.googleapis.com;
               font-src 'self' fonts.gstatic.com;
               img-src 'self' data: https: blob:;
-              connect-src 'self' accounts.google.com oauth2.googleapis.com www.googleapis.com;
-              frame-src accounts.google.com;
+              connect-src 'self' accounts.google.com oauth2.googleapis.com www.googleapis.com https://api.mercadopago.com https://www.mercadopago.com https://*.mercadopago.com;
+              frame-src accounts.google.com https://www.mercadopago.com https://*.mercadopago.com;
               object-src 'none';
               base-uri 'self';
               form-action 'self';
