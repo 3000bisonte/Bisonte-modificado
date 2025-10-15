@@ -13,14 +13,14 @@ export const TEST_MODE = {
    * 
    * @type {boolean}
    */
-  FORCE_FREE_SHIPPING: true,
+  FORCE_FREE_SHIPPING: false, // ✅ DESACTIVADO - Costos reales
 
   /**
    * Muestra logs detallados de debugging en consola
    * 
    * @type {boolean}
    */
-  VERBOSE_LOGGING: true,
+  VERBOSE_LOGGING: false, // ✅ DESACTIVADO - Menos logs en producción
 
   /**
    * Mensaje que se muestra en el cotizador cuando está en modo prueba
