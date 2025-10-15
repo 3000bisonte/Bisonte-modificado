@@ -67,14 +67,26 @@ export default function MisEnvios() {
   // Verificar si viene de un envío exitoso
   useEffect(() => {
     const envioExitoso = localStorage.getItem("envioExitoso");
+    const envioDatos = localStorage.getItem("envioDatos");
+    
     if (envioExitoso === "true") {
       setShowSuccessMessage(true);
       localStorage.removeItem("envioExitoso");
 
-      // Ocultar mensaje después de 5 segundos
+      // Log para debugging
+      if (envioDatos) {
+        try {
+          const datos = JSON.parse(envioDatos);
+          console.log("✅ Envío exitoso registrado:", datos);
+        } catch (e) {
+          console.warn("⚠️ No se pudo parsear envioDatos:", e);
+        }
+      }
+
+      // Ocultar mensaje después de 6 segundos
       setTimeout(() => {
         setShowSuccessMessage(false);
-      }, 5000);
+      }, 6000);
     }
   }, []);
 
@@ -85,8 +97,18 @@ export default function MisEnvios() {
       try {
         console.log("🔍 Consultando envíos para usuario:", userEmail);
 
+        // Forzar recarga sin caché cuando viene de envío exitoso
+        const envioExitoso = localStorage.getItem("envioExitoso");
+        const cacheParam = envioExitoso === "true" ? `&t=${Date.now()}` : '';
+
         const enviosRes = await fetch(
-          `/api/envios/historial?email=${encodeURIComponent(userEmail)}`
+          `/api/envios/historial?email=${encodeURIComponent(userEmail)}${cacheParam}`,
+          {
+            cache: 'no-store', // Evitar caché del navegador
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          }
         );
 
         if (!enviosRes.ok) {
@@ -94,7 +116,7 @@ export default function MisEnvios() {
         }
 
         const data = await enviosRes.json();
-        console.log("✅ Envíos encontrados:", data);
+        console.log("✅ Envíos encontrados:", data.length, "registros");
 
         setEnvios(Array.isArray(data) ? data : []);
       } catch (e) {
@@ -155,8 +177,20 @@ export default function MisEnvios() {
     <div className="min-h-screen w-full bg-[#e3dfde] pb-20 sm:pb-24 relative">
       {/* Mensaje de éxito */}
       {showSuccessMessage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg animate-bounce text-sm sm:text-base">
-          ¡Envío realizado exitosamente! Espere pronta actualización.
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md mx-auto">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-xl shadow-2xl border-2 border-green-400">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-lg mb-1">¡Envío Registrado! 🎉</p>
+                <p className="text-sm text-green-50">Tu envío ha sido creado exitosamente. El estado se actualizará pronto.</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
