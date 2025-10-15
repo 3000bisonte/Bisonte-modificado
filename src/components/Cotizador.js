@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
+import { getTestModeCost, getTestModeBanner } from "../config/testMode";
 import { useLoadingMonitor } from "../hooks/useLoadingMonitor";
 import { useNotification } from "../hooks/useNotification";
 
@@ -236,7 +237,11 @@ export default function Cotizador() {
                 : 0;
 
             const costoFinal = costoBase + recargoValor;
-            setCostoTotal(costoFinal);
+            
+            // 🧪 Aplicar modo prueba (si está activo, retorna $0)
+            const costoConModoPrueba = getTestModeCost(costoFinal);
+            
+            setCostoTotal(costoConModoPrueba);
             setIsCalculating(false);
         } else {
             setCostoTotal(null);
@@ -400,6 +405,27 @@ export default function Cotizador() {
                     <div className="bg-teal-500 h-2 rounded-full transition-all duration-300" style={{ width: '25%' }}></div>
                   </div>
                 </div>
+
+                {/* Banner de Modo Prueba */}
+                {getTestModeBanner() && (
+                  <div className="mb-6 bg-gradient-to-r from-orange-400 to-yellow-400 border-l-4 border-orange-600 rounded-lg p-4 shadow-lg animate-pulse">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-white">
+                          {getTestModeBanner()}
+                        </p>
+                        <p className="text-xs text-white/90 mt-1">
+                          Para desactivar, edita: <code className="bg-white/20 px-1 rounded">src/config/testMode.js</code>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Main Form Card - Actualizado para coincidir exactamente con FormularioRemitente */}
                 <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
