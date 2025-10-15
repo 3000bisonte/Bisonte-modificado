@@ -209,10 +209,16 @@ const MercadoPagoComponent = () => {
     if (paymentId) {setIsVisiblePayments(false);}
   }, [paymentId]);
   const onSubmit = async ({ selectedPaymentMethod: _selectedPaymentMethod, formData }) => {
-    console.log("formData----->", formData);
+    console.log("💳 Procesando pago con Payment Brick...");
+    console.log("📋 Datos del formulario:", {
+      amount: formData.transaction_amount,
+      method: formData.payment_method_id,
+      installments: formData.installments,
+      email: formData.payer?.email,
+    });
 
     return new Promise((resolve, reject) => {
-      fetch("/api/mercadopago", {
+      fetch("/api/mercadopago/process-payment", {  // ✅ NUEVO ENDPOINT
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -220,16 +226,56 @@ const MercadoPagoComponent = () => {
         body: JSON.stringify(formData),
       })
         .then((response) => response.json())
+        .then((result) => {
+          console.log("📥 Respuesta del servidor:", result);
 
-        .then((payment) => {
-          setpaymentId(payment.id);
-          setstatus(payment.status); //approved
+          if (!result.success) {
+            console.error("❌ Error en el pago:", result.error);
+            showError(
+              'Error al Procesar Pago',
+              result.error || 'Hubo un problema al procesar tu pago. Por favor, verifica los datos e inténtalo nuevamente.'
+            );
+            reject(result.error);
+            return;
+          }
 
-          //console.log("response-DESDE-FRONT**************************************************",payment)
-          resolve();
+          const paymentId = result.id || result.payment?.id;
+          const paymentStatus = result.status || result.payment?.status;
+          const statusDetail = result.status_detail || result.payment?.status_detail;
+
+          console.log(`✅ Pago procesado - ID: ${paymentId}, Estado: ${paymentStatus}`);
+
+          setpaymentId(paymentId);
+          setstatus(paymentStatus);
+
+          // Manejar diferentes estados de pago
+          if (paymentStatus === "approved") {
+            console.log("✅ Pago aprobado - Registrando envío...");
+            resolve();
+          } else if (paymentStatus === "in_process" || paymentStatus === "pending") {
+            console.log("⏳ Pago en proceso - Estado:", statusDetail);
+            showWarning(
+              'Pago en Proceso',
+              'Tu pago está siendo procesado. Te notificaremos cuando sea aprobado.'
+            );
+            // También registrar el envío para pagos pendientes
+            resolve();
+          } else {
+            console.error("❌ Pago rechazado - Estado:", paymentStatus, statusDetail);
+            showError(
+              'Pago Rechazado',
+              `Tu pago fue rechazado. ${statusDetail || 'Por favor, verifica los datos e inténtalo nuevamente.'}`
+            );
+            reject(statusDetail || 'Pago rechazado');
+          }
         })
-        .catch(() => {
-          reject();
+        .catch((error) => {
+          console.error("❌ Error de red al procesar pago:", error);
+          showError(
+            'Error de Conexión',
+            'Hubo un problema de conexión al procesar tu pago. Por favor, inténtalo de nuevo.'
+          );
+          reject(error);
         });
     });
   };
@@ -385,12 +431,40 @@ const MercadoPagoComponent = () => {
   }, [generarNumeroGuia, paymentId, session?.user?.email, showSuccess, showError]);
 
   useEffect(() => {
-    if (status === "approved") {
+    console.log("🔍 Estado del pago actualizado:", status);
+    
+    // Registrar envío cuando el pago es aprobado o está en proceso
+    if (status === "approved" || status === "in_process" || status === "pending") {
+      console.log(`📦 Registrando envío con estado de pago: ${status}`);
       void manejarEnvioAprobado();
+    } else if (status === "rejected" || status === "cancelled") {
+      console.error(`❌ Pago ${status} - No se registrará el envío`);
+      showError(
+        'Pago No Exitoso',
+        `Tu pago fue ${status === 'rejected' ? 'rechazado' : 'cancelado'}. Por favor, inténtalo nuevamente con otro método de pago.`
+      );
     }
-  }, [manejarEnvioAprobado, status]);
+  }, [manejarEnvioAprobado, status, showError]);
   const onError = async (error) => {
-    console.log(error);
+    console.error("❌ Error en Payment Brick:", error);
+    
+    // Extraer mensaje de error
+    let errorMessage = 'Hubo un error al procesar tu pago.';
+    
+    if (error && typeof error === 'object') {
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.cause && Array.isArray(error.cause)) {
+        errorMessage = error.cause.map((e) => e.description || e.message).join(', ');
+      }
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
+    
+    showError(
+      'Error en el Pago',
+      errorMessage + '\n\nPor favor, verifica los datos e inténtalo nuevamente.'
+    );
   };
   console.log(
     "paymentId********************************************",
