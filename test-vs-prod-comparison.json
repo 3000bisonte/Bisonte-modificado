@@ -1,0 +1,183 @@
+{
+  "timestamp": "2025-10-15T22:23:54.964Z",
+  "test": {
+    "total": 11,
+    "methods": [
+      {
+        "id": "visa",
+        "name": "Visa",
+        "type": "credit_card"
+      },
+      {
+        "id": "master",
+        "name": "Mastercard Prepaid",
+        "type": "prepaid_card"
+      },
+      {
+        "id": "visa",
+        "name": "Visa",
+        "type": "prepaid_card"
+      },
+      {
+        "id": "debvisa",
+        "name": "Visa Débito",
+        "type": "debit_card"
+      },
+      {
+        "id": "debmaster",
+        "name": "Mastercard Débito",
+        "type": "debit_card"
+      },
+      {
+        "id": "amex",
+        "name": "American Express",
+        "type": "credit_card"
+      },
+      {
+        "id": "codensa",
+        "name": "Crédito Fácil Codensa",
+        "type": "credit_card"
+      },
+      {
+        "id": "master",
+        "name": "Mastercard",
+        "type": "credit_card"
+      },
+      {
+        "id": "diners",
+        "name": "Diners",
+        "type": "credit_card"
+      },
+      {
+        "id": "efecty",
+        "name": "Efecty",
+        "type": "ticket"
+      },
+      {
+        "id": "pse",
+        "name": "PSE",
+        "type": "bank_transfer"
+      }
+    ]
+  },
+  "production": {
+    "total": 11,
+    "methods": [
+      {
+        "id": "codensa",
+        "name": "Crédito Fácil Codensa",
+        "type": "credit_card"
+      },
+      {
+        "id": "debmaster",
+        "name": "Mastercard Débito",
+        "type": "debit_card"
+      },
+      {
+        "id": "master",
+        "name": "Mastercard",
+        "type": "credit_card"
+      },
+      {
+        "id": "diners",
+        "name": "Diners",
+        "type": "credit_card"
+      },
+      {
+        "id": "visa",
+        "name": "Visa",
+        "type": "credit_card"
+      },
+      {
+        "id": "debvisa",
+        "name": "Visa Débito",
+        "type": "debit_card"
+      },
+      {
+        "id": "amex",
+        "name": "American Express",
+        "type": "credit_card"
+      },
+      {
+        "id": "master",
+        "name": "Mastercard Prepaid",
+        "type": "prepaid_card"
+      },
+      {
+        "id": "visa",
+        "name": "Visa",
+        "type": "prepaid_card"
+      },
+      {
+        "id": "pse",
+        "name": "PSE",
+        "type": "bank_transfer"
+      },
+      {
+        "id": "efecty",
+        "name": "Efecty",
+        "type": "ticket"
+      }
+    ]
+  },
+  "comparison": {
+    "in_both": [
+      "visa",
+      "master",
+      "debvisa",
+      "debmaster",
+      "amex",
+      "codensa",
+      "diners",
+      "efecty",
+      "pse"
+    ],
+    "only_test": [],
+    "only_prod": []
+  },
+  "digital_wallets_available": false,
+  "requested_methods_status": [
+    {
+      "id": "nequi",
+      "name": "Nequi",
+      "type": "Billetera Digital",
+      "available_test": false,
+      "available_prod": false
+    },
+    {
+      "id": "daviplata",
+      "name": "DaviPlata",
+      "type": "Billetera Digital",
+      "available_test": false,
+      "available_prod": false
+    },
+    {
+      "id": "baloto",
+      "name": "Baloto",
+      "type": "Efectivo",
+      "available_test": false,
+      "available_prod": false
+    },
+    {
+      "id": "via_baloto",
+      "name": "Vía Baloto",
+      "type": "Efectivo",
+      "available_test": false,
+      "available_prod": false
+    },
+    {
+      "id": "su_red",
+      "name": "Su Red",
+      "type": "Efectivo",
+      "available_test": false,
+      "available_prod": false
+    },
+    {
+      "id": "puntored",
+      "name": "PuntoRed",
+      "type": "Efectivo",
+      "available_test": false,
+      "available_prod": false
+    }
+  ]
+}

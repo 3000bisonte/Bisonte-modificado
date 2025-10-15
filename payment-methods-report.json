@@ -1,0 +1,102 @@
+{
+  "timestamp": "2025-10-15T22:21:29.328Z",
+  "environment": "test",
+  "total_methods": 11,
+  "methods": [
+    {
+      "id": "codensa",
+      "name": "Crédito Fácil Codensa",
+      "type": "credit_card",
+      "status": "active",
+      "min_amount": 100,
+      "max_amount": 5000000
+    },
+    {
+      "id": "debvisa",
+      "name": "Visa Débito",
+      "type": "debit_card",
+      "status": "active",
+      "min_amount": 1000,
+      "max_amount": 50000000
+    },
+    {
+      "id": "master",
+      "name": "Mastercard",
+      "type": "credit_card",
+      "status": "active",
+      "min_amount": 1000,
+      "max_amount": 50000000
+    },
+    {
+      "id": "visa",
+      "name": "Visa",
+      "type": "credit_card",
+      "status": "active",
+      "min_amount": 1000,
+      "max_amount": 50000000
+    },
+    {
+      "id": "debmaster",
+      "name": "Mastercard Débito",
+      "type": "debit_card",
+      "status": "active",
+      "min_amount": 1000,
+      "max_amount": 50000000
+    },
+    {
+      "id": "diners",
+      "name": "Diners",
+      "type": "credit_card",
+      "status": "active",
+      "min_amount": 1000,
+      "max_amount": 50000000
+    },
+    {
+      "id": "amex",
+      "name": "American Express",
+      "type": "credit_card",
+      "status": "active",
+      "min_amount": 1000,
+      "max_amount": 50000000
+    },
+    {
+      "id": "master",
+      "name": "Mastercard Prepaid",
+      "type": "prepaid_card",
+      "status": "active",
+      "min_amount": 1600,
+      "max_amount": 50000000
+    },
+    {
+      "id": "visa",
+      "name": "Visa",
+      "type": "prepaid_card",
+      "status": "active",
+      "min_amount": 1600,
+      "max_amount": 30000000
+    },
+    {
+      "id": "efecty",
+      "name": "Efecty",
+      "type": "ticket",
+      "status": "active",
+      "min_amount": 5000,
+      "max_amount": 8000000
+    },
+    {
+      "id": "pse",
+      "name": "PSE",
+      "type": "bank_transfer",
+      "status": "active",
+      "min_amount": 1600,
+      "max_amount": 340000000
+    }
+  ],
+  "summary": {
+    "credit_cards": 5,
+    "debit_cards": 2,
+    "cash": 1,
+    "transfers": 1,
+    "digital_wallets": 0
+  }
+}
