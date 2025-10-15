@@ -9,6 +9,7 @@ import { useMultipleLoadingMonitor } from "../hooks/useLoadingMonitor";
 import { useNotification } from "../hooks/useNotification";
 import AdMobService, { useAdMob } from "../services/AdMobService";
 
+import AdLoadingIndicator from "./AdLoadingIndicator";
 import BottomNav from "./BottomNav";
 import MegaSaleModal from "./MegaSaleModal";
 import NotificationModal from "./NotificationModal";
@@ -81,6 +82,15 @@ export default function Resumen() {
   const adErrorModalTimerRef = useRef(null);
   const messagePortRef = useRef(null);
   const MAX_RETRIES = 3;
+  
+  // 🕐 Estado para timeout de carga de anuncios
+  const [adLoadTimeout, setAdLoadTimeout] = useState(false);
+  const [adLoadAttempts, setAdLoadAttempts] = useState(0);
+  const [adLoadProgress, setAdLoadProgress] = useState(0);
+  const adLoadTimeoutRef = useRef(null);
+  const adProgressIntervalRef = useRef(null);
+  const MAX_AD_LOAD_ATTEMPTS = 2;
+  const AD_LOAD_TIMEOUT = 15000; // 15 segundos para cargar anuncio
 
   // 🎯 Monitorear múltiples estados de loading
   useMultipleLoadingMonitor({
@@ -276,6 +286,63 @@ export default function Resumen() {
     scheduleAdErrorModal(errorType, config);
   }, [scheduleAdErrorModal]);
 
+  // 🕐 Limpiar timeouts de carga de anuncios
+  const clearAdLoadTimeout = useCallback(() => {
+    if (adLoadTimeoutRef.current) {
+      clearTimeout(adLoadTimeoutRef.current);
+      adLoadTimeoutRef.current = null;
+    }
+    if (adProgressIntervalRef.current) {
+      clearInterval(adProgressIntervalRef.current);
+      adProgressIntervalRef.current = null;
+    }
+    setAdLoadProgress(0);
+    setAdLoadTimeout(false);
+  }, []);
+
+  // 🕐 Iniciar timeout para carga de anuncio
+  const startAdLoadTimeout = useCallback(() => {
+    clearAdLoadTimeout();
+    setAdLoadProgress(0);
+    setAdLoadTimeout(false);
+
+    // Barra de progreso visual
+    const progressIncrement = 100 / (AD_LOAD_TIMEOUT / 500); // Actualizar cada 500ms
+    adProgressIntervalRef.current = setInterval(() => {
+      setAdLoadProgress((prev) => {
+        const next = prev + progressIncrement;
+        return next >= 100 ? 100 : next;
+      });
+    }, 500);
+
+    // Timeout principal
+    adLoadTimeoutRef.current = setTimeout(() => {
+      console.warn("⏰ Timeout: El anuncio tardó demasiado en cargar");
+      setAdLoadTimeout(true);
+      setAdState("error");
+      clearInterval(adProgressIntervalRef.current);
+      adProgressIntervalRef.current = null;
+      
+      const newAttempts = adLoadAttempts + 1;
+      setAdLoadAttempts(newAttempts);
+      
+      if (newAttempts >= MAX_AD_LOAD_ATTEMPTS) {
+        showWarning(
+          'Anuncios no disponibles',
+          'Los anuncios están tardando mucho en cargar.\n\n' +
+          '¿Deseas continuar sin descuento o intentar de nuevo más tarde?'
+        );
+      } else {
+        showInfo(
+          'Cargando anuncio...',
+          `El anuncio está tardando más de lo esperado.\n\n` +
+          `Intento ${newAttempts} de ${MAX_AD_LOAD_ATTEMPTS}.\n\n` +
+          'Puedes esperar o continuar sin descuento.'
+        );
+      }
+    }, AD_LOAD_TIMEOUT);
+  }, [clearAdLoadTimeout, adLoadAttempts, showWarning, showInfo, AD_LOAD_TIMEOUT, MAX_AD_LOAD_ATTEMPTS]);
+
   const preloadAd = useCallback(() => {
     // No precargar si es envío gratuito
     if (costoTotal === 0) {
@@ -290,29 +357,36 @@ export default function Resumen() {
     if (adMobSupported) {
       if (AdMobService.wasRewardReady()) {
         clearAdErrorState();
+        clearAdLoadTimeout();
         setAdState((prev) => (prev === "ready" ? prev : "ready"));
         return;
       }
 
       if (isRewardedReady) {
         clearAdErrorState();
+        clearAdLoadTimeout();
         setAdState((prev) => (prev === "ready" ? prev : "ready"));
         return;
       }
 
       console.log("📺 Precargando anuncio recompensado (AdMob)...");
       setAdState("preloading");
+      startAdLoadTimeout(); // 🕐 Iniciar timeout
+      
       void prepareRewardedAd()
         .then((ready) => {
+          clearAdLoadTimeout(); // 🕐 Limpiar timeout si carga exitosamente
           setAdState(ready ? "ready" : "idle");
           if (!ready) {
             handleAdError("prepare_failed");
           } else {
             clearAdErrorState();
+            setAdLoadAttempts(0); // Resetear intentos en éxito
             console.log("✅ Anuncio precargado y listo");
           }
         })
         .catch((error) => {
+          clearAdLoadTimeout(); // 🕐 Limpiar timeout en error
           console.error("❌ Error al precargar anuncio recompensado:", error);
           handleAdError("prepare_exception");
         });
@@ -322,9 +396,17 @@ export default function Resumen() {
     if (window.AndroidInterface?.preloadRewardedAd) {
       console.log("📺 Precargando anuncio recompensado (Android)...");
       setAdState("preloading");
+      startAdLoadTimeout(); // 🕐 Iniciar timeout
       try {
         window.AndroidInterface.preloadRewardedAd();
+        // Android no retorna promesa, así que limpiamos timeout después de 2s si no hay error
+        setTimeout(() => {
+          if (adState === "preloading") {
+            clearAdLoadTimeout();
+          }
+        }, 2000);
       } catch (error) {
+        clearAdLoadTimeout(); // 🕐 Limpiar timeout en error
         console.error("❌ Error al llamar a preloadRewardedAd:", error);
         handleAdError("preload_exception");
       }
@@ -332,7 +414,7 @@ export default function Resumen() {
       console.log("⚠️ Interfaz de anuncios no disponible.");
       setAdState("idle");
     }
-  }, [adState, adMobSupported, isRewardedReady, prepareRewardedAd, handleAdError, clearAdErrorState, costoTotal]);
+  }, [adState, adMobSupported, isRewardedReady, prepareRewardedAd, handleAdError, clearAdErrorState, costoTotal, startAdLoadTimeout, clearAdLoadTimeout]);
 
   useEffect(() => {
     if (AdMobService.wasRewardReady()) {
@@ -687,8 +769,10 @@ export default function Resumen() {
         }
         messagePortRef.current = null;
       }
+      // 🕐 Limpiar timeouts al desmontar
+      clearAdLoadTimeout();
     };
-  }, [processRewardPayload, clearAdErrorState]);
+  }, [processRewardPayload, clearAdErrorState, clearAdLoadTimeout]);
 
   // Lógica de reintento para errores de anuncios
   useEffect(() => {
@@ -1360,16 +1444,28 @@ export default function Resumen() {
           onWatchAd={handleWatchAdFromModal}
         />
 
-        {/* Feedback visual de AdMob - Solo mostrar si NO es envío gratuito */}
-  {costoTotal > 0 && (adState === "loading" || adState === "preloading" || (adState === "error" && !showAdErrorModal && !hideAdErrorModal)) && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-            <div className="bg-white rounded-xl p-8 shadow text-center">
-              <span className="block mb-4 text-lg font-bold text-[#41e0b3]">Cargando anuncio...</span>
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#41e0b3] mx-auto"></div>
-              <p className="text-sm text-gray-600 mt-2">Por favor espera...</p>
-            </div>
-          </div>
-        )}
+        {/* Indicador de carga de anuncios con timeout */}
+        <AdLoadingIndicator
+          isLoading={costoTotal > 0 && (adState === "loading" || adState === "preloading" || (adState === "error" && !showAdErrorModal && !hideAdErrorModal))}
+          hasTimeout={adLoadTimeout}
+          progress={adLoadProgress}
+          currentAttempt={adLoadAttempts}
+          maxAttempts={MAX_AD_LOAD_ATTEMPTS}
+          onContinueWithoutAd={() => {
+            clearAdLoadTimeout();
+            setAdState("idle");
+            showInfo(
+              'Continuando sin descuento',
+              'Puedes proceder con el pago sin el descuento por anuncios.'
+            );
+          }}
+          onRetry={() => {
+            clearAdLoadTimeout();
+            setAdLoadAttempts(0);
+            setAdState("idle");
+            setTimeout(preloadAd, 500);
+          }}
+        />
         
         {adState === "done" && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
