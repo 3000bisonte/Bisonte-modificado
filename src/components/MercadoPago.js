@@ -2,6 +2,7 @@
 import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
 import classnames from "classnames";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import Screen from "@/components/BrickStatusScreen";
@@ -30,6 +31,7 @@ if (initMPago) {
 }
 
 const MercadoPagoComponent = () => {
+  const router = useRouter();
   const { data: session } = useSession();
   const [paymentId, setpaymentId] = useState(null);
   const [status, setstatus] = useState(null);
@@ -382,27 +384,173 @@ const MercadoPagoComponent = () => {
   };
   return (
     <InternalProvider context={{ paymentId }}>
-      {isLoadingAmount ? (
-        <div className="text-center p-10">Cargando información de pago...</div>
-      ) : initError ? (
-        <div className="text-center p-10 text-red-600 font-semibold">
-          {initError}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Back Button */}
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors group"
+          >
+            <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="font-medium">Volver al resumen</span>
+          </button>
+
+          {/* Header Section */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#41e0b3] to-[#2bbd8c] rounded-xl flex items-center justify-center shadow-lg">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-800">Pago Seguro</h1>
+                  <p className="text-sm text-gray-500">Protegido por Mercado Pago</p>
+                </div>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-semibold">Conexión Segura SSL</span>
+              </div>
+            </div>
+
+            {initializationConfig && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Total a pagar</p>
+                    <p className="text-3xl font-bold text-gray-800">
+                      ${Number(initializationConfig.amount).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Método de pago</p>
+                    <p className="text-sm font-semibold text-gray-700">Mercado Pago</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Payment Content */}
+          {isLoadingAmount ? (
+            <div className="bg-white rounded-2xl shadow-lg p-12">
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-16 h-16 border-4 border-[#41e0b3] border-t-transparent rounded-full animate-spin mb-4"></div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Cargando información de pago</h3>
+                <p className="text-sm text-gray-500">Por favor espera un momento...</p>
+              </div>
+            </div>
+          ) : initError ? (
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Error al cargar el pago</h3>
+                <p className="text-red-600 font-medium mb-4">{initError}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-[#41e0b3] hover:bg-[#2bbd8c] text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200"
+                >
+                  Reintentar
+                </button>
+              </div>
+            </div>
+          ) : !initializationConfig ? (
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Error inesperado</h3>
+                <p className="text-gray-600 mb-4">No se pudo preparar el pago. Por favor intenta nuevamente.</p>
+                <button
+                  onClick={() => window.history.back()}
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200"
+                >
+                  Volver atrás
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              {/* Trust Badges */}
+              <div className="flex items-center justify-center gap-6 mb-6 pb-6 border-b border-gray-200">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium">Compra protegida</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium">Datos encriptados</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium">Pago verificado</span>
+                </div>
+              </div>
+
+              {/* Payment Form */}
+              <section className={`mercadopago-payment-section ${paymentMethods}`}>
+                <Payment
+                  initialization={initializationConfig}
+                  customization={customization}
+                  onSubmit={onSubmit}
+                  onError={onError}
+                />
+              </section>
+
+              {/* Footer Info */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-start gap-3 text-sm text-gray-600">
+                  <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <p>
+                    <strong>Información importante:</strong> Tu pago será procesado de forma segura por Mercado Pago. 
+                    Una vez confirmado el pago, recibirás un correo con los detalles de tu envío y el número de guía.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Payment Methods Info */}
+          <div className="mt-6 bg-white rounded-xl shadow p-4">
+            <p className="text-center text-sm text-gray-600 mb-3">Aceptamos todos los medios de pago</p>
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <span className="text-xs font-semibold text-gray-700">💳 Tarjetas de crédito</span>
+              </div>
+              <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <span className="text-xs font-semibold text-gray-700">💵 Tarjetas de débito</span>
+              </div>
+              <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <span className="text-xs font-semibold text-gray-700">🏦 Transferencia bancaria</span>
+              </div>
+              <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <span className="text-xs font-semibold text-gray-700">📱 Mercado Pago</span>
+              </div>
+            </div>
+          </div>
         </div>
-      ) : !initializationConfig ? (
-        <div className="text-center p-10 text-red-600 font-semibold">
-          Error inesperado al preparar el pago.
-        </div>
-      ) : (
-        <section className={paymentMethods}>
-          <Payment
-            initialization={initializationConfig}
-            customization={customization}
-            onSubmit={onSubmit}
-            //  onReady={onReady}
-            onError={onError}
-          />
-        </section>
-      )}
+      </div>
 
       <Screen />
 

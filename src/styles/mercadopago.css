@@ -1,3 +1,54 @@
 .shopping-cart--hidden {
   display: none;
 }
+
+/* 🎨 Estilos mejorados para Mercado Pago Payment Brick */
+.mercadopago-payment-section {
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Mejorar el aspecto de los inputs del brick de Mercado Pago */
+.mercadopago-payment-section iframe {
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+/* Animaciones suaves */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mercadopago-payment-section {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+  .mercadopago-payment-section {
+    padding: 0;
+  }
+}
+
+/* Mejorar la apariencia de botones del brick */
+.mercadopago-payment-section button {
+  transition: all 0.2s ease !important;
+}
+
+/* Loader personalizado */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
