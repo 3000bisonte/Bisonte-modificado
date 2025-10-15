@@ -341,6 +341,13 @@ const MercadoPagoComponent = () => {
 
       if (response.ok) {
         console.log("✅ Envío registrado exitosamente:", responseData);
+        console.log("📦 Detalles del envío:", {
+          id: responseData.id,
+          NumeroGuia: responseData.NumeroGuia,
+          usuarioId: responseData.usuarioId,
+          Estado: responseData.Estado,
+          PaymentId: responseData.PaymentId,
+        });
 
         // Guardar información del envío
         localStorage.setItem("envioDatos", JSON.stringify({
@@ -351,6 +358,7 @@ const MercadoPagoComponent = () => {
           paymentId: paymentId,
         }));
         localStorage.setItem("envioExitoso", "true");
+        localStorage.setItem("ultimoEnvioId", responseData.id?.toString() || "");
 
         // Limpiar datos del formulario
         localStorage.removeItem("formCotizador");
@@ -360,9 +368,11 @@ const MercadoPagoComponent = () => {
 
         showSuccess('¡Pago Exitoso! 🎉', '¡Envío realizado exitosamente! Serás redirigido a Mis Envíos para ver el detalle.');
 
+        // Esperar un poco más para asegurar que la DB se actualice
         setTimeout(() => {
+          console.log("🔄 Redirigiendo a Mis Envíos...");
           window.location.href = "/misenvios";
-        }, 2500);
+        }, 3000);
       } else {
         console.error("Error al registrar el envío:", response.status, responseData);
         const errorMessage = responseData?.message || responseData?.error || 'Hubo un error al registrar tu envío. Por favor contacta soporte.';

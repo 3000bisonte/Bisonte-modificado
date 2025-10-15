@@ -92,14 +92,17 @@ export default function MisEnvios() {
 
   // Cargar historial de envíos del usuario
   useEffect(() => {
-    const fetchEnvios = async () => {
-      if (!userEmail) {return;}
+    const fetchEnvios = async (retryCount = 0) => {
+      if (!userEmail) {
+        console.log("⚠️ No hay email de usuario, esperando sesión...");
+        return;
+      }
       try {
-        console.log("🔍 Consultando envíos para usuario:", userEmail);
+        console.log("🔍 Consultando envíos para usuario:", userEmail, `(intento ${retryCount + 1})`);
 
         // Forzar recarga sin caché cuando viene de envío exitoso
         const envioExitoso = localStorage.getItem("envioExitoso");
-        const cacheParam = envioExitoso === "true" ? `&t=${Date.now()}` : '';
+        const cacheParam = `&t=${Date.now()}`; // Siempre forzar recarga en primera carga
 
         const enviosRes = await fetch(
           `/api/envios/historial?email=${encodeURIComponent(userEmail)}${cacheParam}`,
@@ -107,6 +110,7 @@ export default function MisEnvios() {
             cache: 'no-store', // Evitar caché del navegador
             headers: {
               'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache',
             },
           }
         );
@@ -117,11 +121,30 @@ export default function MisEnvios() {
 
         const data = await enviosRes.json();
         console.log("✅ Envíos encontrados:", data.length, "registros");
+        
+        if (data.length > 0) {
+          console.log("📦 Últimos envíos:");
+          data.slice(0, 3).forEach((envio, idx) => {
+            console.log(`  ${idx + 1}. ${envio.NumeroGuia} - ${envio.Estado} (${envio.Origen} → ${envio.Destino})`);
+          });
+        }
 
         setEnvios(Array.isArray(data) ? data : []);
+
+        // Si viene de envío exitoso y no hay datos, reintentar una vez más después de 1 segundo
+        if (envioExitoso === "true" && data.length === 0 && retryCount === 0) {
+          console.log("🔄 No se encontraron envíos, reintentando en 1 segundo...");
+          setTimeout(() => fetchEnvios(1), 1000);
+        }
       } catch (e) {
         console.error("❌ Error al cargar envíos:", e);
         setEnvios([]);
+        
+        // Reintentar en caso de error de red
+        if (retryCount < 2) {
+          console.log(`🔄 Reintentando en 2 segundos... (intento ${retryCount + 2})`);
+          setTimeout(() => fetchEnvios(retryCount + 1), 2000);
+        }
       }
     };
     fetchEnvios();
@@ -331,9 +354,21 @@ export default function MisEnvios() {
                     <tr>
                       <td
                         colSpan={6}
-                        className="text-center text-gray-400 py-8 sm:py-10 bg-[#18191A] text-sm sm:text-base"
+                        className="bg-[#18191A] py-12"
                       >
-                        {envios.length === 0 ? 'No hay envíos registrados.' : 'No se encontraron resultados.'}
+                        <div className="flex flex-col items-center justify-center text-center">
+                          <svg className="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                          </svg>
+                          <p className="text-gray-400 text-base sm:text-lg font-medium mb-2">
+                            {envios.length === 0 ? '📦 No hay envíos registrados' : '🔍 No se encontraron resultados'}
+                          </p>
+                          <p className="text-gray-500 text-sm">
+                            {envios.length === 0 
+                              ? 'Realiza tu primer envío para verlo aquí' 
+                              : 'Intenta con otro término de búsqueda'}
+                          </p>
+                        </div>
                       </td>
                     </tr>
                   ) : (

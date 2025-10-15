@@ -826,6 +826,12 @@ export default function Resumen() {
 
       if (response.ok) {
         console.log("✅ Envío gratuito creado exitosamente:", responseData);
+        console.log("📦 Detalles del envío:", {
+          id: responseData.id,
+          NumeroGuia: responseData.NumeroGuia,
+          usuarioId: responseData.usuarioId,
+          Estado: responseData.Estado,
+        });
         
         // Guardar información del envío en localStorage
         localStorage.setItem("envioDatos", JSON.stringify({
@@ -835,6 +841,7 @@ export default function Resumen() {
           metodoPago: "GRATUITO",
         }));
         localStorage.setItem("envioExitoso", "true");
+        localStorage.setItem("ultimoEnvioId", responseData.id?.toString() || "");
         
         // Limpiar datos del formulario
         localStorage.removeItem("formCotizador");
@@ -843,9 +850,12 @@ export default function Resumen() {
         localStorage.removeItem("formDestinatario");
         
         showSuccess('¡Envío Registrado! 🎉', 'Tu envío gratuito ha sido registrado exitosamente. Serás redirigido a Mis Envíos.');
+        
+        // Esperar un poco más para asegurar que la DB se actualice
         setTimeout(() => {
+          console.log("🔄 Redirigiendo a Mis Envíos...");
           router.push("/misenvios");
-        }, 2000);
+        }, 2500);
       } else {
         console.error("❌ Error del servidor:", responseData);
         const errorMsg = responseData.message || responseData.error || "Error desconocido";
