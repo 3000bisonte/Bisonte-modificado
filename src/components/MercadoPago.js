@@ -230,10 +230,32 @@ const MercadoPagoComponent = () => {
           console.log("📥 Respuesta del servidor:", result);
 
           if (!result.success) {
-            console.error("❌ Error en el pago:", result.error);
+            console.error("❌ Error en el pago:", result);
+            
+            // Construir mensaje de error más descriptivo
+            let errorTitle = 'Error al Procesar Pago';
+            let errorMessage = result.error || 'Hubo un problema al procesar tu pago.';
+            let errorDetails = '';
+
+            // Si es un error de configuración
+            if (result.httpStatus === 401 || result.details?.includes('Access Token')) {
+              errorTitle = 'Error de Configuración';
+              errorDetails = 'El sistema de pagos no está configurado correctamente. Por favor, contacta al administrador.';
+            } 
+            // Si es un error de datos inválidos
+            else if (result.httpStatus === 400) {
+              errorTitle = 'Datos Inválidos';
+              errorDetails = 'Por favor, verifica los datos de tu tarjeta e inténtalo nuevamente.';
+            }
+            // Si es un error del servidor de MP
+            else if (result.httpStatus >= 500) {
+              errorTitle = 'Servicio No Disponible';
+              errorDetails = 'Mercado Pago está experimentando problemas. Intenta nuevamente en unos minutos.';
+            }
+
             showError(
-              'Error al Procesar Pago',
-              result.error || 'Hubo un problema al procesar tu pago. Por favor, verifica los datos e inténtalo nuevamente.'
+              errorTitle,
+              `${errorMessage}${errorDetails ? '\n\n' + errorDetails : ''}`
             );
             reject(result.error);
             return;

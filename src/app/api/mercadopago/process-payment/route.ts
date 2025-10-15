@@ -109,17 +109,24 @@ export async function POST(request: NextRequest) {
 
     if (!accessToken) {
       console.error("❌ Mercado Pago no está configurado - Falta access token");
+      console.error("❌ MP_ENVIRONMENT:", process.env.MP_ENVIRONMENT);
+      console.error("❌ Variables disponibles:", {
+        MP_ACCESS_TOKEN_TEST: process.env.MP_ACCESS_TOKEN_TEST ? '✅ Configurado' : '❌ Falta',
+        MP_ACCESS_TOKEN_PROD: process.env.MP_ACCESS_TOKEN_PROD ? '✅ Configurado' : '❌ Falta',
+      });
       return NextResponse.json(
         {
           success: false,
-          error: "Mercado Pago no está configurado",
-          details: "Falta MP_ACCESS_TOKEN en las variables de entorno",
+          error: "Mercado Pago no está configurado correctamente",
+          details: `Falta el Access Token para el ambiente: ${environment}. Verifica las variables MP_ACCESS_TOKEN_TEST o MP_ACCESS_TOKEN_PROD en .env.local`,
+          help: "Lee el archivo SOLUCION_ERROR_MERCADOPAGO.md para obtener las credenciales correctas",
         },
         { status: 500 }
       );
     }
 
     console.log(`🌍 Ambiente: ${environment}`);
+    console.log(`🔑 Access Token: ${accessToken.substring(0, 20)}...`);
 
     // Preparar el payload para la API de Payments
     const paymentPayload = {
@@ -166,20 +173,42 @@ export async function POST(request: NextRequest) {
 
     // Si Mercado Pago retorna error
     if (!mpResponse.ok) {
-      console.error("❌ Error de Mercado Pago:", paymentResult);
+      console.error("❌ Error de Mercado Pago API - Status:", mpResponse.status);
+      console.error("❌ Respuesta completa:", JSON.stringify(paymentResult, null, 2));
       
-      const errorMessage = 
-        typeof paymentResult.message === "string" 
-          ? paymentResult.message 
-          : "Error al procesar el pago";
+      // Extraer mensaje de error más descriptivo
+      let errorMessage = "Error al procesar el pago";
+      let userFriendlyMessage = "";
+
+      if (typeof paymentResult.message === "string") {
+        errorMessage = paymentResult.message;
+      } else if (typeof paymentResult.error === "string") {
+        errorMessage = paymentResult.error;
+      }
+
+      // Mensajes amigables según el tipo de error
+      if (mpResponse.status === 401) {
+        userFriendlyMessage = "Error de autenticación con Mercado Pago. Las credenciales son inválidas.";
+        console.error("💡 Solución: Verifica que tu Access Token sea correcto en .env.local");
+      } else if (mpResponse.status === 400) {
+        userFriendlyMessage = "Los datos de la tarjeta son inválidos o incompletos.";
+      } else if (mpResponse.status === 403) {
+        userFriendlyMessage = "No tienes permisos para realizar pagos. Verifica tu cuenta de Mercado Pago.";
+      } else if (mpResponse.status >= 500) {
+        userFriendlyMessage = "Mercado Pago está experimentando problemas. Intenta nuevamente en unos minutos.";
+      }
 
       return NextResponse.json(
         {
           success: false,
-          error: errorMessage,
+          error: userFriendlyMessage || errorMessage,
           details: paymentResult,
           status: paymentResult.status,
           status_detail: paymentResult.status_detail,
+          httpStatus: mpResponse.status,
+          help: mpResponse.status === 401 
+            ? "Lee SOLUCION_ERROR_MERCADOPAGO.md para obtener credenciales válidas"
+            : undefined,
         },
         { status: 502 }
       );
