@@ -193,7 +193,8 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
         });
         if (!response.ok) {throw new Error("Error al obtener el perfil");}
         const data = await response.json();
-        const perfil = data.find((perf) => perf.correo === session.user.email);
+        const dataArray = Array.isArray(data) ? data : [];
+        const perfil = dataArray.find((perf) => perf.correo === session.user.email);
         if (perfil) {
           setPerfilId(perfil.id); // Guarda el id en el estado
           perfilLoaded.current = true; // Marca como cargado

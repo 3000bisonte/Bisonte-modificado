@@ -52,6 +52,8 @@ export default function Resumen() {
   const [isCreatingShipment, setIsCreatingShipment] = useState(false);
   const [rewardBanner, setRewardBanner] = useState(null);
   const [rewardChainProgress, setRewardChainProgress] = useState(null);
+  const [showAdErrorModal, setShowAdErrorModal] = useState(false);
+  const [lastAdError, setLastAdError] = useState(null);
 
   // UI State
   const [showRemitente, setShowRemitente] = useState(false);
@@ -76,6 +78,7 @@ export default function Resumen() {
   const [retryCount, setRetryCount] = useState(0);
   const [hideAdErrorModal, setHideAdErrorModal] = useState(false);
   const adTimeoutRef = useRef(null);
+  const adErrorModalTimerRef = useRef(null);
   const messagePortRef = useRef(null);
   const MAX_RETRIES = 3;
 
@@ -232,13 +235,46 @@ export default function Resumen() {
     }
   }, []);
 
-  const handleAdError = useCallback((errorType) => {
+  const clearAdErrorState = useCallback(() => {
+    if (adErrorModalTimerRef.current) {
+      clearTimeout(adErrorModalTimerRef.current);
+      adErrorModalTimerRef.current = null;
+    }
+    setShowAdErrorModal(false);
+    setLastAdError(null);
+  }, []);
+
+  const scheduleAdErrorModal = useCallback((errorType, { immediate = false } = {}) => {
+    const normalizedError = errorType ?? "unknown_error";
+
+    if (immediate || typeof window === "undefined") {
+      clearAdErrorState();
+      setLastAdError(normalizedError);
+      setShowAdErrorModal(true);
+      return;
+    }
+
+    if (adErrorModalTimerRef.current) {
+      clearTimeout(adErrorModalTimerRef.current);
+    }
+
+    setLastAdError(normalizedError);
+    setShowAdErrorModal(false);
+    adErrorModalTimerRef.current = window.setTimeout(() => {
+      setShowAdErrorModal(true);
+      adErrorModalTimerRef.current = null;
+    }, 180_000);
+  }, [clearAdErrorState]);
+
+  const handleAdError = useCallback((errorType, options) => {
     console.error(`❌ Error de anuncio: ${errorType}`);
     setAdState("error");
     if (adTimeoutRef.current) {
       clearTimeout(adTimeoutRef.current);
     }
-  }, []);
+    const config = (typeof options === "object" && options !== null) ? options : {};
+    scheduleAdErrorModal(errorType, config);
+  }, [scheduleAdErrorModal]);
 
   const preloadAd = useCallback(() => {
     // No precargar si es envío gratuito
@@ -253,11 +289,13 @@ export default function Resumen() {
 
     if (adMobSupported) {
       if (AdMobService.wasRewardReady()) {
+        clearAdErrorState();
         setAdState((prev) => (prev === "ready" ? prev : "ready"));
         return;
       }
 
       if (isRewardedReady) {
+        clearAdErrorState();
         setAdState((prev) => (prev === "ready" ? prev : "ready"));
         return;
       }
@@ -270,6 +308,7 @@ export default function Resumen() {
           if (!ready) {
             handleAdError("prepare_failed");
           } else {
+            clearAdErrorState();
             console.log("✅ Anuncio precargado y listo");
           }
         })
@@ -293,7 +332,7 @@ export default function Resumen() {
       console.log("⚠️ Interfaz de anuncios no disponible.");
       setAdState("idle");
     }
-  }, [adState, adMobSupported, isRewardedReady, prepareRewardedAd, handleAdError, costoTotal]);
+  }, [adState, adMobSupported, isRewardedReady, prepareRewardedAd, handleAdError, clearAdErrorState, costoTotal]);
 
   useEffect(() => {
     if (AdMobService.wasRewardReady()) {
@@ -332,6 +371,8 @@ export default function Resumen() {
       showSuccess('¡Felicidades!', 'Tu envío ya es gratuito. No necesitas ver más anuncios. 🎉');
       return;
     }
+
+    clearAdErrorState();
 
     // Usar nuevo servicio AdMob si está disponible
     if (adMobInitialized && adMobSupported) {
@@ -372,6 +413,7 @@ export default function Resumen() {
           successfulAds += 1;
           const rewardAmount = resolveRewardAmount(result?.reward?.amount);
           applyRewardDiscount(rewardAmount);
+          clearAdErrorState();
           setAdState("done");
         } catch (error) {
           console.error("❌ Error mostrando anuncio AdMob:", error);
@@ -396,7 +438,7 @@ export default function Resumen() {
             break;
           }
 
-          await delay(900);
+          await delay(450);
         }
       }
 
@@ -408,8 +450,10 @@ export default function Resumen() {
         }, delayMs);
       };
 
+      setRewardChainProgress(null);
+
       if (chainAborted && successfulAds === 0) {
-        finalizeChain(0);
+        return;
       } else {
         finalizeChain(2000);
       }
@@ -464,7 +508,7 @@ export default function Resumen() {
       showInfo('Anuncios no disponibles', 'Los anuncios solo están disponibles en la app móvil. 📱\n\n💡 Descarga la app para obtener descuentos increíbles.');
       return;
     }
-  }, [adState, costoTotal, adMobInitialized, adMobSupported, isRewardedReady, showRewardedAd, prepareRewardedAd, preloadAd, handleAdError, applyRewardDiscount, resolveRewardAmount, pickRewardChainLength, showInfo, showSuccess]);
+  }, [adState, costoTotal, adMobInitialized, adMobSupported, isRewardedReady, showRewardedAd, prepareRewardedAd, preloadAd, handleAdError, applyRewardDiscount, resolveRewardAmount, pickRewardChainLength, showInfo, showSuccess, clearAdErrorState]);
 
   // --- Effects ---
 
@@ -564,6 +608,7 @@ export default function Resumen() {
       (rewardStatus === undefined || ["completed", "rewarded", "fulfilled"].includes(rewardStatus))
     ) {
       const amountToApply = resolveRewardAmount(rawRewardAmount);
+      clearAdErrorState();
       applyRewardDiscount(amountToApply);
       setAdState("done");
       setTimeout(() => {
@@ -576,13 +621,16 @@ export default function Resumen() {
     if (rewardType === "adStatus") {
       switch (data.status) {
         case "ready":
+          clearAdErrorState();
           setAdState("ready");
           setRetryCount(0);
           break;
         case "opened":
+          clearAdErrorState();
           setAdState("watching");
           break;
         case "closed":
+          clearAdErrorState();
           setAdState("idle");
           preloadAd();
           break;
@@ -590,11 +638,14 @@ export default function Resumen() {
           handleAdError(data.errorType || "unknown_error");
           break;
         default:
+          if (typeof data.status === "string" && data.status !== "error") {
+            clearAdErrorState();
+          }
           setAdState(data.status);
           break;
       }
     }
-  }, [applyRewardDiscount, preloadAd, handleAdError, resolveRewardAmount]);
+  }, [applyRewardDiscount, preloadAd, handleAdError, resolveRewardAmount, clearAdErrorState]);
 
   // Listener para mensajes de la interfaz nativa de Android o bridge webview
   useEffect(() => {
@@ -604,6 +655,7 @@ export default function Resumen() {
         if (port && messagePortRef.current !== port) {
           messagePortRef.current = port;
           setAdState((prev) => (prev === "ready" ? prev : "ready"));
+          clearAdErrorState();
           try {
             port.postMessage("bridge:connected");
           } catch (error) {
@@ -636,7 +688,7 @@ export default function Resumen() {
         messagePortRef.current = null;
       }
     };
-  }, [processRewardPayload]);
+  }, [processRewardPayload, clearAdErrorState]);
 
   // Lógica de reintento para errores de anuncios
   useEffect(() => {
@@ -686,6 +738,10 @@ export default function Resumen() {
     return () => {
       if (adTimeoutRef.current) {
         clearTimeout(adTimeoutRef.current);
+      }
+      if (adErrorModalTimerRef.current) {
+        clearTimeout(adErrorModalTimerRef.current);
+        adErrorModalTimerRef.current = null;
       }
     };
   }, []);
@@ -1295,7 +1351,7 @@ export default function Resumen() {
         />
 
         {/* Feedback visual de AdMob - Solo mostrar si NO es envío gratuito */}
-        {costoTotal > 0 && (adState === "loading" || adState === "preloading") && (
+  {costoTotal > 0 && (adState === "loading" || adState === "preloading" || (adState === "error" && !showAdErrorModal && !hideAdErrorModal)) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
             <div className="bg-white rounded-xl p-8 shadow text-center">
               <span className="block mb-4 text-lg font-bold text-[#41e0b3]">Cargando anuncio...</span>
@@ -1319,7 +1375,7 @@ export default function Resumen() {
           </div>
         )}
         
-        {adState === "error" && !hideAdErrorModal && (
+        {showAdErrorModal && !hideAdErrorModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
             <div className="relative bg-white rounded-xl p-8 shadow text-center">
               <button
@@ -1327,6 +1383,7 @@ export default function Resumen() {
                 aria-label="Cerrar"
                 className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
                 onClick={() => {
+                  clearAdErrorState();
                   setAdState("idle");
                   setRetryCount(0);
                 }}
@@ -1342,11 +1399,15 @@ export default function Resumen() {
               </div>
               <span className="block mb-4 text-lg font-bold text-red-500">Error al cargar el anuncio</span>
               <p className="text-sm text-gray-600">No se pudo mostrar el anuncio. Inténtalo de nuevo.</p>
+              {lastAdError && (
+                <p className="text-xs text-gray-400 mt-2">Código de error: {lastAdError}</p>
+              )}
               <div className="flex flex-col gap-3 mt-5 sm:flex-row sm:justify-center">
                 <button
                   type="button"
                   className="bg-[#41e0b3] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#2bbd8c] transition-colors"
                   onClick={() => {
+                    clearAdErrorState();
                     setAdState("idle");
                     setRetryCount(0);
                     preloadAd();
@@ -1358,6 +1419,7 @@ export default function Resumen() {
                   type="button"
                   className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
                   onClick={() => {
+                    clearAdErrorState();
                     setAdState("idle");
                     setRetryCount(0);
                   }}
@@ -1372,6 +1434,7 @@ export default function Resumen() {
                   setHideAdErrorModal(true);
                   setAdState("idle");
                   setRetryCount(0);
+                  clearAdErrorState();
                   try {
                     localStorage.setItem("hideAdErrorModal", "1");
                   } catch (error) {

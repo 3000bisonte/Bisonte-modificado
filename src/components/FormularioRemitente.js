@@ -90,7 +90,9 @@ const FormularioRemitente = ({ id: _id }) => {
         }
         
         const perfiles = await response.json();
-        const userProfile = perfiles.find(p => p.correo === session.user.email);
+        // Asegurar que perfiles es un array
+        const perfilesArray = Array.isArray(perfiles) ? perfiles : [];
+        const userProfile = perfilesArray.find(p => p.correo === session.user.email);
         
         if (userProfile) {
           console.log("👤 Perfil encontrado:", userProfile);

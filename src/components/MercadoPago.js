@@ -167,7 +167,8 @@ const MercadoPagoComponent = () => {
         if (!response.ok) {throw new Error("Error al obtener el perfil");}
 
         const data = await response.json();
-        const perfil = data.find((perf) => perf.correo === userEmail);
+        const dataArray = Array.isArray(data) ? data : [];
+        const perfil = dataArray.find((perf) => perf.correo === userEmail);
 
         if (perfil) {
           perfilIdRef.current = perfil.id; // Guarda el id en el ref
