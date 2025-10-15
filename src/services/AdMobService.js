@@ -17,6 +17,31 @@ const TEST_DEVICE_IDS = (CONFIGURED_TEST_DEVICE_IDS.length > 0
   : [DEFAULT_TEST_DEVICE_ID]
 ).filter((id, index, array) => array.indexOf(id) === index);
 
+const runtimeState = {
+  initialized: false,
+  rewardReady: false,
+  lastPrepareAt: null,
+};
+
+const markInitialized = (value) => {
+  runtimeState.initialized = Boolean(value);
+  if (!value) {
+    runtimeState.rewardReady = false;
+    runtimeState.lastPrepareAt = null;
+  }
+};
+
+const markRewardReady = (value) => {
+  runtimeState.rewardReady = Boolean(value);
+  if (value) {
+    runtimeState.lastPrepareAt = Date.now();
+  }
+};
+
+const consumeRewardReady = () => {
+  runtimeState.rewardReady = false;
+};
+
 /**
  * @param {unknown} detail
  * @returns {{stage: string, detail: unknown, message?: string, timestamp: string}}
@@ -90,6 +115,7 @@ export const AdMobService = {
       if (process.env.NODE_ENV !== 'production') {
         console.info('ℹ️ AdMobService: se omitió la inicialización (plataforma no nativa)');
       }
+      markInitialized(false);
       return false;
     }
 
@@ -111,10 +137,13 @@ export const AdMobService = {
         `✅ AdMob inicializado en modo ${isTesting ? 'pruebas' : 'producción'}`,
         isTesting ? { testingDevices: TEST_DEVICE_IDS } : undefined
       );
+      markInitialized(true);
+      markRewardReady(false);
       
       return true;
     } catch (error) {
       console.error('❌ Error al inicializar AdMob:', error);
+      markInitialized(false);
       return false;
     }
   },
@@ -131,9 +160,11 @@ export const AdMobService = {
       });
       
       console.log('📺 Anuncio recompensado preparado', info);
+      markRewardReady(true);
       return true;
     } catch (error) {
       console.error('❌ Error preparando anuncio recompensado:', error);
+      markRewardReady(false);
       return false;
     }
   },
@@ -144,6 +175,7 @@ export const AdMobService = {
     }
 
     try {
+      consumeRewardReady();
       const result = await AdMob.showRewardVideoAd();
       console.log('🎁 Anuncio recompensado completado:', result);
       return result;
@@ -188,8 +220,18 @@ export const AdMobService = {
       console.error('❌ Error ocultando banner:', error);
       return false;
     }
+  },
+
+  wasInitialized() {
+    return runtimeState.initialized;
+  },
+
+  wasRewardReady() {
+    return runtimeState.rewardReady;
   }
 };
+
+export const getAdMobRuntimeState = () => ({ ...runtimeState });
 
 // Hook personalizado para usar AdMob en componentes React
 /**
@@ -208,8 +250,9 @@ export const AdMobService = {
  * }}
  */
 export function useAdMob() {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isRewardedReady, setIsRewardedReady] = useState(false);
+  const runtimeSnapshot = getAdMobRuntimeState();
+  const [isInitialized, setIsInitialized] = useState(runtimeSnapshot.initialized);
+  const [isRewardedReady, setIsRewardedReady] = useState(runtimeSnapshot.rewardReady);
   const [isLoading, setIsLoading] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [lastReward, setLastReward] = useState(null);
@@ -222,6 +265,7 @@ export function useAdMob() {
     if (!supported) {
       setIsRewardedReady(false);
       setLastError(createAdError('unsupported', 'AdMob no está disponible en esta plataforma'));
+      markRewardReady(false);
       return false;
     }
 
@@ -229,6 +273,7 @@ export function useAdMob() {
     try {
       const ready = await AdMobService.prepareRewardedAd();
       setIsRewardedReady(ready);
+       markRewardReady(ready);
       if (ready) {
         setLastError(null);
       }
@@ -236,6 +281,7 @@ export function useAdMob() {
     } catch (error) {
       console.error('❌ Error preparando anuncio recompensado:', error);
       setIsRewardedReady(false);
+      markRewardReady(false);
       setLastError(createAdError('prepare', error));
       return false;
     } finally {
@@ -315,6 +361,7 @@ export function useAdMob() {
       if (!isMounted) {
         return;
       }
+      markRewardReady(true);
       setIsRewardedReady(true);
       setIsLoading(false);
       setLastError(null);
@@ -325,6 +372,7 @@ export function useAdMob() {
       if (!isMounted) {
         return;
       }
+      markRewardReady(false);
       setIsRewardedReady(false);
       setIsLoading(false);
       setLastError(createAdError('event:FailedToLoad', error));
@@ -343,6 +391,7 @@ export function useAdMob() {
       if (!isMounted) {
         return;
       }
+      markRewardReady(false);
       setIsRewardedReady(false);
     };
 
@@ -401,6 +450,7 @@ export function useAdMob() {
     try {
       const result = await AdMobService.showRewardedAd();
       setIsRewardedReady(false);
+      markRewardReady(false);
       setLastReward(createRewardSnapshot('showRewardedAd', result));
       setLastError(null);
       // Preparar el siguiente anuncio

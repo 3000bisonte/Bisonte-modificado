@@ -15,11 +15,19 @@ import "../styles/mercadopago.css";
 //import { guardarEnviosRequest } from "../../api/avu.api";// en mi csao guarar para el historial
 
 const initMPago = process.env.NEXT_PUBLIC_INIT_MERCADOPAGO;
-console.log("initMPago", initMPago);
+if (process.env.NODE_ENV !== "production") {
+  console.log("initMPago", initMPago);
+}
 // const apiServer = process.env.NEXT_PUBLIC_API_SERVER_URL;
-initMercadoPago(initMPago, {
-  locale: "es-CL",
-});
+if (initMPago) {
+  initMercadoPago(initMPago, {
+    locale: "es-CL",
+  });
+} else {
+  console.error(
+    "[MercadoPago] Falta la clave pública NEXT_PUBLIC_INIT_MERCADOPAGO. El brick no podrá inicializarse."
+  );
+}
 
 const MercadoPagoComponent = () => {
   const { data: session } = useSession();
@@ -44,58 +52,108 @@ const MercadoPagoComponent = () => {
     setInitError(null); // Limpiar errores previos
     setInitializationConfig(null); // Limpiar config previa
 
-    // Solo ejecutar en el navegador donde existe localStorage
-    if (typeof window !== "undefined") {
-      // Leer el OBJETO COMPLETO de cotización
-      const savedCotizacionDataString = localStorage.getItem("cotizacion");
+    const candidateKeys = [
+      "cotizacion",
+      "formCotizador",
+      "cotizador",
+    ];
 
-      if (savedCotizacionDataString) {
-        try {
-          // Parsear el objeto
-          const parsedData = JSON.parse(savedCotizacionDataString);
+    const extractNumericAmount = (value) => {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+    };
 
-          // Validar y extraer el costoTotal
-          if (
-            parsedData &&
-            typeof parsedData.costoTotal === "number" &&
-            parsedData.costoTotal >= 0
-          ) {
-            const amount = parsedData.costoTotal; // ¡Este es el valor correcto!
-            console.log(
-              "Monto correcto cargado para inicializar Mercado Pago:",
-              amount
-            );
-            // Guardar la configuración en el ESTADO
-            setInitializationConfig({ amount: amount });
-          } else {
-            console.error(
-              "El 'costoTotal' en 'cotizacion' no es un número válido:",
-              parsedData?.costoTotal
-            );
-            setInitError(
-              "Error: No se pudo obtener un monto válido para el pago."
-            );
+    const persistNormalizedCotizacion = (data, amount, sourceKey) => {
+      if (!data || typeof data !== "object") {
+        return;
+      }
+
+      try {
+        let merged = data;
+
+        if (sourceKey !== "cotizacion") {
+          const existingRaw = localStorage.getItem("cotizacion");
+          if (existingRaw) {
+            try {
+              const existing = JSON.parse(existingRaw);
+              merged = {
+                ...existing,
+                ...data,
+              };
+            } catch (mergeError) {
+              console.warn(
+                "[MercadoPago] No se pudo combinar la cotización existente con la de respaldo:",
+                mergeError
+              );
+            }
           }
-        } catch (error) {
-          console.error(
-            "Error al parsear 'cotizacion' de localStorage:",
-            error
-          );
-          setInitError("Error al leer los datos guardados de la cotización.");
         }
+
+        const normalized = {
+          ...merged,
+          costoTotal: amount,
+        };
+        localStorage.setItem("cotizacion", JSON.stringify(normalized));
+      } catch (persistError) {
+        console.error("[MercadoPago] Error normalizando 'cotizacion':", persistError);
+      }
+    };
+
+    const resolveAmount = () => {
+      for (const key of candidateKeys) {
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+          continue;
+        }
+
+        try {
+          const parsed = JSON.parse(raw);
+          const possibleAmounts = [
+            parsed?.costoTotal,
+            parsed?.total,
+            parsed?.amount,
+            parsed?.montoTotal,
+            parsed?.precio,
+          ];
+
+          for (const maybeAmount of possibleAmounts) {
+            const numeric = extractNumericAmount(maybeAmount);
+            if (numeric !== null) {
+              persistNormalizedCotizacion(parsed, numeric, key);
+              return numeric;
+            }
+          }
+        } catch (parseError) {
+          console.error(`[MercadoPago] Error al parsear '${key}' desde localStorage:`, parseError);
+        }
+      }
+
+      return null;
+    };
+
+    try {
+      if (typeof window === "undefined") {
+        setInitError("Error: Entorno no compatible (localStorage no disponible).");
+        return;
+      }
+
+      const amount = resolveAmount();
+
+      if (amount !== null) {
+        console.log(
+          "Monto cargado para inicializar Mercado Pago:",
+          amount
+        );
+        setInitializationConfig({ amount });
       } else {
-        console.error("No se encontró 'cotizacion' en localStorage.");
+        console.error("No se encontraron datos válidos de cotización para el pago.");
         setInitError(
           "No se encontraron los datos de la cotización para el pago."
         );
       }
-    } else {
-      setInitError(
-        "Error: Entorno no compatible (localStorage no disponible)."
-      );
+    } finally {
+      setIsLoadingAmount(false); // Indicar que terminamos de intentar cargar
     }
-
-    setIsLoadingAmount(false); // Indicar que terminamos de intentar cargar
   }, []);
   // Cargar el perfil solo si no ha sido cargado
   useEffect(() => {

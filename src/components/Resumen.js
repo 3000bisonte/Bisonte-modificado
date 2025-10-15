@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { ADMOB_CONFIG } from "../config/admob.config";
 import { useMultipleLoadingMonitor } from "../hooks/useLoadingMonitor";
 import { useNotification } from "../hooks/useNotification";
-import { useAdMob } from "../services/AdMobService";
+import AdMobService, { useAdMob } from "../services/AdMobService";
 
 import BottomNav from "./BottomNav";
 import MegaSaleModal from "./MegaSaleModal";
@@ -215,6 +215,10 @@ export default function Resumen() {
   // --- Ad Logic ---
 
   useEffect(() => {
+    router.prefetch?.("/mercadopago");
+  }, [router]);
+
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
@@ -248,6 +252,11 @@ export default function Resumen() {
     }
 
     if (adMobSupported) {
+      if (AdMobService.wasRewardReady()) {
+        setAdState((prev) => (prev === "ready" ? prev : "ready"));
+        return;
+      }
+
       if (isRewardedReady) {
         setAdState((prev) => (prev === "ready" ? prev : "ready"));
         return;
@@ -285,6 +294,38 @@ export default function Resumen() {
       setAdState("idle");
     }
   }, [adState, adMobSupported, isRewardedReady, prepareRewardedAd, handleAdError, costoTotal]);
+
+  useEffect(() => {
+    if (AdMobService.wasRewardReady()) {
+      setAdState((prev) => (prev === "ready" ? prev : "ready"));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (costoTotal === 0 || AdMobService.wasRewardReady()) {
+      return;
+    }
+
+    const schedulePreload = () => {
+      preloadAd();
+    };
+
+    if (typeof window.requestIdleCallback === "function") {
+      const idleHandle = window.requestIdleCallback(schedulePreload, { timeout: 2000 });
+      return () => {
+        window.cancelIdleCallback?.(idleHandle);
+      };
+    }
+
+    const timeoutHandle = window.setTimeout(schedulePreload, 250);
+    return () => {
+      clearTimeout(timeoutHandle);
+    };
+  }, [preloadAd, costoTotal]);
 
   const showAd = useCallback(async () => {
     if (costoTotal <= 0) {
@@ -621,7 +662,13 @@ export default function Resumen() {
 
   // Precarga inmediata cuando AdMob esté listo
   useEffect(() => {
-    if (adMobSupported && adMobInitialized && costoTotal > 0) {
+    const shouldTriggerPreload =
+      adMobSupported &&
+      adMobInitialized &&
+      (costoTotal === null || costoTotal > 0) &&
+      !AdMobService.wasRewardReady();
+
+    if (shouldTriggerPreload) {
       console.log("🚀 AdMob listo, iniciando precarga inmediata del anuncio...");
       preloadAd();
     }

@@ -31,6 +31,10 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
   const { modalState, showSuccess, showError, showWarning, closeModal } = useNotification();
 
   useEffect(() => {
+    router.prefetch?.("/mercadopago");
+  }, [router]);
+
+  useEffect(() => {
     const savedAdCount = localStorage.getItem("adCount");
     if (savedAdCount) {
       setAdCount(parseInt(savedAdCount, 10));
