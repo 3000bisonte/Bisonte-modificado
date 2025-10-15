@@ -67,12 +67,19 @@ export async function POST(request) {
         if (!usuario) {
           console.log('⚠️ Usuario no encontrado, creando nuevo usuario...');
           // Crear usuario automáticamente si no existe
+          const now = new Date();
           usuario = await prisma.usuarios.create({
             data: {
               email: userEmail,
               nombre: body.Remitente?.Nombre || 'Usuario',
               celular: body.Remitente?.Telefono || '0000000000',
-              rol: 'cliente',
+              emailVerified: false,
+              esAdministrador: false,
+              esRecolector: false,
+              failedLogins: 0,
+              passwordVersion: 0,
+              createdAt: now,
+              updatedAt: now,
             },
           });
           console.log('✅ Usuario creado:', usuario.id);
@@ -81,9 +88,20 @@ export async function POST(request) {
         }
       } catch (error) {
         console.error('❌ Error buscando/creando usuario:', error);
+        // Proporcionar más detalles del error
+        const errorDetails = error instanceof Error ? error.message : String(error);
+        return NextResponse.json({
+          message: 'Error al buscar o crear usuario en la base de datos',
+          details: errorDetails,
+          hint: 'Verifica que el email sea válido y que la base de datos esté accesible',
+        }, { status: 500 });
       }
     } else {
       console.warn('⚠️ No se proporcionó email de usuario');
+      return NextResponse.json({
+        message: 'Email de usuario requerido',
+        details: 'No se proporcionó usuarioEmail en la solicitud',
+      }, { status: 400 });
     }
 
     const serializeValue = (value) => {
@@ -109,7 +127,8 @@ export async function POST(request) {
       console.error('❌ No se pudo obtener el ID del usuario');
       return NextResponse.json({
         message: 'Error: No se pudo asociar el envío al usuario',
-        details: 'Usuario no encontrado o no creado correctamente',
+        details: 'Usuario no encontrado o no creado correctamente. Verifica tu sesión.',
+        email: userEmail,
       }, { status: 400 });
     }
 
