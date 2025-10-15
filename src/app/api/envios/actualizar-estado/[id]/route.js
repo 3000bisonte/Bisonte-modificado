@@ -73,7 +73,7 @@ export async function PATCH(request, { params }) {
         where: { id },
         data: {
           Estado: nuevoEstado,
-          FechaActualizacion: new Date(),
+          // FechaActualizacion no existe en el schema - se omite
         },
       });
 
