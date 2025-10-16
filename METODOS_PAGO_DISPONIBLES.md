@@ -58,26 +58,26 @@ MP_ENVIRONMENT=test
 - Todas las tarjetas de crédito (Visa, Mastercard, Amex, Diners, Codensa)
 - Todas las tarjetas de débito (Visa Débito, Mastercard Débito)
 
-**❌ NO disponible:**
+**⚠️ LIMITADO en TEST:**
 - PSE (se muestra pero no procesa pagos reales)
 - Efectivo/Efecty (se muestra pero no genera cupones reales)
-- Billeteras digitales (Nequi, DaviPlata)
+- Billeteras digitales (Nequi, DaviPlata) - no disponibles
 
 **📝 Notas:**
 - Solo se aceptan tarjetas de prueba
 - No se cobran transacciones reales
 - Ideal para desarrollo y testing
 
-### 🚀 Modo PRODUCCIÓN
+### 🚀 Modo PRODUCCIÓN ✅ **ACTIVO AHORA**
 ```bash
-MP_ENVIRONMENT=production
+MP_ENVIRONMENT=production  # ✅ CONFIGURADO
 ```
 
-**✅ Disponible:**
-- ✅ Todas las tarjetas de crédito/débito
-- ✅ PSE (transferencias bancarias en línea)
-- ✅ Efecty (pago en efectivo en tiendas)
-- ❌ Nequi, DaviPlata (no configurados)
+**✅ Disponible y FUNCIONAL:**
+- ✅ Todas las tarjetas de crédito/débito (pagos reales)
+- ✅ PSE (transferencias bancarias en línea) - **ACTIVO**
+- ✅ Efecty (pago en efectivo en tiendas) - **ACTIVO**
+- ❌ Nequi, DaviPlata (no configurados en tu cuenta MP)
 
 **📝 Notas:**
 - Se procesan pagos REALES

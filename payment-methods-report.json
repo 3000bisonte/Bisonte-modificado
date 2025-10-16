@@ -1,19 +1,19 @@
 {
-  "timestamp": "2025-10-15T22:21:29.328Z",
+  "timestamp": "2025-10-16T23:21:35.667Z",
   "environment": "test",
   "total_methods": 11,
   "methods": [
     {
-      "id": "codensa",
-      "name": "Crédito Fácil Codensa",
-      "type": "credit_card",
-      "status": "active",
-      "min_amount": 100,
-      "max_amount": 5000000
-    },
-    {
       "id": "debvisa",
       "name": "Visa Débito",
+      "type": "debit_card",
+      "status": "active",
+      "min_amount": 1000,
+      "max_amount": 50000000
+    },
+    {
+      "id": "debmaster",
+      "name": "Mastercard Débito",
       "type": "debit_card",
       "status": "active",
       "min_amount": 1000,
@@ -28,24 +28,24 @@
       "max_amount": 50000000
     },
     {
-      "id": "visa",
-      "name": "Visa",
+      "id": "diners",
+      "name": "Diners",
       "type": "credit_card",
       "status": "active",
       "min_amount": 1000,
       "max_amount": 50000000
     },
     {
-      "id": "debmaster",
-      "name": "Mastercard Débito",
-      "type": "debit_card",
+      "id": "codensa",
+      "name": "Crédito Fácil Codensa",
+      "type": "credit_card",
       "status": "active",
-      "min_amount": 1000,
-      "max_amount": 50000000
+      "min_amount": 100,
+      "max_amount": 5000000
     },
     {
-      "id": "diners",
-      "name": "Diners",
+      "id": "visa",
+      "name": "Visa",
       "type": "credit_card",
       "status": "active",
       "min_amount": 1000,
@@ -76,20 +76,20 @@
       "max_amount": 30000000
     },
     {
-      "id": "efecty",
-      "name": "Efecty",
-      "type": "ticket",
-      "status": "active",
-      "min_amount": 5000,
-      "max_amount": 8000000
-    },
-    {
       "id": "pse",
       "name": "PSE",
       "type": "bank_transfer",
       "status": "active",
       "min_amount": 1600,
       "max_amount": 340000000
+    },
+    {
+      "id": "efecty",
+      "name": "Efecty",
+      "type": "ticket",
+      "status": "active",
+      "min_amount": 5000,
+      "max_amount": 8000000
     }
   ],
   "summary": {

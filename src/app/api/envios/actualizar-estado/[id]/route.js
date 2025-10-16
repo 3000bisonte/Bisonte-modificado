@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { actualizarEstadoEnvioSchema, EstadoEnvio } from "@/schemas/envios";
 
 import prisma from "../../../../../libs/prisma";
+import { enviarNotificacionEstado } from "../../../../../lib/emailService";
 
 // Estados terminales que no pueden ser actualizados
 const ESTADOS_TERMINALES = [
@@ -96,10 +97,48 @@ export async function PATCH(request, { params }) {
 
     console.log("✅ Envío actualizado exitosamente:", result.envio);
 
+    // Enviar notificación por email al usuario
+    try {
+      // Obtener el email del usuario desde el envío
+      const envioCompleto = await prisma.historial_envio.findUnique({
+        where: { id },
+        include: {
+          usuario: {
+            select: {
+              email: true,
+              nombre: true,
+            },
+          },
+        },
+      });
+
+      if (envioCompleto?.usuario?.email) {
+        console.log(`📧 Enviando notificación a: ${envioCompleto.usuario.email}`);
+        
+        // Enviar email de forma asíncrona (no bloqueante)
+        enviarNotificacionEstado(result.envio, envioCompleto.usuario.email)
+          .then((emailResult) => {
+            if (emailResult.success) {
+              console.log(`✅ Email enviado exitosamente a ${envioCompleto.usuario.email}`);
+            } else {
+              console.warn(`⚠️ No se pudo enviar email: ${emailResult.error}`);
+            }
+          })
+          .catch((err) => {
+            console.error(`❌ Error al enviar email: ${err.message}`);
+          });
+      } else {
+        console.warn('⚠️ No se encontró email del usuario para notificación');
+      }
+    } catch (emailError) {
+      // No bloqueamos la respuesta si falla el email
+      console.error('❌ Error al procesar notificación por email:', emailError);
+    }
+
     return NextResponse.json({
       success: true,
       envio: result.envio,
-      message: "Estado actualizado exitosamente",
+      message: "Estado actualizado exitosamente. Notificación enviada al usuario.",
     });
   } catch (error) {
     console.error("❌ Error al actualizar el estado del envío:", error);

@@ -355,9 +355,21 @@ export default function Cotizador() {
             );
 
             if (userProfile?.id) {
+                // Usuario tiene perfil, continuar al formulario de remitente
                 router.push(`/remitente/edit/${userProfile.id}`);
             } else {
-                router.push("/remitente/edit/9");
+                // Usuario NO tiene perfil completo
+                console.warn("⚠️ Usuario sin perfil completo. Redirigiendo a completar perfil.");
+                showWarning(
+                    'Perfil Incompleto', 
+                    'Necesitas completar tu perfil antes de crear un envío. Te redirigiremos ahora.'
+                );
+                // Guardar cotización para recuperarla después
+                localStorage.setItem("cotizacionPendiente", "true");
+                // Redirigir a completar perfil después de un momento
+                setTimeout(() => {
+                    router.push("/perfilCard");
+                }, 2000);
             }
         } catch (error) {
             console.error("Error:", error);
