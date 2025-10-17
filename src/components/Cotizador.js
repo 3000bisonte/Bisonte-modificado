@@ -351,11 +351,20 @@ export default function Cotizador() {
         try {
             localStorage.setItem("formCotizador", JSON.stringify(cotizacionData));
             const userProfile = miperfil.find(
-                (perf) => perf.correo === session.user.email
+                (perf) => (perf.email || perf.correo) === session.user.email
             );
 
-            if (userProfile?.id) {
-                // Usuario tiene perfil, continuar al formulario de remitente
+            // Verificar si el perfil está completo
+            const perfilEstaCompleto = userProfile && 
+                                      userProfile.nombre && 
+                                      userProfile.celular && 
+                                      userProfile.tipoDocumento && 
+                                      userProfile.numeroDocumento && 
+                                      userProfile.direccionRecogida;
+
+            if (userProfile?.id && perfilEstaCompleto) {
+                // Usuario tiene perfil COMPLETO, continuar al formulario de remitente
+                console.log("✅ Usuario con perfil completo. Continuando...");
                 router.push(`/remitente/edit/${userProfile.id}`);
             } else {
                 // Usuario NO tiene perfil completo
