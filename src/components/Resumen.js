@@ -8,8 +8,8 @@ import { ADMOB_CONFIG } from "../config/admob.config";
 import { useMultipleLoadingMonitor } from "../hooks/useLoadingMonitor";
 import { useNotification } from "../hooks/useNotification";
 import AdMobService, { useAdMob } from "../services/AdMobService";
-// TEMPORALMENTE DESHABILITADO - Ver FIX_VERCEL_DEPLOY.md
-// import { reloadAd } from "../services/AdPreloader";
+// ✅ REACTIVADO - Usando ruta relativa
+import { reloadAd } from "../services/AdPreloader";
 
 import AdLoadingIndicator from "./AdLoadingIndicator";
 import BottomNav from "./BottomNav";
@@ -500,10 +500,9 @@ export default function Resumen() {
           clearAdErrorState();
           setAdState("done");
           
-          // 🔄 Recargar anuncio - TEMPORALMENTE DESHABILITADO
-          // Ver FIX_VERCEL_DEPLOY.md
-          // console.log("🔄 Iniciando recarga del siguiente anuncio...");
-          // reloadAd().catch(err => console.warn("⚠️ Error en recarga automática:", err));
+          // 🔄 Recargar anuncio para la próxima vez (REACTIVADO)
+          console.log("🔄 Iniciando recarga del siguiente anuncio...");
+          reloadAd().catch(err => console.warn("⚠️ Error en recarga automática:", err));
         } catch (error) {
           console.error("❌ Error mostrando anuncio AdMob:", error);
           handleAdError("show_exception");

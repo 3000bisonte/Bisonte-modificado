@@ -16,8 +16,8 @@ import {
 } from "../utils/homeStickyStorage";
 
 import BottomNav from "./BottomNav";
-// TEMPORALMENTE DESHABILITADO - Ver FIX_VERCEL_DEPLOY.md
-// import { useAdPreloader } from "@/services/AdPreloader";
+// ✅ REACTIVADO - Usando ruta relativa en lugar de alias @/
+import { useAdPreloader } from "../services/AdPreloader";
 
 // Iconos SVG
 const IconUser = () => (
@@ -139,9 +139,9 @@ const Home = () => {
     }
   }, []);
 
-  // 🚀 PRECARGA DE ANUNCIOS - TEMPORALMENTE DESHABILITADO
-  // Ver FIX_VERCEL_DEPLOY.md para detalles
-  // useAdPreloader();
+  // 🚀 PRECARGA DE ANUNCIOS - REACTIVADO
+  // Precarga automática al abrir la app (optimiza experiencia de usuario)
+  useAdPreloader();
 
   const handleCloseWelcome = () => {
     setShowWelcome(false);
