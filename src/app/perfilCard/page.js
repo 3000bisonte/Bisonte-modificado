@@ -71,60 +71,135 @@ export default function PerfilCard() {
   };
 
   // Validaciones
-  const validarNombre = (nombre) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.trim());
-  const validarCelular = (cel) => /^\+?\d{7,15}$/.test(cel.trim());
-  const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const validarNumeroDocumento = (num) => /^\d{5,20}$/.test(num.trim());
-  const validarDireccion = (dir) => dir.trim().length > 4;
+  const validarNombre = (nombre) => {
+    if (!nombre || nombre.trim().length === 0) return "El nombre es requerido";
+    if (nombre.trim().length < 3) return "El nombre debe tener al menos 3 caracteres";
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.trim())) return "El nombre solo puede contener letras";
+    return "";
+  };
+
+  const validarCelular = (cel) => {
+    if (!cel || cel.trim().length === 0) return "El celular es requerido";
+    if (!/^\+?\d{7,15}$/.test(cel.trim())) return "Celular inválido. Debe tener entre 7 y 15 dígitos";
+    return "";
+  };
+
+  const validarEmail = (email) => {
+    if (!email || email.trim().length === 0) return "El correo es requerido";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Correo electrónico inválido";
+    return "";
+  };
+
+  const validarNumeroDocumento = (num) => {
+    if (!num || num.trim().length === 0) return "El número de documento es requerido";
+    if (!/^\d{5,20}$/.test(num.trim())) return "Debe tener entre 5 y 20 dígitos";
+    return "";
+  };
+
+  const validarDireccion = (dir) => {
+    if (!dir || dir.trim().length === 0) return "La dirección es requerida";
+    if (dir.trim().length < 5) return "La dirección debe tener al menos 5 caracteres";
+    return "";
+  };
+
+  const validarCiudad = (ciudad) => {
+    if (!ciudad || ciudad.trim().length === 0) return "La ciudad es requerida";
+    if (ciudad.trim().length < 3) return "La ciudad debe tener al menos 3 caracteres";
+    return "";
+  };
+
+  // Validar campo en tiempo real mientras el usuario escribe
+  const validarCampo = (name, value) => {
+    switch (name) {
+      case "nombre":
+        return validarNombre(value);
+      case "celular":
+        return validarCelular(value);
+      case "email":
+        return validarEmail(value);
+      case "numeroDocumento":
+        return validarNumeroDocumento(value);
+      case "direccion":
+        return validarDireccion(value);
+      case "ciudad":
+        return validarCiudad(value);
+      case "tipoDocumento":
+        return value ? "" : "Debes seleccionar un tipo de documento";
+      default:
+        return "";
+    }
+  };
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    
+    // Validar en tiempo real mientras el usuario escribe
+    const error = validarCampo(name, value);
+    setErrors({ ...errors, [name]: error });
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    // Validar cuando el usuario sale del campo
+    const error = validarCampo(name, value);
+    setErrors({ ...errors, [name]: error });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const newErrors = {};
+    
+    // Validar todos los campos
+    const newErrors = {
+      nombre: validarNombre(form.nombre),
+      tipoDocumento: form.tipoDocumento ? "" : "Debes seleccionar un tipo de documento",
+      numeroDocumento: validarNumeroDocumento(form.numeroDocumento),
+      celular: validarCelular(form.celular),
+      email: validarEmail(form.email),
+      direccion: validarDireccion(form.direccion),
+      ciudad: validarCiudad(form.ciudad)
+    };
 
-    if (!form.nombre || !validarNombre(form.nombre)) {newErrors.nombre = "Nombre inválido";}
-    if (!form.tipoDocumento) {newErrors.tipoDocumento = "Selecciona un tipo";}
-    if (!form.numeroDocumento || !validarNumeroDocumento(form.numeroDocumento)) {newErrors.numeroDocumento = "Número inválido";}
-    if (!form.celular || !validarCelular(form.celular)) {newErrors.celular = "Celular inválido";}
-    if (!form.email || !validarEmail(form.email)) {newErrors.email = "Correo inválido";}
-    if (!form.direccion || !validarDireccion(form.direccion)) {newErrors.direccion = "Dirección inválida";}
+    // Filtrar solo los errores que existen
+    const erroresActivos = Object.fromEntries(
+      Object.entries(newErrors).filter(([_, error]) => error !== "")
+    );
 
-    setErrors(newErrors);
+    setErrors(erroresActivos);
 
-    if (Object.keys(newErrors).length === 0) {
-      try {
-        setSaving(true);
-        console.log("💾 Guardando perfil...", form);
-
-        const response = await fetch("/api/perfil", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form)
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          console.log("✅ Perfil guardado exitosamente:", data);
-          setMsg("✅ Perfil actualizado y guardado correctamente");
-          setTimeout(() => setMsg(""), 4000);
-        } else {
-          throw new Error(data.error || "Error al guardar");
-        }
-      } catch (error) {
-        console.error("❌ Error guardando perfil:", error);
-        setMsg("❌ Error al guardar el perfil. Intenta nuevamente.");
-        setTimeout(() => setMsg(""), 4000);
-      } finally {
-        setSaving(false);
-      }
-    } else {
+    // Si hay errores, no continuar
+    if (Object.keys(erroresActivos).length > 0) {
       setMsg("⚠️ Por favor corrige los errores del formulario");
-      setTimeout(() => setMsg(""), 3000);
+      setTimeout(() => setMsg(""), 4000);
+      return;
+    }
+
+    // Si todo está correcto, guardar
+    try {
+      setSaving(true);
+      console.log("💾 Guardando perfil...", form);
+
+      const response = await fetch("/api/perfil", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log("✅ Perfil guardado exitosamente:", data);
+        setMsg("✅ Perfil actualizado y guardado correctamente");
+        setTimeout(() => setMsg(""), 4000);
+      } else {
+        throw new Error(data.error || "Error al guardar");
+      }
+    } catch (error) {
+      console.error("❌ Error guardando perfil:", error);
+      setMsg("❌ Error al guardar el perfil. Intenta nuevamente.");
+      setTimeout(() => setMsg(""), 4000);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -164,12 +239,13 @@ export default function PerfilCard() {
               type="text"
               name="nombre"
               placeholder="Ej. Juan Pérez"
-              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
+              className={`w-full mt-1 px-4 py-2 rounded-lg border ${errors.nombre ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#41e0b3]'} focus:outline-none focus:ring-2 transition`}
               value={form.nombre}
               onChange={handleChange}
+              onBlur={handleBlur}
               required
             />
-            {errors.nombre && <span className="text-red-600 text-xs">{errors.nombre}</span>}
+            {errors.nombre && <span className="text-red-600 text-xs mt-1 block">⚠️ {errors.nombre}</span>}
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">
@@ -177,9 +253,10 @@ export default function PerfilCard() {
             </label>
             <select
               name="tipoDocumento"
-              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
+              className={`w-full mt-1 px-4 py-2 rounded-lg border ${errors.tipoDocumento ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#41e0b3]'} focus:outline-none focus:ring-2 transition`}
               value={form.tipoDocumento}
               onChange={handleChange}
+              onBlur={handleBlur}
               required
             >
               <option value="">Selecciona un tipo</option>
@@ -189,7 +266,7 @@ export default function PerfilCard() {
               <option value="NIT">NIT</option>
               <option value="Otro">Otro</option>
             </select>
-            {errors.tipoDocumento && <span className="text-red-600 text-xs">{errors.tipoDocumento}</span>}
+            {errors.tipoDocumento && <span className="text-red-600 text-xs mt-1 block">⚠️ {errors.tipoDocumento}</span>}
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">Número de Documento*</label>
@@ -197,25 +274,27 @@ export default function PerfilCard() {
               type="text"
               name="numeroDocumento"
               placeholder="Ej. 123456789"
-              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
+              className={`w-full mt-1 px-4 py-2 rounded-lg border ${errors.numeroDocumento ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#41e0b3]'} focus:outline-none focus:ring-2 transition`}
               value={form.numeroDocumento}
               onChange={handleChange}
+              onBlur={handleBlur}
               required
             />
-            {errors.numeroDocumento && <span className="text-red-600 text-xs">{errors.numeroDocumento}</span>}
+            {errors.numeroDocumento && <span className="text-red-600 text-xs mt-1 block">⚠️ {errors.numeroDocumento}</span>}
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">Celular*</label>
             <input
               type="tel"
               name="celular"
-              placeholder="+57  Número de celular"
-              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
+              placeholder="+57 3001234567"
+              className={`w-full mt-1 px-4 py-2 rounded-lg border ${errors.celular ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#41e0b3]'} focus:outline-none focus:ring-2 transition`}
               value={form.celular}
               onChange={handleChange}
+              onBlur={handleBlur}
               required
             />
-            {errors.celular && <span className="text-red-600 text-xs">{errors.celular}</span>}
+            {errors.celular && <span className="text-red-600 text-xs mt-1 block">⚠️ {errors.celular}</span>}
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">Correo electrónico*</label>
@@ -236,10 +315,13 @@ export default function PerfilCard() {
               type="text"
               name="ciudad"
               placeholder="Ej. Bogotá, Medellín, Cali"
-              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
+              className={`w-full mt-1 px-4 py-2 rounded-lg border ${errors.ciudad ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#41e0b3]'} focus:outline-none focus:ring-2 transition`}
               value={form.ciudad}
               onChange={handleChange}
+              onBlur={handleBlur}
+              required
             />
+            {errors.ciudad && <span className="text-red-600 text-xs mt-1 block">⚠️ {errors.ciudad}</span>}
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">Dirección de Recogida*</label>
@@ -247,12 +329,13 @@ export default function PerfilCard() {
               type="text"
               name="direccion"
               placeholder="Ej. Calle 123 #45-67"
-              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
+              className={`w-full mt-1 px-4 py-2 rounded-lg border ${errors.direccion ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#41e0b3]'} focus:outline-none focus:ring-2 transition`}
               value={form.direccion}
               onChange={handleChange}
+              onBlur={handleBlur}
               required
             />
-            {errors.direccion && <span className="text-red-600 text-xs">{errors.direccion}</span>}
+            {errors.direccion && <span className="text-red-600 text-xs mt-1 block">⚠️ {errors.direccion}</span>}
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">
@@ -266,10 +349,24 @@ export default function PerfilCard() {
               value={form.apartamento}
               onChange={handleChange}
             />
+            <p className="text-xs text-gray-500 mt-1">📍 Campo opcional para complementar la dirección</p>
           </div>
+          
+          {/* Resumen de validación */}
+          {Object.keys(errors).length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-700 text-sm font-semibold mb-2">⚠️ Por favor corrige los siguientes errores:</p>
+              <ul className="list-disc list-inside text-xs text-red-600 space-y-1">
+                {Object.entries(errors).map(([field, error]) => (
+                  error && <li key={field}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || Object.keys(errors).length > 0}
             className="w-full bg-[#41e0b3] text-white font-bold py-3 rounded-lg mt-2 hover:bg-[#2bbd8c] transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {saving ? (
