@@ -1,201 +1,135 @@
-# 🔧 FIX: Error de Despliegue en Vercel - AdPreloader
+# 🔧 FIX: Error de Despliegue en Vercel - AdPreloader DESHABILITADO TEMPORALMENTE
 
 ## ❌ Error Reportado
 
 ```
 ./src/components/Home.js
 Module not found: Can't resolve '@/services/AdPreloader'
+Build failed in Vercel at commit e33b564
 ```
-
-**Build falló en Vercel** intentando desplegar el commit `b4d9ab4`
 
 ---
 
 ## 🔍 Diagnóstico
 
-### Problema Identificado:
-El error ocurre porque **Vercel intentó desplegar el commit `b4d9ab4`** que:
-- ✅ Tiene la importación de `AdPreloader` en `Home.js`
-- ❌ NO tiene el archivo `src/services/AdPreloader.js`
+Vercel está desplegando el commit `e33b564` pero **no puede resolver el módulo** `@/services/AdPreloader` a pesar de que el archivo SÍ existe en ese commit.
 
-### Historial de Commits:
-```
-5b4667d (NUEVO) - Deploy: Forzar redespliegue ← SOLUCIÓN
-3942751 - Feature: Validaciones formulario perfil
-b4d9ab4 - Docs + Fix: Validación perfil ← ERROR AQUÍ
-a28e0f6 - Fix: Perfil permanente en BD
-e33b564 - Mejora: Precarga anuncios ← AdPreloader.js creado aquí
-92d771f - Auditoría y email notifications
-```
-
-### ¿Por qué pasó esto?
-1. El archivo `AdPreloader.js` se creó en commit `e33b564`
-2. Se agregó la importación en `Home.js` en el mismo commit
-3. Los commits posteriores (`a28e0f6`, `b4d9ab4`, `3942751`) modificaron otros archivos
-4. Vercel intentó desplegar `b4d9ab4` que puede tener la importación pero no el archivo completo
+### Posibles Causas:
+1. Problema de caché en Vercel
+2. Conflicto con alias `@/services` en configuración de producción
+3. Webpack no encuentra el archivo por path resolution
 
 ---
 
-## ✅ Solución Aplicada
+## ✅ SOLUCIÓN APLICADA: Deshabilitar Temporalmente
 
-### 1. Verificación del Archivo
-```powershell
-Test-Path "src/services/AdPreloader.js"
-# Resultado: True ✅ (existe localmente)
-```
+Para permitir que el deploy sea exitoso, se ha **DESHABILITADO TEMPORALMENTE** la funcionalidad de AdPreloader.
 
-### 2. Verificación en Repositorio
-```powershell
-git ls-tree -r HEAD --name-only | Select-String "AdPreloader"
-# Resultado: src/services/AdPreloader.js ✅
-```
+### Cambios Realizados:
 
-### 3. Commit Vacío para Forzar Redespliegue
-```powershell
-git commit --allow-empty -m "🔄 DEPLOY: Forzar redespliegue con todos los archivos"
-git push origin main
-# Nuevo commit: 5b4667d ✅
-```
-
----
-
-## 🎯 Estado Actual
-
-### Archivos Verificados:
-✅ `src/services/AdPreloader.js` - Existe en repositorio  
-✅ `src/components/Home.js` - Tiene importación correcta  
-✅ `src/components/Resumen.js` - Usa `reloadAd()` de AdPreloader  
-
-### Commit Actual:
-```
-Commit: 5b4667d
-Branch: main
-Push: ✅ Exitoso
-```
-
-### Próximo Despliegue:
-Vercel debería ahora desplegar el commit `5b4667d` que incluye:
-- ✅ Todos los archivos del proyecto
-- ✅ `AdPreloader.js` completo
-- ✅ Importaciones correctas en `Home.js`
-- ✅ Validaciones de formulario de perfil
-- ✅ Perfil permanente en BD
-
----
-
-## 📋 Verificación Post-Despliegue
-
-### Cuando Vercel complete el despliegue, verificar:
-
-1. **Build exitoso:**
-   ```
-   ✅ Build completed successfully
-   ✅ No module not found errors
-   ```
-
-2. **Funcionalidad de precarga de anuncios:**
-   - Usuario abre app
-   - Anuncios se precargan en background
-   - Click en "Ver Anuncio" muestra ad instantáneamente
-
-3. **Formulario de perfil:**
-   - Validaciones en tiempo real funcionando
-   - Campos con bordes rojos si hay error
-   - Panel de resumen de errores visible
-   - Botón deshabilitado si hay errores
-
-4. **Perfil permanente:**
-   - Datos se guardan en base de datos
-   - Datos persisten entre sesiones
-   - Cotizador valida perfil correctamente
-
----
-
-## 🔄 Plan de Contingencia
-
-### Si el error persiste en Vercel:
-
-#### Opción 1: Verificar que AdPreloader.js esté en el commit
-```bash
-git show HEAD:src/services/AdPreloader.js
-```
-
-#### Opción 2: Comentar temporalmente la funcionalidad
+#### 1. src/components/Home.js
 ```javascript
-// En src/components/Home.js
-// import { useAdPreloader } from "@/services/AdPreloader"; // Temporalmente comentado
-// useAdPreloader(); // Temporalmente comentado
+// LÍNEA 18 - Import comentado
+// TEMPORALMENTE DESHABILITADO - Ver FIX_VERCEL_DEPLOY.md
+// import { useAdPreloader } from "@/services/AdPreloader";
+
+// LÍNEA 143 - Llamada comentada
+// 🚀 PRECARGA DE ANUNCIOS - TEMPORALMENTE DESHABILITADO
+// Ver FIX_VERCEL_DEPLOY.md para detalles
+// useAdPreloader();
 ```
 
-#### Opción 3: Agregar el archivo nuevamente
-```bash
-git add -f src/services/AdPreloader.js
-git commit -m "Asegurar AdPreloader.js en repo"
-git push origin main
+#### 2. src/components/Resumen.js
+```javascript
+// LÍNEA 11 - Import comentado
+// TEMPORALMENTE DESHABILITADO - Ver FIX_VERCEL_DEPLOY.md
+// import { reloadAd } from "../services/AdPreloader";
+
+// LÍNEA 505 - Llamada comentada
+// 🔄 Recargar anuncio - TEMPORALMENTE DESHABILITADO
+// Ver FIX_VERCEL_DEPLOY.md
+// reloadAd().catch(err => console.warn(...));
 ```
 
 ---
 
-## 📝 Archivos Involucrados
+## 📊 Impacto
 
-### Archivo que causó el error:
-- `src/components/Home.js` (línea 18)
-  ```javascript
-  import { useAdPreloader } from "@/services/AdPreloader";
-  ```
+| Funcionalidad | Estado | Descripción |
+|---------------|--------|-------------|
+| **Precarga de anuncios** | ❌ DESHABILITADA | Anuncios cargarán normalmente (15-30s de espera) |
+| **Recarga automática** | ❌ DESHABILITADA | Usuario esperará si ve múltiples anuncios |
+| **App principal** | ✅ FUNCIONAL | Deploy exitoso, sin errores |
+| **Validaciones perfil** | ✅ FUNCIONAL | Activas y funcionando |
+| **Perfil permanente BD** | ✅ FUNCIONAL | Guardado correcto |
+| **Cotizador** | ✅ FUNCIONAL | Sin problemas |
 
-### Archivo faltante:
-- `src/services/AdPreloader.js` (130 líneas)
-  - Exporta: `useAdPreloader()`, `reloadAd()`
-  - Precarga anuncios automáticamente
+---
 
-### Archivos relacionados:
-- `src/components/Resumen.js` - Usa `reloadAd()`
-- `MEJORA_PRECARGA_ANUNCIOS.md` - Documentación
+## 🔄 Plan para Reactivar
+
+### Paso 1: Deploy Exitoso
+1. ✅ Commit con código comentado
+2. ✅ Push a GitHub
+3. ⏳ Esperar deploy exitoso en Vercel
+
+### Paso 2: Investigar y Corregir
+Una vez que el deploy sea exitoso, probar:
+
+#### Opción A: Cambiar a Ruta Relativa
+```javascript
+// En lugar de alias @/services
+import { useAdPreloader } from "@/services/AdPreloader";
+
+// Usar ruta relativa
+import { useAdPreloader } from "../services/AdPreloader";
+```
+
+#### Opción B: Verificar tsconfig.json
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+#### Opción C: Limpiar Caché de Vercel
+1. Vercel Dashboard → Settings → General
+2. "Clear Build Cache"
+3. Re-deploy manual
+
+---
+
+## 📝 Próximos Commits
+
+```bash
+# AHORA:
+git add Home.js Resumen.js FIX_VERCEL_DEPLOY.md
+git commit -m "FIX: Deshabilitar AdPreloader temporalmente para deploy exitoso"
+git push origin main
+
+# DESPUÉS (cuando funcione):
+# Probar rutas relativas y reactivar
+```
 
 ---
 
 ## ✅ Resultado Esperado
 
-Después del redespliegue de Vercel:
-
 ```
 ✅ Build exitoso en Vercel
-✅ AdPreloader.js encontrado y compilado
-✅ Home.js importa correctamente
-✅ Aplicación funciona sin errores
-✅ Precarga de anuncios operativa
-✅ Validaciones de perfil activas
-✅ Perfil permanente funcionando
+✅ App funcionando sin errores
+⚠️ Precarga de anuncios deshabilitada (temporal)
+✅ Todas las demás funcionalidades activas
 ```
 
----
-
-## 🚀 Siguiente Acción
-
-**Monitorear el despliegue de Vercel:**
-1. Ir a Vercel Dashboard
-2. Ver el nuevo despliegue del commit `5b4667d`
-3. Verificar que el build complete exitosamente
-4. Probar la aplicación en producción
-
-**Si el build es exitoso:**
-✅ Problema resuelto!
-
-**Si el build falla nuevamente:**
-1. Revisar logs de Vercel
-2. Verificar que el archivo esté en el commit exacto que Vercel despliega
-3. Aplicar plan de contingencia
+Una vez que Vercel despliegue exitosamente, investigaremos la causa raíz y reactivaremos AdPreloader con la configuración correcta.
 
 ---
 
-## 📌 Notas
-
-- El archivo `AdPreloader.js` SÍ existe en el repositorio
-- El commit vacío fuerza a Vercel a usar el HEAD más reciente
-- Todos los archivos están sincronizados en `main`
-- El error fue por desplegar un commit intermedio
-
-**Estado:** ⏳ Esperando nuevo despliegue de Vercel  
-**Commit:** `5b4667d`  
-**Acción:** Monitorear dashboard de Vercel
+**Estado:** ⏳ Pendiente de commit y push  
+**Objetivo:** Deploy exitoso PRIMERO, luego reactivar funcionalidad  
+**Prioridad:** ALTA - App en producción necesita funcionar
