@@ -16,6 +16,7 @@ import {
 } from "../utils/homeStickyStorage";
 
 import BottomNav from "./BottomNav";
+import { useAdPreloader } from "@/services/AdPreloader";
 
 // Iconos SVG
 const IconUser = () => (
@@ -136,6 +137,9 @@ const Home = () => {
       }
     }
   }, []);
+
+  // 🚀 PRECARGA DE ANUNCIOS - Se ejecuta automáticamente al abrir la app
+  useAdPreloader();
 
   const handleCloseWelcome = () => {
     setShowWelcome(false);
