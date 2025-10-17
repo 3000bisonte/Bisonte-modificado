@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import BottomNav from "@/components/BottomNav";
 
 
 export default function PerfilCard() {
+  const { data: session, status } = useSession();
   const [form, setForm] = useState({
     nombre: "",
     tipoDocumento: "",
@@ -13,9 +14,61 @@ export default function PerfilCard() {
     email: "",
     direccion: "",
     apartamento: "",
+    ciudad: "",
   });
   const [msg, setMsg] = useState("");
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Cargar datos del perfil al montar el componente
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.email) {
+      cargarPerfil();
+    }
+  }, [status, session]);
+
+  const cargarPerfil = async () => {
+    try {
+      setLoading(true);
+      console.log("🔄 Cargando perfil del usuario...");
+      
+      const response = await fetch("/api/perfil", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al cargar el perfil");
+      }
+
+      const data = await response.json();
+      console.log("✅ Perfil cargado:", data);
+
+      if (data.success && data.perfiles && data.perfiles.length > 0) {
+        const perfil = data.perfiles[0];
+        setForm({
+          nombre: perfil.nombre || "",
+          tipoDocumento: perfil.tipoDocumento || "",
+          numeroDocumento: perfil.numeroDocumento || "",
+          celular: perfil.celular || "",
+          email: perfil.email || session.user.email,
+          direccion: perfil.direccionRecogida || "",
+          apartamento: perfil.detalleDireccion || "",
+          ciudad: perfil.ciudad || "",
+        });
+      } else {
+        // Si no hay perfil, al menos poner el email
+        setForm(prev => ({ ...prev, email: session.user.email }));
+      }
+    } catch (error) {
+      console.error("❌ Error cargando perfil:", error);
+      setMsg("Error al cargar el perfil");
+      setTimeout(() => setMsg(""), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Validaciones
   const validarNombre = (nombre) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.trim());
@@ -29,7 +82,7 @@ export default function PerfilCard() {
     setErrors({ ...errors, [e.target.name]: "" });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
 
@@ -43,12 +96,48 @@ export default function PerfilCard() {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      setMsg("Perfil actualizado correctamente");
-      setTimeout(() => setMsg(""), 3000);
+      try {
+        setSaving(true);
+        console.log("💾 Guardando perfil...", form);
+
+        const response = await fetch("/api/perfil", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form)
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log("✅ Perfil guardado exitosamente:", data);
+          setMsg("✅ Perfil actualizado y guardado correctamente");
+          setTimeout(() => setMsg(""), 4000);
+        } else {
+          throw new Error(data.error || "Error al guardar");
+        }
+      } catch (error) {
+        console.error("❌ Error guardando perfil:", error);
+        setMsg("❌ Error al guardar el perfil. Intenta nuevamente.");
+        setTimeout(() => setMsg(""), 4000);
+      } finally {
+        setSaving(false);
+      }
     } else {
-      setMsg("");
+      setMsg("⚠️ Por favor corrige los errores del formulario");
+      setTimeout(() => setMsg(""), 3000);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#e3dfde] to-[#f8fafc]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#41e0b3] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando perfil...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-gradient-to-br from-[#e3dfde] to-[#f8fafc] pb-24">
@@ -61,9 +150,9 @@ export default function PerfilCard() {
         <div className="bg-[#18191A] py-2 text-center">
           <p className="text-white text-base font-semibold">Edita tu perfil</p>
         </div>
-        {/* Mensaje de éxito */}
+        {/* Mensaje de éxito/error */}
         {msg && (
-          <div className="bg-green-100 text-green-700 text-center py-2 rounded mb-2 mx-4">
+          <div className={`${msg.includes('✅') ? 'bg-green-100 text-green-700' : msg.includes('❌') ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'} text-center py-3 px-4 rounded mb-2 mx-4 mt-4 font-semibold`}>
             {msg}
           </div>
         )}
@@ -134,15 +223,26 @@ export default function PerfilCard() {
               type="email"
               name="email"
               placeholder="example@gmail.com"
-              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
+              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 cursor-not-allowed focus:outline-none"
               value={form.email}
-              onChange={handleChange}
-              required
+              disabled
+              title="El email no se puede cambiar"
             />
-            {errors.email && <span className="text-red-600 text-xs">{errors.email}</span>}
+            <p className="text-xs text-gray-500 mt-1">📧 El correo electrónico no se puede modificar</p>
           </div>
           <div>
-            <label className="text-sm font-semibold text-gray-700">Dirección de Entrega*</label>
+            <label className="text-sm font-semibold text-gray-700">Ciudad*</label>
+            <input
+              type="text"
+              name="ciudad"
+              placeholder="Ej. Bogotá, Medellín, Cali"
+              className="w-full mt-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#41e0b3] transition"
+              value={form.ciudad}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-700">Dirección de Recogida*</label>
             <input
               type="text"
               name="direccion"
@@ -169,9 +269,17 @@ export default function PerfilCard() {
           </div>
           <button
             type="submit"
-            className="w-full bg-[#41e0b3] text-white font-bold py-2 rounded-lg mt-2 hover:bg-[#2bbd8c] transition"
+            disabled={saving}
+            className="w-full bg-[#41e0b3] text-white font-bold py-3 rounded-lg mt-2 hover:bg-[#2bbd8c] transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Editar
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Guardando...
+              </>
+            ) : (
+              "💾 Guardar Perfil"
+            )}
           </button>
         </form>
         <BottomNav />
