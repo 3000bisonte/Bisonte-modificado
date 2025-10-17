@@ -136,14 +136,26 @@ export default function PerfilCard() {
     
     // Validar en tiempo real mientras el usuario escribe
     const error = validarCampo(name, value);
-    setErrors({ ...errors, [name]: error });
+    const newErrors = { ...errors };
+    if (error) {
+      newErrors[name] = error;
+    } else {
+      delete newErrors[name]; // Eliminar la key si no hay error
+    }
+    setErrors(newErrors);
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
     // Validar cuando el usuario sale del campo
     const error = validarCampo(name, value);
-    setErrors({ ...errors, [name]: error });
+    const newErrors = { ...errors };
+    if (error) {
+      newErrors[name] = error;
+    } else {
+      delete newErrors[name]; // Eliminar la key si no hay error
+    }
+    setErrors(newErrors);
   };
 
   const handleSubmit = async (e) => {
