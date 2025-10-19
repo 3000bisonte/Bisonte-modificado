@@ -307,34 +307,126 @@ export default function Cotizador() {
         }));
     };
 
+    // 🔒 Función para calcular el costo de forma segura (evita manipulación)
+    const calcularCostoSeguro = () => {
+        const alto = parseFloat(formData.alto);
+        const ancho = parseFloat(formData.ancho);
+        const largo = parseFloat(formData.largo);
+        const actualPeso = parseFloat(formData.peso);
+        const valorDecl = parseFloat(formData.valorDeclarado);
+
+        // Validar que todos los datos necesarios estén presentes
+        if (!(alto > 0 && ancho > 0 && largo > 0 && actualPeso > 0 && valorDecl >= 0 && formData.tipoEnvio && formData.ciudadDestino)) {
+            return null;
+        }
+
+        // Calcular peso volumétrico
+        const volWeight = (alto * ancho * largo) / VOLUMETRIC_DIVISOR;
+        
+        // Validar límite volumétrico
+        if (volWeight > MAX_VOLUMETRIC_WEIGHT) {
+            return null;
+        }
+
+        // Peso facturable (el mayor entre real y volumétrico)
+        const chargeableWeight = Math.max(actualPeso, volWeight);
+
+        // Tarifas según tipo de envío
+        const tarifas = {
+            Sobre: { hasta1Kilo: 12000, hasta3Kilos: 12000, adicional: 3000 },
+            Paquete: { hasta1Kilo: 12000, hasta3Kilos: 15000, adicional: 3000 },
+            Sábana: { hasta1Kilo: 15000, hasta3Kilos: 18000, adicional: 3000 },
+        };
+
+        let tarifa = tarifas[formData.tipoEnvio];
+
+        // Si la ciudad destino está en lista de sábana, usar tarifa Sábana
+        if (sabanaCities.includes(formData.ciudadDestino)) {
+            tarifa = tarifas["Sábana"];
+        }
+
+        if (!tarifa) {
+            return null;
+        }
+
+        // Calcular costo base según peso facturable
+        let costoBase = 0;
+        if (chargeableWeight <= 1) {
+            costoBase = tarifa.hasta1Kilo;
+        } else if (chargeableWeight <= 3) {
+            costoBase = tarifa.hasta3Kilos;
+        } else {
+            const kilosAdicionales = Math.ceil(chargeableWeight - 3);
+            costoBase = tarifa.hasta3Kilos + kilosAdicionales * tarifa.adicional;
+        }
+
+        // Calcular recargo por valor declarado
+        const recargoValor = valorDecl > MIN_DECLARED_VALUE_SURCHARGE
+            ? valorDecl * DECLARED_VALUE_SURCHARGE_RATE
+            : 0;
+
+        const costoFinal = costoBase + recargoValor;
+
+        // Aplicar modo prueba si está activo
+        const costoConModoPrueba = getTestModeCost(costoFinal);
+
+        return {
+            costoTotal: costoConModoPrueba,
+            pesoVolumetrico: volWeight,
+            pesoFacturable: chargeableWeight,
+            costoBase,
+            recargoValor
+        };
+    };
+
     const handleActionClick = async () => {
         setIsLoadingAction(true);
 
-        if (volumetricError || costoTotal === null || !session?.user) {
-            if (volumetricError) {
-                showWarning('Error de Volumen', volumetricError);
-            }
-            else if (!session?.user) {
-                showWarning('Sesión Requerida', 'Debes iniciar sesión para continuar con la cotización.');
-            }
-            else {
-                showWarning('Formulario Incompleto', 'Completa todos los campos requeridos para obtener una cotización válida.');
-            }
+        // 🔒 RECALCULAR COSTO DE FORMA SEGURA (evita manipulación)
+        const costoRecalculado = calcularCostoSeguro();
+
+        // Validar que el cálculo sea exitoso
+        if (!costoRecalculado || costoRecalculado.costoTotal === null) {
+            showWarning(
+                'Error de Cálculo', 
+                'No se pudo calcular el costo del envío. Verifica que todos los campos estén correctos.'
+            );
             setIsLoadingAction(false);
             return;
         }
 
-        const actualPeso = parseFloat(formData.peso) || 0;
-        const chargeableWeight = volumetricWeight !== null ? Math.max(actualPeso, volumetricWeight) : actualPeso;
+        // Validar errores volumétricos
+        if (volumetricError) {
+            showWarning('Error de Volumen', volumetricError);
+            setIsLoadingAction(false);
+            return;
+        }
 
+        // Validar sesión
+        if (!session?.user) {
+            showWarning('Sesión Requerida', 'Debes iniciar sesión para continuar con la cotización.');
+            setIsLoadingAction(false);
+            return;
+        }
+
+        // Construir datos de cotización con valores recalculados (no del estado)
         const cotizacionData = {
             ...formData,
             otraDescripcion,
-            costoTotal,
-            pesoVolumetrico: volumetricWeight,
-            pesoFacturable: chargeableWeight,
+            costoTotal: costoRecalculado.costoTotal, // 🔒 Usar costo recalculado
+            pesoVolumetrico: costoRecalculado.pesoVolumetrico,
+            pesoFacturable: costoRecalculado.pesoFacturable,
             fechaCotizacion: new Date().toISOString(),
+            // Metadatos adicionales para auditoría
+            costoBase: costoRecalculado.costoBase,
+            recargoValor: costoRecalculado.recargoValor
         };
+
+        console.log("🔒 Costo recalculado de forma segura:", {
+            costoTotalEstado: costoTotal,
+            costoTotalRecalculado: costoRecalculado.costoTotal,
+            coinciden: costoTotal === costoRecalculado.costoTotal
+        });
 
         try {
             localStorage.setItem("formCotizador", JSON.stringify(cotizacionData));
