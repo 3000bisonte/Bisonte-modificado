@@ -25,6 +25,14 @@ async function fetchPerfil() {
     try {
         const data = await response.json();
         console.log("Datos de perfil-desde-cotizador:", data);
+        
+        // El API retorna { success: true, perfiles: [...] }
+        // Extraer el array de perfiles del objeto de respuesta
+        if (data.perfiles && Array.isArray(data.perfiles)) {
+            return data.perfiles;
+        }
+        
+        // Compatibilidad con respuestas anteriores
         return Array.isArray(data) ? data : [];
     } catch (error) {
         console.error("Error parsing perfil JSON:", error);
@@ -354,13 +362,18 @@ export default function Cotizador() {
                 (perf) => (perf.email || perf.correo) === session.user.email
             );
 
-            // Verificar si el perfil está completo
-            const perfilEstaCompleto = userProfile && 
-                                      userProfile.nombre && 
-                                      userProfile.celular && 
-                                      userProfile.tipoDocumento && 
-                                      userProfile.numeroDocumento && 
-                                      userProfile.direccionRecogida;
+            console.log("🔍 Perfil encontrado:", userProfile);
+
+            // Verificar si el perfil está completo usando la bandera de la base de datos
+            // O como fallback, verificar campos manualmente
+            const perfilEstaCompleto = userProfile && (
+                userProfile.perfilCompleto === true ||
+                (userProfile.nombre && 
+                 userProfile.celular && 
+                 userProfile.tipoDocumento && 
+                 userProfile.numeroDocumento && 
+                 userProfile.direccionRecogida)
+            );
 
             if (userProfile?.id && perfilEstaCompleto) {
                 // Usuario tiene perfil COMPLETO, continuar al formulario de remitente
@@ -368,7 +381,16 @@ export default function Cotizador() {
                 router.push(`/remitente/edit/${userProfile.id}`);
             } else {
                 // Usuario NO tiene perfil completo
-                console.warn("⚠️ Usuario sin perfil completo. Redirigiendo a completar perfil.");
+                console.warn("⚠️ Usuario sin perfil completo. Redirigiendo a completar perfil.", {
+                    perfilCompleto: userProfile?.perfilCompleto,
+                    camposPresentes: {
+                        nombre: !!userProfile?.nombre,
+                        celular: !!userProfile?.celular,
+                        tipoDocumento: !!userProfile?.tipoDocumento,
+                        numeroDocumento: !!userProfile?.numeroDocumento,
+                        direccionRecogida: !!userProfile?.direccionRecogida
+                    }
+                });
                 showWarning(
                     'Perfil Incompleto', 
                     'Necesitas completar tu perfil antes de crear un envío. Te redirigiremos ahora.'
