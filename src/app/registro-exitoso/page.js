@@ -86,20 +86,21 @@ export default function RegistroExitoso() {
       // ✅ LEER DATOS DEL REGISTRO
       const nombreGuardado = localStorage.getItem("nombreRegistro") || "";
       const emailGuardado = localStorage.getItem("emailRegistro") || "";
-      const passwordGuardado = localStorage.getItem("passwordRegistro") || "";
+      // ❌ NO leer contraseña por seguridad
+      // const passwordGuardado = localStorage.getItem("passwordRegistro") || "";
       
       console.log("📋 Datos del registro:", { 
         nombre: nombreGuardado, 
-        email: emailGuardado, 
-        tienePassword: !!passwordGuardado 
+        email: emailGuardado
       });
       
       setNombre(nombreGuardado);
       setEmail(emailGuardado);
-      setPassword(passwordGuardado);
+      // No pre-llenar contraseña por seguridad
+      setPassword("");
       
-      // ✅ SI NO HAY DATOS, IR A LOGIN
-      if (!emailGuardado || !passwordGuardado) {
+      // ✅ SI NO HAY EMAIL, IR A LOGIN
+      if (!emailGuardado) {
         console.log("⚠️ No hay datos de registro, redirigiendo a login");
         setTimeout(() => {
           router.push("/");

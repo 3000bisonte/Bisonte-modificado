@@ -132,7 +132,8 @@ export default function Register() {
         // Después de que el usuario se registre exitosamente
         localStorage.setItem("nombreRegistro", nombre);
         localStorage.setItem("emailRegistro", email);
-        localStorage.setItem("passwordRegistro", password); // texto plano
+        // ❌ NUNCA guardar contraseñas en localStorage (vulnerabilidad crítica)
+        // localStorage.setItem("passwordRegistro", password);
         setTimeout(() => {
           router.push("/registro-exitoso");
         }, 1500);
