@@ -77,35 +77,15 @@ function validateCotizadorFields(formData, otraDescripcion = "") {
     else if (isNaN(formData.valorDeclarado) || Number(formData.valorDeclarado) < 0) {errors.valorDeclarado = "El valor declarado debe ser un número positivo.";}
     else if (Number(formData.valorDeclarado) > MAX_DECLARED_VALUE) {errors.valorDeclarado = `El valor declarado no puede exceder $${MAX_DECLARED_VALUE.toLocaleString('es-CO')}.`;}
 
-    // Validación para "Dice Contener"
-    if (!formData.recomendaciones) {
-        errors.recomendaciones = "Selecciona el contenido del paquete.";
-    } else if (formData.recomendaciones === "Otro") {
-        if (!otraDescripcion.trim()) {
-            errors.recomendaciones = "Por favor describe el contenido.";
-        } else if (/\d/.test(otraDescripcion)) {
-            errors.recomendaciones = "La descripción no debe contener números.";
-        } else if (otraDescripcion.length > 100) {
-            errors.recomendaciones = "La descripción no debe superar los 100 caracteres.";
-        }
+    // Validación para "Dice Contener" (campo de texto libre)
+    if (!formData.recomendaciones || !formData.recomendaciones.trim()) {
+        errors.recomendaciones = "Describe el contenido del paquete.";
+    } else if (formData.recomendaciones.length > 100) {
+        errors.recomendaciones = "La descripción no debe superar los 100 caracteres.";
     }
 
     return errors;
 }
-
-// Opciones para "Dice Contener"
-const DICE_CONTENER_OPCIONES = [
-    "Documentos",
-    "Ropa",
-    "Electrónica",
-    "Zapatos",
-    "Libros",
-    "Juguetes",
-    "Herramientas",
-    "Repuestos",
-    "Alimentos no perecederos",
-    "Otro",
-];
 
 export default function Cotizador() {
     const { data: session } = useSession();
@@ -732,41 +712,20 @@ export default function Cotizador() {
                                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                                     Contenido del Paquete <span className="text-red-500">*</span>
                                 </label>
-                                <select
+                                <input
+                                    type="text"
                                     name="recomendaciones"
                                     value={formData.recomendaciones}
                                     onChange={handleChange}
+                                    placeholder="Ej: juguetes, herramientas, libros, ropa, electrónica, etc."
+                                    maxLength={100}
                                     className={`w-full px-3 sm:px-4 py-2 sm:py-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors text-xs sm:text-base ${validateCotizadorFields(formData, otraDescripcion).recomendaciones ? 'border-red-300' : 'border-gray-300'}`}
-                                >
-                                    <option value="">Selecciona el contenido</option>
-                                    {DICE_CONTENER_OPCIONES.map((opcion) => (
-                                        <option key={opcion} value={opcion}>
-                                            {opcion}
-                                        </option>
-                                    ))}
-                                </select>
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {formData.recomendaciones.length}/100 caracteres
+                                </p>
                                 {validateCotizadorFields(formData, otraDescripcion).recomendaciones && (
                                     <p className="text-red-500 text-xs sm:text-sm mt-1">{validateCotizadorFields(formData, otraDescripcion).recomendaciones}</p>
-                                )}
-
-                                {/* Campo de descripción personalizada */}
-                                {formData.recomendaciones === "Otro" && (
-                                    <div className="mt-3 sm:mt-4">
-                                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-                                            Describe el contenido <span className="text-red-500">*</span>
-                                        </label>
-                                        <textarea
-                                            value={otraDescripcion}
-                                            onChange={(e) => setOtraDescripcion(e.target.value)}
-                                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors text-xs sm:text-base"
-                                            rows={3}
-                                            placeholder="Describe el contenido del paquete..."
-                                            maxLength={100}
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            {otraDescripcion.length}/100 caracteres
-                                        </p>
-                                    </div>
                                 )}
                             </div>
                         </div>
