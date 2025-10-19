@@ -346,14 +346,16 @@ Descarga ahora y envía tu primer paquete en menos de 5 minutos.
 - No hay compras in-app
 
 #### **Política de Privacidad**
-**URL:** https://www.bisonteapp.com/privacy (debe crearse)
+**URL:** ✅ https://www.bisonteapp.com/politica-datos/ (YA PUBLICADA)
 
-**Contenido mínimo:**
-- Datos recopilados (email, nombre, teléfono)
-- Uso de Google Analytics (si aplica)
-- Cookies y almacenamiento local
-- Compartición de datos con MercadoPago
-- Derechos del usuario (GDPR, CCPA)
+**Estado:** COMPLETA - Cumple con Ley 1581 de 2012 (Colombia)
+**Contenido incluido:**
+- ✅ Datos recopilados y finalidades
+- ✅ Derechos de los titulares (Habeas Data)
+- ✅ Procedimientos de consulta y reclamos
+- ✅ Medidas de seguridad
+- ✅ Autorización de reportes a centrales de riesgo
+- ✅ Normatividad colombiana completa
 
 ---
 
@@ -487,15 +489,14 @@ adb logcat | findstr "BisonteApp"
 ⚠️ Limpieza de console.log (5 minutos)  
 ⚠️ Testing en dispositivos físicos (1-2 horas)  
 ⚠️ Capturas de pantalla para Play Store (30 minutos)  
-⚠️ Página de política de privacidad (1 hora)  
 
 ### **Tiempo Estimado para Publicación:**
 - **Sin mejoras opcionales:** 30 minutos (solo subir APK)
-- **Con todas las mejoras:** 4-5 horas
+- **Con todas las mejoras:** 2-3 horas
 
 ### **Recomendación Final:**
 **Puedes publicar HOY MISMO** si es urgente. La app está funcional y segura.  
-**O invertir 4-5 horas** en las mejoras opcionales para una publicación más pulida.
+**O invertir 2-3 horas** en las mejoras opcionales para una publicación más pulida.
 
 ---
 

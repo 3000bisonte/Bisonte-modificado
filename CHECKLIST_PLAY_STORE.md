@@ -215,45 +215,27 @@ Descarga ahora y envía tu primer paquete en menos de 5 minutos.
 
 ---
 
-### 5️⃣ Política de Privacidad (REQUERIDO)
+### 5️⃣ Política de Privacidad ✅ (YA PUBLICADA)
 
-**Crear página en:** https://www.bisonteapp.com/privacy
+**URL:** https://www.bisonteapp.com/politica-datos/
 
-**Contenido mínimo:**
+**Estado:** ✅ COMPLETA - Cumple con Ley 1581 de 2012 (Colombia)
 
-```markdown
-# Política de Privacidad - Bisonte Logística
+**Contenido incluido:**
+- ✅ Normatividad legal (Ley 1581 de 2012)
+- ✅ Definiciones (Autorización, Base de Datos, Titular, etc.)
+- ✅ Finalidad del tratamiento de datos
+- ✅ Principios (finalidad, libertad, veracidad, seguridad)
+- ✅ Responsable del tratamiento (Bisonte)
+- ✅ Derechos de los titulares (Habeas Data)
+- ✅ Datos de menores y sensibles
+- ✅ Deberes de Bisonte
+- ✅ Procedimiento de consultas y reclamos
+- ✅ Medidas de seguridad
+- ✅ Autorización de consulta a centrales de riesgo
 
-## Datos que recopilamos
-- Nombre y apellido
-- Correo electrónico
-- Número de teléfono
-- Dirección de recogida y entrega
-
-## Uso de los datos
-- Procesamiento de envíos
-- Notificaciones de estado
-- Soporte al cliente
-
-## Compartición de datos
-- MercadoPago (procesamiento de pagos)
-- Google Analytics (estadísticas anónimas)
-
-## Almacenamiento
-- PostgreSQL en servidores seguros (Neon)
-- Encriptación SSL/TLS
-
-## Derechos del usuario
-- Acceso a tus datos
-- Rectificación
-- Eliminación (derecho al olvido)
-
-## Contacto
-Email: soporte@bisonteapp.com
-```
-
-- [ ] Página de privacidad creada
-- [ ] URL agregada en Play Console: `https://www.bisonteapp.com/privacy`
+- [x] ✅ Página de privacidad creada
+- [ ] URL agregada en Play Console: `https://www.bisonteapp.com/politica-datos/`
 
 ---
 
@@ -382,7 +364,7 @@ adb logcat | findstr "AndroidRuntime"
 - [ ] Información completa (título, descripción)
 - [ ] Gráficos subidos (ícono, banner, capturas)
 - [ ] Clasificación de contenido completada
-- [ ] Política de privacidad publicada
+- [x] ✅ Política de privacidad publicada (https://www.bisonteapp.com/politica-datos/)
 - [ ] APK subido
 - [ ] Precios y distribución configurados
 - [ ] App enviada a revisión
