@@ -1492,9 +1492,10 @@ export default function Resumen() {
           currentAttempt={adLoadAttempts}
           maxAttempts={MAX_AD_LOAD_ATTEMPTS}
           onContinueWithoutAd={() => {
-            console.log("🚫 Usuario cerró modal de anuncio - marcando como cerrado manualmente");
-            setUserClosedAdModal(true); // 🚫 Marcar que el usuario cerró manualmente
-            resetAdStateCompletely();
+            console.log("🚫 Usuario cerró modal de anuncio - ocultando modal pero manteniendo carga en segundo plano");
+            setUserClosedAdModal(true); // 🚫 Marcar que el usuario cerró manualmente el modal de carga
+            // NO llamar a resetAdStateCompletely() para que el anuncio siga cargándose en segundo plano
+            // Si se carga exitosamente, se mostrará el modal Mega Sale
           }}
           onRetry={() => {
             console.log("🔄 Usuario solicitó reintentar anuncio");
