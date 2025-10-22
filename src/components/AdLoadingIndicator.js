@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-
 /**
- * Componente de indicador de carga de anuncios con timeout y barra de progreso
- * Muestra el estado de carga y permite al usuario continuar si tarda demasiado
+ * COMPONENTE RECREADO COMPLETAMENTE
+ * Modal de carga de anuncios - Versión simplificada y funcional
  */
 export default function AdLoadingIndicator({
   isLoading = false,
@@ -15,43 +13,41 @@ export default function AdLoadingIndicator({
   onContinueWithoutAd = null,
   onRetry = null,
 }) {
-  // Manejar tecla Escape para cerrar el modal
-  useEffect(() => {
-    const handleEscape = (event) => {
-      if (event.key === 'Escape' && isLoading && onContinueWithoutAd) {
-        console.log("⌨️ Tecla Escape presionada - cerrando modal de anuncio");
-        onContinueWithoutAd();
-      }
-    };
-
-    if (isLoading) {
-      document.addEventListener('keydown', handleEscape);
-      return () => {
-        document.removeEventListener('keydown', handleEscape);
-      };
-    }
-  }, [isLoading, onContinueWithoutAd]);
-
+  // Si no está cargando, no mostrar nada
   if (!isLoading) return null;
 
+  // Función para cerrar el modal
+  const handleClose = () => {
+    console.log("🚫 Cerrando modal de anuncio");
+    if (onContinueWithoutAd) {
+      onContinueWithoutAd();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={(e) => {
+        // Cerrar si se hace clic en el fondo
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
       <div className="bg-white rounded-2xl p-8 shadow-2xl text-center max-w-sm mx-4 transform transition-all relative">
         
-        {/* X GIGANTE ROJA - SIEMPRE VISIBLE */}
-        {onContinueWithoutAd && (
-          <button
-            type="button"
-            onClick={onContinueWithoutAd}
-            className="absolute -top-3 -right-3 w-14 h-14 flex items-center justify-center rounded-full bg-red-500 hover:bg-red-600 text-white transition-all duration-200 z-50 shadow-2xl border-4 border-white text-2xl font-bold"
-            aria-label="Cerrar y continuar sin anuncio"
-            title="Cerrar y continuar sin descuento"
-          >
-            ✕
-          </button>
-        )}
+        {/* X GIGANTE ROJA EN LA ESQUINA SUPERIOR DERECHA */}
+        <button
+          type="button"
+          onClick={handleClose}
+          className="absolute -top-3 -right-3 w-14 h-14 flex items-center justify-center rounded-full bg-red-500 hover:bg-red-600 active:bg-red-700 text-white transition-all duration-200 z-50 shadow-2xl border-4 border-white text-2xl font-bold cursor-pointer"
+          aria-label="Cerrar"
+          title="Cerrar"
+        >
+          ✕
+        </button>
         
-        {/* Icono animado */}
+        {/* Icono animado de video */}
         <div className="relative mb-6">
           <div className="w-20 h-20 mx-auto">
             {hasTimeout ? (
@@ -72,7 +68,7 @@ export default function AdLoadingIndicator({
                 </svg>
               </div>
             ) : (
-              // Spinner normal
+              // Spinner con icono de video
               <div className="relative">
                 <div className="w-20 h-20 border-4 border-gray-200 rounded-full"></div>
                 <div className="absolute top-0 left-0 w-20 h-20 border-4 border-transparent border-t-[#41e0b3] rounded-full animate-spin"></div>
@@ -118,72 +114,61 @@ export default function AdLoadingIndicator({
               </span>
             </>
           ) : (
-            <>
-              Esto puede tardar unos segundos...
-              <br />
-              <span className="text-xs text-gray-500 mt-1 block font-bold">
-                Presiona el botón rojo de arriba o el de abajo para cerrar
-              </span>
-            </>
+            'Esto puede tardar unos segundos...'
           )}
         </p>
 
-        {/* BOTÓN GRANDE PARA SALTAR - SIEMPRE VISIBLE */}
-        {onContinueWithoutAd && (
-          <button
-            type="button"
-            onClick={onContinueWithoutAd}
-            className="w-full bg-red-500 hover:bg-red-600 text-white py-4 px-6 rounded-lg text-base font-bold transition-all duration-200 transform hover:scale-105 shadow-lg mb-4"
-          >
-            ✕ CERRAR Y CONTINUAR SIN DESCUENTO
-          </button>
-        )}
+        {/* BOTÓN GRANDE PARA CERRAR - SIEMPRE VISIBLE */}
+        <button
+          type="button"
+          onClick={handleClose}
+          className="w-full bg-red-500 hover:bg-red-600 active:bg-red-700 text-white py-4 px-6 rounded-lg text-base font-bold transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg mb-4 cursor-pointer"
+        >
+          ✕ CERRAR Y CONTINUAR SIN DESCUENTO
+        </button>
 
-        {/* Barra de progreso - Solo si no hay timeout */}
+        {/* Barra de progreso */}
         {!hasTimeout && progress > 0 && (
           <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4 overflow-hidden">
             <div
               className="h-2.5 rounded-full bg-gradient-to-r from-[#41e0b3] via-[#35d4a4] to-[#2bbd8c] transition-all duration-500 ease-out relative"
               style={{ width: `${Math.min(progress, 100)}%` }}
             >
-              {/* Efecto de brillo animado */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
             </div>
           </div>
         )}
 
-        {/* Indicador de porcentaje */}
+        {/* Porcentaje */}
         {!hasTimeout && progress > 0 && (
           <p className="text-xs text-gray-500 mb-2">
             {Math.round(progress)}% completado
           </p>
         )}
 
-        {/* Botones de acción cuando hay timeout */}
+        {/* Botones cuando hay timeout y se agotaron intentos */}
         {hasTimeout && currentAttempt >= maxAttempts && (
           <div className="flex flex-col gap-2 mt-6">
             {onRetry && (
               <button
                 type="button"
-                className="bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] hover:from-[#35d4a4] hover:to-[#23a878] text-white py-3 px-6 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
+                className="bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] hover:from-[#35d4a4] hover:to-[#23a878] text-white py-3 px-6 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg cursor-pointer"
                 onClick={onRetry}
               >
                 🔄 Reintentar cargar anuncio
               </button>
             )}
-            {onContinueWithoutAd && (
-              <button
-                type="button"
-                className="bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
-                onClick={onContinueWithoutAd}
-              >
-                Continuar sin descuento
-              </button>
-            )}
+            <button
+              type="button"
+              className="bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg cursor-pointer"
+              onClick={handleClose}
+            >
+              Continuar sin descuento
+            </button>
           </div>
         )}
 
-        {/* Mensaje de espera cuando aún hay intentos */}
+        {/* Mensaje de reintento automático */}
         {hasTimeout && currentAttempt < maxAttempts && (
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-xs text-yellow-800">
@@ -192,13 +177,12 @@ export default function AdLoadingIndicator({
           </div>
         )}
 
-        {/* Tips mientras espera */}
+        {/* MENSAJE PERSONALIZADO CON TU TEXTO */}
         {!hasTimeout && (
           <div className="mt-2">
             <div className="p-3 bg-gradient-to-r from-[#41e0b3]/10 to-[#2bbd8c]/10 rounded-lg border border-[#41e0b3]/20">
               <p className="text-xs text-gray-600">
-                💡 <span className="font-semibold">¿Sabías?</span> Ver anuncios te da hasta{" "}
-                <span className="font-bold text-[#2bbd8c]">$15,000 de descuento</span> en tu envío
+                💡 <span className="font-semibold">¿Sabías?</span> Recibirás un descuento en tu envío al ver los anuncios
               </p>
             </div>
           </div>
@@ -207,12 +191,8 @@ export default function AdLoadingIndicator({
 
       <style jsx>{`
         @keyframes shimmer {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
         }
         .animate-shimmer {
           animation: shimmer 2s infinite;
