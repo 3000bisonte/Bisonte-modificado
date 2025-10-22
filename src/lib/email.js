@@ -20,7 +20,7 @@ function getResendClient() {
 }
 
 function ensureSiteUrl() {
-  const baseUrl = env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const baseUrl = env.NEXT_PUBLIC_SITE_URL ?? 'https://bisonteapp.com'
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
 }
 

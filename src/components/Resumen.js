@@ -302,7 +302,39 @@ export default function Resumen() {
     setAdLoadTimeout(false);
   }, []);
 
-  // 🕐 Iniciar timeout para carga de anuncio
+  // � Resetear COMPLETAMENTE el estado de anuncios (función de emergencia)
+  const resetAdStateCompletely = useCallback(() => {
+    console.log("🔄 Reseteando completamente el estado de anuncios...");
+    
+    // Limpiar todos los timeouts e intervalos
+    clearAdLoadTimeout();
+    
+    if (adTimeoutRef.current) {
+      clearTimeout(adTimeoutRef.current);
+      adTimeoutRef.current = null;
+    }
+    
+    if (adErrorModalTimerRef.current) {
+      clearTimeout(adErrorModalTimerRef.current);
+      adErrorModalTimerRef.current = null;
+    }
+    
+    // Resetear TODOS los estados relacionados con anuncios
+    setAdState("idle");
+    setAdLoadTimeout(false);
+    setAdLoadAttempts(0);
+    setAdLoadProgress(0);
+    setShowAdErrorModal(false);
+    setHideAdErrorModal(false);
+    setLastAdError(null);
+    setRewardBanner(null);
+    setRewardChainProgress(null);
+    setRetryCount(0);
+    
+    console.log("✅ Estado de anuncios reseteado completamente");
+  }, [clearAdLoadTimeout]);
+
+  // �🕐 Iniciar timeout para carga de anuncio
   const startAdLoadTimeout = useCallback(() => {
     clearAdLoadTimeout();
     setAdLoadProgress(0);
@@ -1458,18 +1490,20 @@ export default function Resumen() {
           currentAttempt={adLoadAttempts}
           maxAttempts={MAX_AD_LOAD_ATTEMPTS}
           onContinueWithoutAd={() => {
-            clearAdLoadTimeout();
-            setAdState("idle");
+            console.log("🚫 Usuario cerró modal de anuncio - reseteando estado");
+            resetAdStateCompletely();
+            
             showInfo(
               'Continuando sin descuento',
-              'Puedes proceder con el pago sin el descuento por anuncios.'
+              'Modal cerrado. Puedes proceder con el pago sin el descuento por anuncios.'
             );
           }}
           onRetry={() => {
-            clearAdLoadTimeout();
-            setAdLoadAttempts(0);
-            setAdState("idle");
-            setTimeout(preloadAd, 500);
+            console.log("🔄 Usuario solicitó reintentar anuncio");
+            resetAdStateCompletely();
+            setTimeout(() => {
+              preloadAd();
+            }, 500);
           }}
         />
         

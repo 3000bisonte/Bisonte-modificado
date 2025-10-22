@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 /**
  * Componente de indicador de carga de anuncios con timeout y barra de progreso
  * Muestra el estado de carga y permite al usuario continuar si tarda demasiado
@@ -13,17 +15,34 @@ export default function AdLoadingIndicator({
   onContinueWithoutAd = null,
   onRetry = null,
 }) {
+  // Manejar tecla Escape para cerrar el modal
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && isLoading && onContinueWithoutAd) {
+        console.log("⌨️ Tecla Escape presionada - cerrando modal de anuncio");
+        onContinueWithoutAd();
+      }
+    };
+
+    if (isLoading) {
+      document.addEventListener('keydown', handleEscape);
+      return () => {
+        document.removeEventListener('keydown', handleEscape);
+      };
+    }
+  }, [isLoading, onContinueWithoutAd]);
+
   if (!isLoading) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="bg-white rounded-2xl p-8 shadow-2xl text-center max-w-sm mx-4 transform transition-all relative">
-        {/* Botón de cerrar (X) - Solo si no hay timeout */}
-        {!hasTimeout && onContinueWithoutAd && (
+        {/* Botón de cerrar (X) - SIEMPRE disponible */}
+        {onContinueWithoutAd && (
           <button
             type="button"
             onClick={onContinueWithoutAd}
-            className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-all duration-200 group"
+            className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-all duration-200 group z-10"
             aria-label="Cerrar y continuar sin anuncio"
             title="Cerrar y continuar sin descuento"
           >
@@ -110,7 +129,13 @@ export default function AdLoadingIndicator({
               </span>
             </>
           ) : (
-            "Esto puede tardar unos segundos..."
+            <>
+              Esto puede tardar unos segundos...
+              <br />
+              <span className="text-xs text-gray-500 mt-1 block">
+                Presiona <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Esc</kbd> para saltar
+              </span>
+            </>
           )}
         </p>
 
@@ -169,11 +194,24 @@ export default function AdLoadingIndicator({
 
         {/* Tips mientras espera */}
         {!hasTimeout && (
-          <div className="mt-4 p-3 bg-gradient-to-r from-[#41e0b3]/10 to-[#2bbd8c]/10 rounded-lg border border-[#41e0b3]/20">
-            <p className="text-xs text-gray-600">
-              💡 <span className="font-semibold">¿Sabías?</span> Ver anuncios te da hasta{" "}
-              <span className="font-bold text-[#2bbd8c]">$15,000 de descuento</span> en tu envío
-            </p>
+          <div className="mt-4 space-y-3">
+            <div className="p-3 bg-gradient-to-r from-[#41e0b3]/10 to-[#2bbd8c]/10 rounded-lg border border-[#41e0b3]/20">
+              <p className="text-xs text-gray-600">
+                💡 <span className="font-semibold">¿Sabías?</span> Ver anuncios te da hasta{" "}
+                <span className="font-bold text-[#2bbd8c]">$15,000 de descuento</span> en tu envío
+              </p>
+            </div>
+            
+            {/* Botón para saltar anuncio - Siempre disponible */}
+            {onContinueWithoutAd && (
+              <button
+                type="button"
+                onClick={onContinueWithoutAd}
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105"
+              >
+                ⏭️ Saltar anuncio y continuar sin descuento
+              </button>
+            )}
           </div>
         )}
       </div>

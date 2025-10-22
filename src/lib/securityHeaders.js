@@ -79,7 +79,7 @@ export const AuthSecurityHeaders = {
  * 🌐 Headers para CORS seguro
  */
 export const CorsHeaders = {
-  'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'http://localhost:3000',
+  'Access-Control-Allow-Origin': process.env.FRONTEND_URL || 'https://bisonteapp.com',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': [
     'Content-Type',

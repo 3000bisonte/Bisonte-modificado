@@ -52,8 +52,8 @@ export const env = cleanEnv(process.env, {
   TOKEN_SECRET: str({ default: '', desc: 'Legacy token secret used by some helpers' }),
 
   // CORS / URLs
-  NEXT_PUBLIC_SITE_URL: url({ default: 'http://localhost:3000', desc: 'Public site URL for client code' }),
-  NEXT_PUBLIC_API_BASE_URL: url({ default: 'http://localhost:3000/api', desc: 'Base URL for client to call APIs' }),
+  NEXT_PUBLIC_SITE_URL: url({ default: 'https://bisonteapp.com', desc: 'Public site URL for client code' }),
+  NEXT_PUBLIC_API_BASE_URL: url({ default: 'https://bisonteapp.com/api', desc: 'Base URL for client to call APIs' }),
   ALLOWED_ORIGINS: commaSeparated({ default: [], desc: 'Comma-separated allowed origins for CORS' }),
 
   // Ads / Mobile (public-only)
@@ -66,8 +66,8 @@ export const env = cleanEnv(process.env, {
   NEXT_PUBLIC_ADSENSE_RESP_SLOT: str({ default: '' }),
 
   // Misc
-  RUNTIME_ENV: str({ default: 'local' }),
-  BASE_URL: url({ default: 'http://localhost:3000/api', desc: 'Used by test scripts as the base API URL' }),
+  RUNTIME_ENV: str({ default: 'production' }),
+  BASE_URL: url({ default: 'https://bisonteapp.com/api', desc: 'Used by test scripts as the base API URL' }),
 })
 
 export type Env = typeof env
