@@ -5,6 +5,9 @@ import { authOptions } from "../../../../lib/auth";
 
 const handler = NextAuth(authOptions);
 
+// Exportar authOptions para uso en otras rutas API
+export { authOptions };
+
 export async function GET(request, ctx) {
 	try {
 		const path = request.nextUrl?.pathname || "";
