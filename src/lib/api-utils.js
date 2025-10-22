@@ -6,8 +6,8 @@ import { NextResponse } from "next/server";
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
-  'https://bisonteapp.com',
   'https://www.bisonteapp.com',
+  'https://bisonteapp.com',
   'https://bisonte-modificado.vercel.app',
   ...(process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean)
 ];

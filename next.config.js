@@ -30,7 +30,7 @@ const nextConfig = {
               style-src 'self' 'unsafe-inline' fonts.googleapis.com;
               font-src 'self' fonts.gstatic.com;
               img-src 'self' data: https: blob:;
-              connect-src 'self' accounts.google.com oauth2.googleapis.com www.googleapis.com https://api.mercadopago.com https://www.mercadopago.com https://*.mercadopago.com https://http2.mlstatic.com;
+              connect-src 'self' accounts.google.com oauth2.googleapis.com www.googleapis.com https://api.mercadopago.com https://www.mercadopago.com https://*.mercadopago.com https://http2.mlstatic.com https://api.mercadolibre.com https://secure.mlstatic.com wss://api.mercadopago.com;
               frame-src accounts.google.com https://www.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com;
               object-src 'none';
               base-uri 'self';

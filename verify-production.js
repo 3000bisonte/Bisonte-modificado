@@ -118,7 +118,7 @@ console.log('\n🔐 VERIFICANDO AUTENTICACIÓN...\n');
 // 7. Verificar Google OAuth
 if (envVars.GOOGLE_CLIENT_ID && envVars.GOOGLE_CLIENT_SECRET) {
   checkPassed('Credenciales de Google OAuth configuradas');
-  checkWarning('Recuerda agregar https://bisonteapp.com/api/auth/callback/google en Google Cloud Console');
+  checkWarning('Recuerda agregar https://www.bisonteapp.com/api/auth/callback/google en Google Cloud Console');
 } else {
   checkFailed('GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET deben estar configurados');
 }

@@ -20,7 +20,7 @@ function getResendClient() {
 }
 
 function ensureSiteUrl() {
-  const baseUrl = env.NEXT_PUBLIC_SITE_URL ?? 'https://bisonteapp.com'
+  const baseUrl = env.NEXT_PUBLIC_SITE_URL ?? 'https://www.bisonteapp.com'
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
 }
 
