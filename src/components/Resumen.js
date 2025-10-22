@@ -1492,11 +1492,6 @@ export default function Resumen() {
           onContinueWithoutAd={() => {
             console.log("🚫 Usuario cerró modal de anuncio - reseteando estado");
             resetAdStateCompletely();
-            
-            showInfo(
-              'Continuando sin descuento',
-              'Modal cerrado. Puedes proceder con el pago sin el descuento por anuncios.'
-            );
           }}
           onRetry={() => {
             console.log("🔄 Usuario solicitó reintentar anuncio");
