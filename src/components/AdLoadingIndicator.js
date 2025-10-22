@@ -37,28 +37,17 @@ export default function AdLoadingIndicator({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="bg-white rounded-2xl p-8 shadow-2xl text-center max-w-sm mx-4 transform transition-all relative">
-        {/* Botón de cerrar (X) - SIEMPRE disponible */}
+        
+        {/* X GIGANTE ROJA - SIEMPRE VISIBLE */}
         {onContinueWithoutAd && (
           <button
             type="button"
             onClick={onContinueWithoutAd}
-            className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-all duration-200 group z-10"
+            className="absolute -top-3 -right-3 w-14 h-14 flex items-center justify-center rounded-full bg-red-500 hover:bg-red-600 text-white transition-all duration-200 z-50 shadow-2xl border-4 border-white text-2xl font-bold"
             aria-label="Cerrar y continuar sin anuncio"
             title="Cerrar y continuar sin descuento"
           >
-            <svg
-              className="w-5 h-5 group-hover:scale-110 transition-transform"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            ✕
           </button>
         )}
         
@@ -132,12 +121,23 @@ export default function AdLoadingIndicator({
             <>
               Esto puede tardar unos segundos...
               <br />
-              <span className="text-xs text-gray-500 mt-1 block">
-                Presiona <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Esc</kbd> para saltar
+              <span className="text-xs text-gray-500 mt-1 block font-bold">
+                Presiona el botón rojo de arriba o el de abajo para cerrar
               </span>
             </>
           )}
         </p>
+
+        {/* BOTÓN GRANDE PARA SALTAR - SIEMPRE VISIBLE */}
+        {onContinueWithoutAd && (
+          <button
+            type="button"
+            onClick={onContinueWithoutAd}
+            className="w-full bg-red-500 hover:bg-red-600 text-white py-4 px-6 rounded-lg text-base font-bold transition-all duration-200 transform hover:scale-105 shadow-lg mb-4"
+          >
+            ✕ CERRAR Y CONTINUAR SIN DESCUENTO
+          </button>
+        )}
 
         {/* Barra de progreso - Solo si no hay timeout */}
         {!hasTimeout && progress > 0 && (
@@ -194,24 +194,13 @@ export default function AdLoadingIndicator({
 
         {/* Tips mientras espera */}
         {!hasTimeout && (
-          <div className="mt-4 space-y-3">
+          <div className="mt-2">
             <div className="p-3 bg-gradient-to-r from-[#41e0b3]/10 to-[#2bbd8c]/10 rounded-lg border border-[#41e0b3]/20">
               <p className="text-xs text-gray-600">
                 💡 <span className="font-semibold">¿Sabías?</span> Ver anuncios te da hasta{" "}
                 <span className="font-bold text-[#2bbd8c]">$15,000 de descuento</span> en tu envío
               </p>
             </div>
-            
-            {/* Botón para saltar anuncio - Siempre disponible */}
-            {onContinueWithoutAd && (
-              <button
-                type="button"
-                onClick={onContinueWithoutAd}
-                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105"
-              >
-                ⏭️ Saltar anuncio y continuar sin descuento
-              </button>
-            )}
           </div>
         )}
       </div>
