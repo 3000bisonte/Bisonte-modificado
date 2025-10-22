@@ -92,8 +92,8 @@ export default function Resumen() {
   const [adLoadProgress, setAdLoadProgress] = useState(0);
   const adLoadTimeoutRef = useRef(null);
   const adProgressIntervalRef = useRef(null);
-  const MAX_AD_LOAD_ATTEMPTS = 2;
-  const AD_LOAD_TIMEOUT = 8000; // 🚀 8 segundos para carga más rápida (optimizado para alto tráfico)
+  const MAX_AD_LOAD_ATTEMPTS = 1; // 🚀 Solo 1 intento para cargar rápido
+  const AD_LOAD_TIMEOUT = 5000; // 🚀 5 segundos MÁXIMO - después mostrar opciones
 
   // 🎯 Monitorear múltiples estados de loading
   useMultipleLoadingMonitor({
@@ -353,31 +353,23 @@ export default function Resumen() {
 
     // Timeout principal
     adLoadTimeoutRef.current = setTimeout(() => {
-      console.warn("⏰ Timeout: El anuncio tardó demasiado en cargar");
-      setAdLoadTimeout(true);
-      setAdState("error");
+      console.warn("⏰ Timeout de 5s alcanzado - Cerrando modal automáticamente");
       clearInterval(adProgressIntervalRef.current);
       adProgressIntervalRef.current = null;
       
-      const newAttempts = adLoadAttempts + 1;
-      setAdLoadAttempts(newAttempts);
+      // 🚀 ESTRATEGIA NUEVA: Cerrar modal automáticamente y dejar que el usuario continúe
+      userClosedAdModalRef.current = true; // Marcar como cerrado
+      setAdLoadTimeout(false); // No mostrar mensaje de timeout
       
-      if (newAttempts >= MAX_AD_LOAD_ATTEMPTS) {
-        showWarning(
-          'Anuncios no disponibles',
-          'Los anuncios están tardando mucho en cargar.\n\n' +
-          '¿Deseas continuar sin descuento o intentar de nuevo más tarde?'
-        );
-      } else {
-        showInfo(
-          'Cargando anuncio...',
-          `El anuncio está tardando más de lo esperado.\n\n` +
-          `Intento ${newAttempts} de ${MAX_AD_LOAD_ATTEMPTS}.\n\n` +
-          'Puedes esperar o continuar sin descuento.'
-        );
-      }
+      // Si el anuncio está cargando en segundo plano, dejarlo cargar
+      // pero NO bloquear al usuario con el modal
+      console.log("ℹ️ El anuncio seguirá cargando en segundo plano");
+      console.log("ℹ️ Si se carga, aparecerá el modal Mega Sale automáticamente");
+      
+      // Forzar re-render para cerrar el modal
+      setAdLoadProgress(0);
     }, AD_LOAD_TIMEOUT);
-  }, [clearAdLoadTimeout, adLoadAttempts, showWarning, showInfo, AD_LOAD_TIMEOUT, MAX_AD_LOAD_ATTEMPTS]);
+  }, [clearAdLoadTimeout, AD_LOAD_TIMEOUT]);
 
   const preloadAd = useCallback(() => {
     // No precargar si es envío gratuito

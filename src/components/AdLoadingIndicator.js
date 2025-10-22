@@ -114,7 +114,13 @@ export default function AdLoadingIndicator({
               </span>
             </>
           ) : (
-            'Esto puede tardar unos segundos...'
+            <>
+              Cargando anuncio...
+              <br />
+              <span className="text-xs text-gray-500 mt-1 block">
+                Esto tomará máximo 5 segundos
+              </span>
+            </>
           )}
         </p>
 
