@@ -128,8 +128,8 @@ export async function POST(request: NextRequest) {
     console.log(`🌍 Ambiente: ${environment}`);
     console.log(`🔑 Access Token: ${accessToken.substring(0, 20)}...`);
 
-    // Preparar el payload para la API de Payments
-    const paymentPayload = {
+    // Preparar el payload para la API of Payments
+    const paymentPayload: Record<string, unknown> = {
       transaction_amount: paymentData.transaction_amount,
       token: paymentData.token,
       payment_method_id: paymentData.payment_method_id,
@@ -148,6 +148,38 @@ export async function POST(request: NextRequest) {
         createdAt: new Date().toISOString(),
       },
     };
+
+    // 🏦 PSE requiere campos adicionales específicos
+    if (paymentData.payment_method_id === 'pse') {
+      console.log('🏦 Detectado pago PSE - Agregando campos adicionales...');
+      
+      // PSE requiere estos campos obligatorios
+      const psePayload = body as Record<string, unknown>;
+      const pseTransactionDetails = psePayload.transaction_details as Record<string, unknown> | undefined;
+      
+      paymentPayload.transaction_details = {
+        financial_institution: (pseTransactionDetails?.financial_institution as string) || 
+                              (psePayload.financial_institution as string),
+      };
+      
+      paymentPayload.callback_url = (psePayload.callback_url as string) || 
+                                    `${process.env.NEXTAUTH_URL}/mercadopago/statusbrick`;
+      
+      // Agregar entity_type si está disponible (individual o association)
+      if (psePayload.payer && typeof psePayload.payer === 'object') {
+        const payerData = psePayload.payer as Record<string, unknown>;
+        if (payerData.entity_type) {
+          (paymentPayload.payer as Record<string, unknown>).entity_type = payerData.entity_type;
+        }
+      }
+      
+      const pseTransactionDetailsResult = paymentPayload.transaction_details as Record<string, unknown>;
+      console.log('🏦 Datos PSE agregados:', {
+        financial_institution: pseTransactionDetailsResult.financial_institution,
+        callback_url: paymentPayload.callback_url,
+        entity_type: (paymentPayload.payer as Record<string, unknown>)?.entity_type,
+      });
+    }
 
     console.log("📤 Enviando pago a Mercado Pago API...");
 

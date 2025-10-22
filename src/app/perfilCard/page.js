@@ -161,13 +161,13 @@ export default function PerfilCard() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validar todos los campos
+    // Validar todos los campos EXCEPTO email (que está deshabilitado)
     const newErrors = {
       nombre: validarNombre(form.nombre),
       tipoDocumento: form.tipoDocumento ? "" : "Debes seleccionar un tipo de documento",
       numeroDocumento: validarNumeroDocumento(form.numeroDocumento),
       celular: validarCelular(form.celular),
-      email: validarEmail(form.email),
+      // email: NO validar porque el campo está deshabilitado
       direccion: validarDireccion(form.direccion),
       ciudad: validarCiudad(form.ciudad)
     };

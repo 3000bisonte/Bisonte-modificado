@@ -210,11 +210,14 @@ const MercadoPagoComponent = () => {
   }, [paymentId]);
   const onSubmit = async ({ selectedPaymentMethod: _selectedPaymentMethod, formData }) => {
     console.log("💳 Procesando pago con Payment Brick...");
-    console.log("📋 Datos del formulario:", {
+    console.log("📋 Datos del formulario (completos):", JSON.stringify(formData, null, 2));
+    console.log("📋 Resumen:", {
       amount: formData.transaction_amount,
       method: formData.payment_method_id,
       installments: formData.installments,
       email: formData.payer?.email,
+      isPSE: formData.payment_method_id === 'pse',
+      hasFinancialInstitution: !!formData.transaction_details?.financial_institution || !!formData.financial_institution,
     });
 
     return new Promise((resolve, reject) => {
