@@ -36,6 +36,7 @@ const MercadoPagoComponent = () => {
   const [paymentId, setpaymentId] = useState(null);
   const [status, setstatus] = useState(null);
   const [isVisiblePayments, setIsVisiblePayments] = useState(true);
+  const [isPSEPayment, setIsPSEPayment] = useState(false); // 🏦 Rastrear pagos PSE
   // const [miperfil, setMiperfil] = useState([]);
   // const [perfilId, setPerfilId] = useState(null);
   const perfilIdRef = useRef(null); // Usa un ref para evitar re-renderizados
@@ -43,7 +44,21 @@ const MercadoPagoComponent = () => {
 
   const userEmail = session?.user?.email; // Extrae el email al inicio del componente
 
-  // 🎨 Modal de notificaciones
+  // � Detectar retorno de PSE al cargar el componente
+  useEffect(() => {
+    const currentUrl = window.location.href;
+    const isReturningFromPSE = currentUrl.includes('payment_id') || 
+                               currentUrl.includes('external_reference') ||
+                               currentUrl.includes('status=approved') ||
+                               currentUrl.includes('status=pending');
+    
+    if (isReturningFromPSE) {
+      console.log("🏦 Detectado retorno de PSE - Activando modo PSE");
+      setIsPSEPayment(true);
+    }
+  }, []);
+
+  // �🎨 Modal de notificaciones
   const { modalState, showSuccess, showError, closeModal } = useNotification();
   
   // Función showWarning que faltaba
@@ -216,12 +231,17 @@ const MercadoPagoComponent = () => {
   const onSubmit = async ({ selectedPaymentMethod: _selectedPaymentMethod, formData }) => {
     console.log("💳 Procesando pago con Payment Brick...");
     console.log("📋 Datos del formulario (completos):", JSON.stringify(formData, null, 2));
+    
+    // 🏦 Detectar si es pago PSE
+    const isPSE = formData.payment_method_id === 'pse';
+    setIsPSEPayment(isPSE);
+    
     console.log("📋 Resumen:", {
       amount: formData.transaction_amount,
       method: formData.payment_method_id,
       installments: formData.installments,
       email: formData.payer?.email,
-      isPSE: formData.payment_method_id === 'pse',
+      isPSE: isPSE,
       hasFinancialInstitution: !!formData.transaction_details?.financial_institution || !!formData.financial_institution,
     });
 
@@ -301,10 +321,21 @@ const MercadoPagoComponent = () => {
         })
         .catch((error) => {
           console.error("❌ Error de red al procesar pago:", error);
-          showError(
-            'Error de Conexión',
-            'Hubo un problema de conexión al procesar tu pago. Por favor, inténtalo de nuevo.'
-          );
+          
+          // 🚀 MEJORA PSE: No mostrar error durante flujo PSE
+          const currentUrl = window.location.href;
+          const isReturningFromPSE = currentUrl.includes('payment_id') || 
+                                     currentUrl.includes('external_reference') ||
+                                     currentUrl.includes('status=approved') ||
+                                     currentUrl.includes('status=pending') ||
+                                     isPSEPayment;
+          
+          if (!isReturningFromPSE) {
+            showError(
+              'Error de Conexión',
+              'Hubo un problema de conexión al procesar tu pago. Por favor, inténtalo de nuevo.'
+            );
+          }
           reject(error);
         });
     });
@@ -456,7 +487,24 @@ const MercadoPagoComponent = () => {
       }
     } catch (error) {
       console.error("Error al registrar el envío:", error);
-      showError('Error de Conexión', 'Error de conexión al registrar el envío. Inténtalo nuevamente.');
+      
+      // 🚀 MEJORA PSE: No mostrar error de conexión durante flujo PSE
+      const currentUrl = window.location.href;
+      const isReturningFromPSE = currentUrl.includes('payment_id') || 
+                                 currentUrl.includes('external_reference') ||
+                                 currentUrl.includes('status=approved') ||
+                                 currentUrl.includes('status=pending') ||
+                                 isPSEPayment;
+      
+      if (!isReturningFromPSE) {
+        showError('Error de Conexión', 'Error de conexión al registrar el envío. Inténtalo nuevamente.');
+      } else {
+        console.log("🏦 Error de conexión durante flujo PSE - Reintentando automáticamente...");
+        // Para PSE, reintenta automáticamente sin mostrar error al usuario
+        setTimeout(() => {
+          void manejarEnvioAprobado();
+        }, 3000); // Un poco más de tiempo para PSE
+      }
     }
   }, [generarNumeroGuia, paymentId, session?.user?.email, showSuccess, showError]);
 
@@ -478,7 +526,20 @@ const MercadoPagoComponent = () => {
   const onError = async (error) => {
     console.error("❌ Error en Payment Brick:", error);
     
-    // Extraer mensaje de error
+    // 🚀 MEJORA PSE: No mostrar errores durante flujo PSE
+    const currentUrl = window.location.href;
+    const isReturningFromPSE = currentUrl.includes('payment_id') || 
+                               currentUrl.includes('external_reference') ||
+                               currentUrl.includes('status=approved') ||
+                               currentUrl.includes('status=pending') ||
+                               isPSEPayment;
+    
+    if (isReturningFromPSE) {
+      console.log("🏦 Flujo PSE activo - No mostrar error de conexión");
+      return; // PSE maneja sus propios errores y redirecciones
+    }
+    
+    // Extraer mensaje de error para otros métodos de pago
     let errorMessage = 'Hubo un error al procesar tu pago.';
     
     if (error && typeof error === 'object') {
