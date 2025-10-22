@@ -36,11 +36,11 @@ export default function AdLoadingIndicator({
     >
       <div className="bg-white rounded-2xl p-8 shadow-2xl text-center max-w-sm mx-4 transform transition-all relative">
         
-        {/* X GIGANTE ROJA EN LA ESQUINA SUPERIOR DERECHA */}
+        {/* X PEQUEÑA Y GRIS EN LA ESQUINA SUPERIOR DERECHA */}
         <button
           type="button"
           onClick={handleClose}
-          className="absolute -top-3 -right-3 w-14 h-14 flex items-center justify-center rounded-full bg-red-500 hover:bg-red-600 active:bg-red-700 text-white transition-all duration-200 z-50 shadow-2xl border-4 border-white text-2xl font-bold cursor-pointer"
+          className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-600 transition-all duration-200 shadow-md text-lg font-bold cursor-pointer"
           aria-label="Cerrar"
           title="Cerrar"
         >
@@ -117,15 +117,6 @@ export default function AdLoadingIndicator({
             'Esto puede tardar unos segundos...'
           )}
         </p>
-
-        {/* BOTÓN GRANDE PARA CERRAR - SIEMPRE VISIBLE */}
-        <button
-          type="button"
-          onClick={handleClose}
-          className="w-full bg-red-500 hover:bg-red-600 active:bg-red-700 text-white py-4 px-6 rounded-lg text-base font-bold transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg mb-4 cursor-pointer"
-        >
-          ✕ CERRAR Y CONTINUAR SIN DESCUENTO
-        </button>
 
         {/* Barra de progreso */}
         {!hasTimeout && progress > 0 && (
