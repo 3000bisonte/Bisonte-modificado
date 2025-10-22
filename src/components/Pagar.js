@@ -221,12 +221,12 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
   }, [session]);
   // 🚀 Función para cancelar anuncio
   const cancelAdLoading = () => {
-    console.log("🚫 Usuario canceló carga de anuncio");
+    console.log("🚫 Usuario canceló carga de anuncio - disponible inmediatamente");
     setIsAdLoading(false);
     setAdTimeout(null);
     showInfo(
       'Anuncio cancelado',
-      'Puedes proceder con el pago sin descuento o intentar el anuncio más tarde.'
+      'Continúa con el pago normal. El anuncio seguirá cargándose en segundo plano para la próxima vez.'
     );
   };
 
@@ -265,10 +265,10 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
       if (!isAdLoading) {
         setIsAdLoading(true);
         
-        // 🚀 Agregar timeout para permitir cancelar anuncio
+        // 🚀 Timeout opcional para indicar que está tardando (pero botón ya está disponible)
         const timeoutId = setTimeout(() => {
-          console.log("⏰ Timeout de anuncio - permitir cancelar");
-          setAdTimeout(true);
+          console.log("⏰ Anuncio tardando más de lo esperado");
+          setAdTimeout(true); // Solo para logging, botón ya está disponible
         }, 5000); // 5 segundos
         
         if (port) {
@@ -519,30 +519,28 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
       {isAdLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-8 shadow-2xl text-center max-w-sm mx-4 transform transition-all relative">
-            {/* Botón de cerrar (X) - disponible después del timeout */}
-            {adTimeout && (
-              <button
-                type="button"
-                onClick={cancelAdLoading}
-                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-all duration-200 group z-10"
-                aria-label="Cerrar y continuar sin anuncio"
-                title="Cerrar y continuar sin descuento"
+            {/* Botón de cerrar (X) - SIEMPRE disponible desde el inicio */}
+            <button
+              type="button"
+              onClick={cancelAdLoading}
+              className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-all duration-200 group z-10"
+              aria-label="Cerrar y continuar sin anuncio"
+              title="Cerrar y continuar sin descuento"
+            >
+              <svg
+                className="w-5 h-5 group-hover:scale-110 transition-transform"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  className="w-5 h-5 group-hover:scale-110 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
             
             {/* Icono animado */}
             <div className="relative mb-6">
@@ -578,49 +576,33 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
 
             {/* Mensaje de estado */}
             <p className="text-gray-600 text-sm mb-4">
-              {adTimeout ? (
-                <>
-                  El anuncio está tardando más de lo esperado.
-                  <br />
-                  <span className="text-xs text-gray-500 mt-1 block">
-                    Puedes cerrar este aviso y continuar sin descuento
-                  </span>
-                </>
-              ) : (
-                <>
-                  Esto puede tardar unos segundos...
-                  <br />
-                  <span className="text-xs text-gray-500 mt-1 block">
-                    El anuncio se está cargando en segundo plano
-                  </span>
-                </>
-              )}
+              Esto puede tardar unos segundos...
+              <br />
+              <span className="text-xs text-gray-500 mt-1 block">
+                Puedes cerrar este aviso en cualquier momento
+              </span>
             </p>
 
-            {/* Botón para cancelar cuando hay timeout */}
-            {adTimeout && (
-              <div className="mt-6">
-                <button
-                  type="button"
-                  onClick={cancelAdLoading}
-                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105"
-                >
-                  ⏭️ Continuar sin descuento
-                </button>
-              </div>
-            )}
+            {/* Botón para cancelar - SIEMPRE visible */}
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={cancelAdLoading}
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105"
+              >
+                ⏭️ Continuar sin descuento
+              </button>
+            </div>
 
-            {/* Tips mientras espera */}
-            {!adTimeout && (
-              <div className="mt-4">
-                <div className="p-3 bg-gradient-to-r from-[#41e0b3]/10 to-[#2bbd8c]/10 rounded-lg border border-[#41e0b3]/20">
-                  <p className="text-xs text-gray-600">
-                    💡 <span className="font-semibold">¿Sabías?</span> Ver anuncios te da hasta{" "}
-                    <span className="font-bold text-[#2bbd8c]">$15,000 de descuento</span> en tu envío
-                  </p>
-                </div>
+            {/* Tips mientras espera - SIEMPRE visible */}
+            <div className="mt-4">
+              <div className="p-3 bg-gradient-to-r from-[#41e0b3]/10 to-[#2bbd8c]/10 rounded-lg border border-[#41e0b3]/20">
+                <p className="text-xs text-gray-600">
+                  💡 <span className="font-semibold">¿Sabías?</span> Ver anuncios te da hasta{" "}
+                  <span className="font-bold text-[#2bbd8c]">$15,000 de descuento</span> en tu envío
+                </p>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
