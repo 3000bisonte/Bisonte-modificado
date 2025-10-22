@@ -14,13 +14,13 @@ export function useAdPreloader() {
   useEffect(() => {
     // Solo precargar si el usuario está autenticado y no se ha precargado antes
     if (status === 'authenticated' && !hasPreloaded.current) {
-      console.log('🚀 Iniciando precarga global de anuncios...');
+      console.log('🚀 Iniciando precarga INMEDIATA de anuncios desde Home...');
       
-      // Esperar un momento para no bloquear la carga inicial de la app
+      // 🚀 PRECARGA INMEDIATA - No esperar para tener anuncios listos más rápido
       preloadTimer.current = setTimeout(() => {
         preloadAds();
         hasPreloaded.current = true;
-      }, 2000); // 2 segundos después de que la app cargue
+      }, 100); // Solo 100ms para permitir que React termine de renderizar
     }
 
     return () => {
@@ -35,12 +35,14 @@ export function useAdPreloader() {
  * Función principal de precarga de anuncios
  */
 async function preloadAds() {
+  const startTime = performance.now();
+  
   try {
-    console.log('📺 Precargando anuncios en segundo plano...');
+    console.log('📺 [AdPreloader] Iniciando precarga desde Home...');
     
     // Verificar si estamos en un entorno que soporta anuncios
     if (typeof window === 'undefined') {
-      console.log('⏭️ Entorno servidor, saltando precarga de anuncios');
+      console.log('⏭️ [AdPreloader] Entorno servidor, saltando precarga');
       return;
     }
 
@@ -51,7 +53,7 @@ async function preloadAds() {
     const isNative = await checkIfNative();
     
     if (!isNative) {
-      console.log('⏭️ No es plataforma nativa, saltando precarga de anuncios');
+      console.log('⏭️ [AdPreloader] No es plataforma nativa, saltando precarga');
       return;
     }
 
@@ -59,28 +61,31 @@ async function preloadAds() {
     const initialized = await AdMobService.initialize();
     
     if (!initialized) {
-      console.log('⚠️ No se pudo inicializar AdMob para precarga');
+      console.log('⚠️ [AdPreloader] No se pudo inicializar AdMob');
       return;
     }
 
-    console.log('✅ AdMob inicializado para precarga');
+    console.log('✅ [AdPreloader] AdMob inicializado');
 
     // Precargar anuncio recompensado (el más importante)
     try {
-      console.log('📺 Precargando anuncio recompensado...');
+      console.log('📺 [AdPreloader] Precargando anuncio recompensado...');
+      const adStartTime = performance.now();
+      
       await AdMobService.prepareRewardAd();
-      console.log('✅ Anuncio recompensado precargado exitosamente');
+      
+      const adLoadTime = ((performance.now() - adStartTime) / 1000).toFixed(2);
+      console.log(`✅ [AdPreloader] Anuncio precargado en ${adLoadTime}s`);
     } catch (error) {
-      console.warn('⚠️ No se pudo precargar anuncio recompensado:', error.message);
+      console.warn('⚠️ [AdPreloader] Error precargando anuncio:', error.message);
     }
 
-    // Opcional: Precargar banner (si lo usas)
-    // Los banners normalmente se cargan rápido, pero puedes inicializarlos aquí
-    
-    console.log('🎉 Precarga de anuncios completada');
+    const totalTime = ((performance.now() - startTime) / 1000).toFixed(2);
+    console.log(`🎉 [AdPreloader] Precarga completada en ${totalTime}s total`);
     
   } catch (error) {
-    console.error('❌ Error en precarga de anuncios:', error);
+    const totalTime = ((performance.now() - startTime) / 1000).toFixed(2);
+    console.error(`❌ [AdPreloader] Error después de ${totalTime}s:`, error);
     // No lanzamos el error para no interrumpir la app
   }
 }
