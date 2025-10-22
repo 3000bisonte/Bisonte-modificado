@@ -57,12 +57,14 @@ const validatePaymentData = (data: unknown): PaymentFormData => {
     throw new Error("Monto de transacción inválido");
   }
 
-  if (!payment.token || typeof payment.token !== "string") {
-    throw new Error("Token de pago inválido");
-  }
-
   if (!payment.payment_method_id || typeof payment.payment_method_id !== "string") {
     throw new Error("Método de pago inválido");
+  }
+
+  // ⚠️ PSE no envía token, solo tarjetas lo requieren
+  const isPSE = payment.payment_method_id === 'pse';
+  if (!isPSE && (!payment.token || typeof payment.token !== "string")) {
+    throw new Error("Token de pago inválido");
   }
 
   if (!payment.payer || typeof payment.payer !== "object") {
@@ -76,7 +78,7 @@ const validatePaymentData = (data: unknown): PaymentFormData => {
 
   return {
     transaction_amount: payment.transaction_amount,
-    token: payment.token,
+    token: (payment.token as string) || "", // PSE no tiene token
     payment_method_id: payment.payment_method_id,
     installments: typeof payment.installments === "number" ? payment.installments : 1,
     payer: {
@@ -131,7 +133,6 @@ export async function POST(request: NextRequest) {
     // Preparar el payload para la API of Payments
     const paymentPayload: Record<string, unknown> = {
       transaction_amount: paymentData.transaction_amount,
-      token: paymentData.token,
       payment_method_id: paymentData.payment_method_id,
       installments: paymentData.installments,
       payer: {
@@ -148,6 +149,11 @@ export async function POST(request: NextRequest) {
         createdAt: new Date().toISOString(),
       },
     };
+
+    // Solo agregar token para tarjetas (no para PSE)
+    if (paymentData.payment_method_id !== 'pse' && paymentData.token) {
+      paymentPayload.token = paymentData.token;
+    }
 
     // 🏦 PSE requiere campos adicionales específicos
     if (paymentData.payment_method_id === 'pse') {
