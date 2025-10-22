@@ -10,7 +10,6 @@ const nextConfig = {
   },
   // Usar standalone siempre - funciona mejor con Capacitor y Vercel
   output: 'standalone',
-  trailingSlash: true,
   images: {
     unoptimized: true
   },
