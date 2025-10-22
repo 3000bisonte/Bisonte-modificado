@@ -93,7 +93,7 @@ export default function Resumen() {
   const adLoadTimeoutRef = useRef(null);
   const adProgressIntervalRef = useRef(null);
   const MAX_AD_LOAD_ATTEMPTS = 2;
-  const AD_LOAD_TIMEOUT = 15000; // 15 segundos para cargar anuncio
+  const AD_LOAD_TIMEOUT = 8000; // 🚀 8 segundos para carga más rápida (optimizado para alto tráfico)
 
   // 🎯 Monitorear múltiples estados de loading
   useMultipleLoadingMonitor({
@@ -405,12 +405,15 @@ export default function Resumen() {
         return;
       }
 
-      console.log("📺 Precargando anuncio recompensado (AdMob)...");
+      console.log("� Precargando anuncio recompensado (AdMob) - Inicio:", new Date().toISOString());
+      const startTime = performance.now();
       setAdState("preloading");
       startAdLoadTimeout(); // 🕐 Iniciar timeout
       
       void prepareRewardedAd()
         .then((ready) => {
+          const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
+          console.log(`✅ Anuncio cargado en ${loadTime}s`);
           clearAdLoadTimeout(); // 🕐 Limpiar timeout si carga exitosamente
           setAdState(ready ? "ready" : "idle");
           if (!ready) {
@@ -418,12 +421,12 @@ export default function Resumen() {
           } else {
             clearAdErrorState();
             setAdLoadAttempts(0); // Resetear intentos en éxito
-            console.log("✅ Anuncio precargado y listo");
           }
         })
         .catch((error) => {
+          const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
+          console.error(`❌ Error al precargar anuncio después de ${loadTime}s:`, error);
           clearAdLoadTimeout(); // 🕐 Limpiar timeout en error
-          console.error("❌ Error al precargar anuncio recompensado:", error);
           handleAdError("prepare_exception");
         });
       return;
@@ -467,21 +470,21 @@ export default function Resumen() {
       return;
     }
 
+    // 🚀 Precarga INMEDIATA para máxima velocidad
     const schedulePreload = () => {
       preloadAd();
     };
 
-    if (typeof window.requestIdleCallback === "function") {
-      const idleHandle = window.requestIdleCallback(schedulePreload, { timeout: 2000 });
+    // Usar requestAnimationFrame para precarga en el próximo frame (más rápido)
+    if (typeof window.requestAnimationFrame === "function") {
+      const frameHandle = window.requestAnimationFrame(schedulePreload);
       return () => {
-        window.cancelIdleCallback?.(idleHandle);
+        window.cancelAnimationFrame?.(frameHandle);
       };
     }
 
-    const timeoutHandle = window.setTimeout(schedulePreload, 250);
-    return () => {
-      clearTimeout(timeoutHandle);
-    };
+    // Fallback: ejecutar inmediatamente
+    schedulePreload();
   }, [preloadAd, costoTotal]);
 
   const showAd = useCallback(async () => {
