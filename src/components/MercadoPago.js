@@ -232,9 +232,11 @@ const MercadoPagoComponent = () => {
     console.log("💳 Procesando pago con Payment Brick...");
     console.log("📋 Datos del formulario (completos):", JSON.stringify(formData, null, 2));
     
-    // 🏦 Detectar si es pago PSE
+    // 🏦 Detectar si es pago PSE y resetear estado previo
     const isPSE = formData.payment_method_id === 'pse';
     setIsPSEPayment(isPSE);
+    
+    console.log(`🎯 Método de pago detectado: ${formData.payment_method_id} ${isPSE ? '(PSE)' : '(Otro método)'}`);
     
     console.log("📋 Resumen:", {
       amount: formData.transaction_amount,
@@ -322,15 +324,14 @@ const MercadoPagoComponent = () => {
         .catch((error) => {
           console.error("❌ Error de red al procesar pago:", error);
           
-          // 🚀 MEJORA PSE: No mostrar error durante flujo PSE
+          // 🚀 MEJORA PSE: Solo suprimir errores para flujos PSE específicos
           const currentUrl = window.location.href;
-          const isReturningFromPSE = currentUrl.includes('payment_id') || 
-                                     currentUrl.includes('external_reference') ||
-                                     currentUrl.includes('status=approved') ||
-                                     currentUrl.includes('status=pending') ||
-                                     isPSEPayment;
+          const isPSEFlowActive = (
+            isPSEPayment || // Usuario seleccionó PSE
+            (currentUrl.includes('payment_id') && currentUrl.includes('external_reference')) // Retorno específico de PSE
+          );
           
-          if (!isReturningFromPSE) {
+          if (!isPSEFlowActive) {
             showError(
               'Error de Conexión',
               'Hubo un problema de conexión al procesar tu pago. Por favor, inténtalo de nuevo.'
@@ -488,15 +489,14 @@ const MercadoPagoComponent = () => {
     } catch (error) {
       console.error("Error al registrar el envío:", error);
       
-      // 🚀 MEJORA PSE: No mostrar error de conexión durante flujo PSE
+      // 🚀 MEJORA PSE: Solo suprimir errores para flujos PSE específicos
       const currentUrl = window.location.href;
-      const isReturningFromPSE = currentUrl.includes('payment_id') || 
-                                 currentUrl.includes('external_reference') ||
-                                 currentUrl.includes('status=approved') ||
-                                 currentUrl.includes('status=pending') ||
-                                 isPSEPayment;
+      const isPSEFlowActive = (
+        isPSEPayment || // Usuario seleccionó PSE
+        (currentUrl.includes('payment_id') && currentUrl.includes('external_reference')) // Retorno específico de PSE
+      );
       
-      if (!isReturningFromPSE) {
+      if (!isPSEFlowActive) {
         showError('Error de Conexión', 'Error de conexión al registrar el envío. Inténtalo nuevamente.');
       } else {
         console.log("🏦 Error de conexión durante flujo PSE - Reintentando automáticamente...");
@@ -526,15 +526,14 @@ const MercadoPagoComponent = () => {
   const onError = async (error) => {
     console.error("❌ Error en Payment Brick:", error);
     
-    // 🚀 MEJORA PSE: No mostrar errores durante flujo PSE
+    // 🚀 MEJORA PSE: Solo suprimir errores para flujos PSE específicos
     const currentUrl = window.location.href;
-    const isReturningFromPSE = currentUrl.includes('payment_id') || 
-                               currentUrl.includes('external_reference') ||
-                               currentUrl.includes('status=approved') ||
-                               currentUrl.includes('status=pending') ||
-                               isPSEPayment;
+    const isPSEFlowActive = (
+      isPSEPayment || // Usuario seleccionó PSE
+      (currentUrl.includes('payment_id') && currentUrl.includes('external_reference')) // Retorno específico de PSE
+    );
     
-    if (isReturningFromPSE) {
+    if (isPSEFlowActive) {
       console.log("🏦 Flujo PSE activo - No mostrar error de conexión");
       return; // PSE maneja sus propios errores y redirecciones
     }

@@ -15,6 +15,7 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
   const [isLoading, _setIsLoading] = useState(false);
   const [costoTotal, setCostoTotal] = useState(null);
   const [isAdLoading, setIsAdLoading] = useState(false);
+  const [adTimeout, setAdTimeout] = useState(null); // Para manejar timeout del anuncio
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_messages, _setMessages] = useState([]);
   const [port, setPort] = useState(null);
@@ -94,6 +95,10 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
               : event.data;
 
           if (messageData?.type === "reward") {
+            // 🚀 Cerrar modal de carga cuando se complete el anuncio
+            setIsAdLoading(false);
+            setAdTimeout(null);
+            
             const originalReward = messageData.amount;
             const bonusAmount = 10000;
             const totalDiscount = originalReward + bonusAmount;
@@ -168,7 +173,9 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
             messageData?.type === "adStatus" &&
             messageData.status === "ready"
           ) {
+            // 🚀 Cerrar modal cuando el anuncio está listo
             setIsAdLoading(false);
+            setAdTimeout(null);
           }
         } catch (error) {
           console.error("Error al procesar el mensaje:", error);
@@ -212,6 +219,17 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
     };
     loadPerfil();
   }, [session]);
+  // 🚀 Función para cancelar anuncio
+  const cancelAdLoading = () => {
+    console.log("🚫 Usuario canceló carga de anuncio");
+    setIsAdLoading(false);
+    setAdTimeout(null);
+    showInfo(
+      'Anuncio cancelado',
+      'Puedes proceder con el pago sin descuento o intentar el anuncio más tarde.'
+    );
+  };
+
   const handleReduceShipping = () => {
     if (process.env.NODE_ENV === "development") {
       // Chequeo si estás en entorno de desarrollo
@@ -246,6 +264,13 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
     } else {
       if (!isAdLoading) {
         setIsAdLoading(true);
+        
+        // 🚀 Agregar timeout para permitir cancelar anuncio
+        const timeoutId = setTimeout(() => {
+          console.log("⏰ Timeout de anuncio - permitir cancelar");
+          setAdTimeout(true);
+        }, 5000); // 5 segundos
+        
         if (port) {
           port.postMessage("iniciarVideo");
           setAdCount((prevAdCount) => {
@@ -255,6 +280,9 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
           });
         } else {
           console.log("No hay puerto de mensajes disponible");
+          // Si no hay puerto, limpiar timeout inmediatamente
+          clearTimeout(timeoutId);
+          setAdTimeout(true);
         }
       }
     }
@@ -477,51 +505,125 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
 
 {costoTotal !== null && costoTotal > 0 && (
   <button
-    className={`
-      w-full py-3 text-lg font-semibold rounded-lg shadow-md
-      transition-all duration-150 ease-in-out
-      focus:outline-none focus:ring-2 focus:ring-offset-2
-      flex items-center justify-center // Para centrar el contenido (spinner y texto)
-      ${
-        isAdLoading
-          ? "bg-green-500 text-white opacity-75 cursor-wait" // Verde atenuado, texto blanco, cursor de espera
-          : "bg-green-500 hover:bg-green-600 text-white focus:ring-green-500" // Estado normal y hover
-      }
-    `}
+    className="w-full py-3 text-lg font-semibold rounded-lg shadow-md bg-green-500 hover:bg-green-600 text-white focus:ring-green-500 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2"
     onClick={handleReduceShipping}
     disabled={isAdLoading} // El disabled previene clics adicionales
   >
-    {isAdLoading ? (
-      <> {/* Fragmento para agrupar spinner y texto */}
-        <svg
-          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          ></circle>
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          ></path>
-        </svg>
-        <span>Cargando anuncio...</span>
-      </>
-    ) : (
-      "Reducir costo viendo un video"
-    )}
+    Reducir costo viendo un video
   </button>
 )}
         </div>
       </div>
+
+      {/* Modal de carga de anuncio */}
+      {isAdLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl text-center max-w-sm mx-4 transform transition-all relative">
+            {/* Botón de cerrar (X) - disponible después del timeout */}
+            {adTimeout && (
+              <button
+                type="button"
+                onClick={cancelAdLoading}
+                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-all duration-200 group z-10"
+                aria-label="Cerrar y continuar sin anuncio"
+                title="Cerrar y continuar sin descuento"
+              >
+                <svg
+                  className="w-5 h-5 group-hover:scale-110 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+            
+            {/* Icono animado */}
+            <div className="relative mb-6">
+              <div className="w-20 h-20 mx-auto">
+                <div className="relative">
+                  <div className="w-20 h-20 border-4 border-gray-200 rounded-full"></div>
+                  <div className="absolute top-0 left-0 w-20 h-20 border-4 border-transparent border-t-[#41e0b3] rounded-full animate-spin"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg
+                      className="w-8 h-8 text-[#41e0b3]"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Título */}
+            <h3 className="text-xl font-bold mb-2">
+              <span className="bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] bg-clip-text text-transparent">
+                Cargando anuncio
+              </span>
+            </h3>
+
+            {/* Mensaje de estado */}
+            <p className="text-gray-600 text-sm mb-4">
+              {adTimeout ? (
+                <>
+                  El anuncio está tardando más de lo esperado.
+                  <br />
+                  <span className="text-xs text-gray-500 mt-1 block">
+                    Puedes cerrar este aviso y continuar sin descuento
+                  </span>
+                </>
+              ) : (
+                <>
+                  Esto puede tardar unos segundos...
+                  <br />
+                  <span className="text-xs text-gray-500 mt-1 block">
+                    El anuncio se está cargando en segundo plano
+                  </span>
+                </>
+              )}
+            </p>
+
+            {/* Botón para cancelar cuando hay timeout */}
+            {adTimeout && (
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={cancelAdLoading}
+                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105"
+                >
+                  ⏭️ Continuar sin descuento
+                </button>
+              </div>
+            )}
+
+            {/* Tips mientras espera */}
+            {!adTimeout && (
+              <div className="mt-4">
+                <div className="p-3 bg-gradient-to-r from-[#41e0b3]/10 to-[#2bbd8c]/10 rounded-lg border border-[#41e0b3]/20">
+                  <p className="text-xs text-gray-600">
+                    💡 <span className="font-semibold">¿Sabías?</span> Ver anuncios te da hasta{" "}
+                    <span className="font-bold text-[#2bbd8c]">$15,000 de descuento</span> en tu envío
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Notification Modal */}
       <NotificationModal
