@@ -45,6 +45,11 @@ const MercadoPagoComponent = () => {
 
   // 🎨 Modal de notificaciones
   const { modalState, showSuccess, showError, closeModal } = useNotification();
+  
+  // Función showWarning que faltaba
+  const showWarning = (title, message) => {
+    showError(title, message); // Usar showError como fallback
+  };
   const [initializationConfig, setInitializationConfig] = useState(null); // Para guardar { amount: XXX }
   const [isLoadingAmount, setIsLoadingAmount] = useState(true); // Para mostrar "Cargando..."
   const [initError, setInitError] = useState(null);
@@ -503,7 +508,26 @@ const MercadoPagoComponent = () => {
       debitCard: "all",
       mercadoPago: "all",
     },
+    visual: {
+      style: {
+        theme: "default"
+      }
+    }
   };
+
+  // ✅ Mejorar configuración de inicialización
+  const enhancedInitConfig = initializationConfig ? {
+    ...initializationConfig,
+    // Configuración adicional para mejorar la generación de tokens
+    callbacks: {
+      onReady: () => {
+        console.log("🎯 Payment Brick inicializado correctamente");
+      },
+      onError: (error) => {
+        console.error("❌ Error en Payment Brick:", error);
+      }
+    }
+  } : null;
   return (
     <InternalProvider context={{ paymentId }}>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
@@ -631,7 +655,7 @@ const MercadoPagoComponent = () => {
               {/* Payment Form */}
               <section className={`mercadopago-payment-section ${paymentMethods}`}>
                 <Payment
-                  initialization={initializationConfig}
+                  initialization={enhancedInitConfig || initializationConfig}
                   customization={customization}
                   onSubmit={onSubmit}
                   onError={onError}

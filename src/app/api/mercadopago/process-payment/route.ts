@@ -102,7 +102,17 @@ export async function POST(request: NextRequest) {
       method: body.payment_method_id,
       installments: body.installments,
       email: body.payer?.email,
+      hasToken: !!body.token,
+      tokenPreview: body.token ? body.token.substring(0, 20) + '...' : 'NO TOKEN',
     });
+
+    // Obtener IP del cliente para cumplir requisitos de MercadoPago
+    const clientIP = request.headers.get('x-forwarded-for') || 
+                     request.headers.get('x-real-ip') || 
+                     request.ip || 
+                     '127.0.0.1';
+    
+    console.log("🌐 IP del cliente:", clientIP);
 
     // Validar datos
     const paymentData = validatePaymentData(body);
@@ -143,16 +153,34 @@ export async function POST(request: NextRequest) {
       statement_descriptor: paymentData.statement_descriptor,
       external_reference: `BISONTE-${Date.now()}`,
       notification_url: process.env.MP_WEBHOOK_URL,
+      // ✅ Agregar información adicional requerida por MercadoPago
+      additional_info: {
+        ip_address: clientIP,
+        items: [
+          {
+            id: "ENVIO_BISONTE",
+            title: paymentData.description || "Servicio de envío",
+            description: "Servicio de logística y envío",
+            category_id: "services",
+            quantity: 1,
+            unit_price: paymentData.transaction_amount,
+          }
+        ]
+      },
       metadata: {
         project: "bisonte-logistica",
         environment,
         createdAt: new Date().toISOString(),
+        client_ip: clientIP,
       },
     };
 
     // Solo agregar token para tarjetas (no para PSE)
     if (paymentData.payment_method_id !== 'pse' && paymentData.token) {
       paymentPayload.token = paymentData.token;
+      console.log("🔑 Token agregado para tarjeta:", paymentData.token.substring(0, 20) + '...');
+    } else if (paymentData.payment_method_id !== 'pse') {
+      console.log("⚠️  ADVERTENCIA: Pago con tarjeta sin token - esto causará error");
     }
 
     // 🏦 PSE requiere campos adicionales específicos

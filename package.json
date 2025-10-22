@@ -54,6 +54,7 @@
     "@capacitor-community/admob": "5.1.0",
     "@capacitor-firebase/authentication": "5.2.0",
     "@capacitor/android": "6.1.2",
+    "@capacitor/browser": "^7.0.2",
     "@capacitor/cli": "6.1.2",
     "@capacitor/core": "6.1.2",
     "@mercadopago/sdk-react": "^0.0.15",
