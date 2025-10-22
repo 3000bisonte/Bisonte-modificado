@@ -16,6 +16,7 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
   const [costoTotal, setCostoTotal] = useState(null);
   const [isAdLoading, setIsAdLoading] = useState(false);
   const [adTimeout, setAdTimeout] = useState(null); // Para manejar timeout del anuncio
+  const [userCancelledAd, setUserCancelledAd] = useState(false); // Flag para cancelación manual
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_messages, _setMessages] = useState([]);
   const [port, setPort] = useState(null);
@@ -96,8 +97,10 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
 
           if (messageData?.type === "reward") {
             // 🚀 Cerrar modal de carga cuando se complete el anuncio
+            console.log("💰 Recompensa recibida - cerrando modal");
             setIsAdLoading(false);
             setAdTimeout(null);
+            setUserCancelledAd(false); // Reset flag
             
             const originalReward = messageData.amount;
             const bonusAmount = 10000;
@@ -174,8 +177,10 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
             messageData.status === "ready"
           ) {
             // 🚀 Cerrar modal cuando el anuncio está listo
+            console.log("📺 Anuncio listo - cerrando modal");
             setIsAdLoading(false);
             setAdTimeout(null);
+            setUserCancelledAd(false); // Reset flag
           }
         } catch (error) {
           console.error("Error al procesar el mensaje:", error);
@@ -188,6 +193,16 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
       window.removeEventListener("message", handleMessage);
     };
   }, []);
+
+  // 🚀 useEffect para garantizar que el modal se cierre
+  useEffect(() => {
+    console.log("🔍 Estado isAdLoading cambió a:", isAdLoading);
+    if (!isAdLoading && adTimeout) {
+      // Limpiar timeout cuando el modal se cierre
+      setAdTimeout(null);
+    }
+  }, [isAdLoading, adTimeout]);
+
   useEffect(() => {
     const loadPerfil = async () => {
       if (!session?.user?.email || perfilLoaded.current) {
@@ -221,9 +236,23 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
   }, [session]);
   // 🚀 Función para cancelar anuncio
   const cancelAdLoading = () => {
-    console.log("🚫 Usuario canceló carga de anuncio - disponible inmediatamente");
+    console.log("🚫 Usuario canceló carga de anuncio - FORZANDO CIERRE INMEDIATO");
+    
+    // Limpiar todos los timeouts que puedan estar corriendo
+    if (adTimeout) {
+      clearTimeout(adTimeout);
+    }
+    
+    // Forzar estado de cierre
     setIsAdLoading(false);
     setAdTimeout(null);
+    setUserCancelledAd(true);
+    
+    // Resetear después de un momento para permitir futuros intentos
+    setTimeout(() => {
+      setUserCancelledAd(false);
+    }, 1000);
+    
     showInfo(
       'Anuncio cancelado',
       'Continúa con el pago normal. El anuncio seguirá cargándose en segundo plano para la próxima vez.'
@@ -516,14 +545,19 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
       </div>
 
       {/* Modal de carga de anuncio */}
-      {isAdLoading && (
+      {isAdLoading && (console.log("🎨 Renderizando modal de anuncio"), true) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-8 shadow-2xl text-center max-w-sm mx-4 transform transition-all relative">
             {/* Botón de cerrar (X) - SIEMPRE disponible desde el inicio */}
             <button
               type="button"
-              onClick={cancelAdLoading}
-              className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-all duration-200 group z-10"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("🚫 Botón X clicado - cerrando modal INMEDIATAMENTE");
+                cancelAdLoading();
+              }}
+              className="absolute top-3 right-3 w-10 h-10 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-800 transition-all duration-200 group z-50 shadow-lg border-2 border-red-300"
               aria-label="Cerrar y continuar sin anuncio"
               title="Cerrar y continuar sin descuento"
             >
@@ -587,8 +621,13 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
             <div className="mt-6">
               <button
                 type="button"
-                onClick={cancelAdLoading}
-                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("🚫 Botón 'Continuar sin descuento' clicado");
+                  cancelAdLoading();
+                }}
+                className="w-full bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-lg text-sm font-bold transition-all duration-200 transform hover:scale-105 shadow-lg"
               >
                 ⏭️ Continuar sin descuento
               </button>
