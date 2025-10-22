@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 
 
 export default function PerfilCard() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [form, setForm] = useState({
     nombre: "",
     tipoDocumento: "",
@@ -20,6 +22,14 @@ export default function PerfilCard() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Redirigir a login si no está autenticado
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      console.log("⚠️ Usuario no autenticado, redirigiendo a login...");
+      router.push("/login");
+    }
+  }, [status, router]);
 
   // Cargar datos del perfil al montar el componente
   useEffect(() => {
@@ -215,7 +225,20 @@ export default function PerfilCard() {
     }
   };
 
-  if (loading) {
+  // Mostrar pantalla de carga mientras verifica autenticación
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#e3dfde] to-[#f8fafc]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#41e0b3] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Verificando sesión...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar pantalla de carga mientras carga el perfil
+  if (loading && status === "authenticated") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#e3dfde] to-[#f8fafc]">
         <div className="text-center">
