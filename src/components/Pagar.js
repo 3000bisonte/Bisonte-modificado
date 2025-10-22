@@ -234,29 +234,10 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
     };
     loadPerfil();
   }, [session]);
-  // 🚀 Función para cancelar anuncio
+  // 🚀 Función SIMPLE para cerrar modal
   const cancelAdLoading = () => {
-    console.log("🚫 Usuario canceló carga de anuncio - FORZANDO CIERRE INMEDIATO");
-    
-    // Limpiar todos los timeouts que puedan estar corriendo
-    if (adTimeout) {
-      clearTimeout(adTimeout);
-    }
-    
-    // Forzar estado de cierre
+    console.log("🚫 CERRANDO MODAL - MÉTODO SIMPLE");
     setIsAdLoading(false);
-    setAdTimeout(null);
-    setUserCancelledAd(true);
-    
-    // Resetear después de un momento para permitir futuros intentos
-    setTimeout(() => {
-      setUserCancelledAd(false);
-    }, 1000);
-    
-    showInfo(
-      'Anuncio cancelado',
-      'Continúa con el pago normal. El anuncio seguirá cargándose en segundo plano para la próxima vez.'
-    );
   };
 
   const handleReduceShipping = () => {
@@ -544,103 +525,34 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
         </div>
       </div>
 
-      {/* Modal de carga de anuncio */}
-      {isAdLoading && (console.log("🎨 Renderizando modal de anuncio"), true) && (
+      {/* Modal de carga de anuncio - SIMPLICADO PARA CERRAR FÁCIL */}
+      {isAdLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-8 shadow-2xl text-center max-w-sm mx-4 transform transition-all relative">
-            {/* Botón de cerrar (X) - SIEMPRE disponible desde el inicio */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log("🚫 Botón X clicado - cerrando modal INMEDIATAMENTE");
-                cancelAdLoading();
-              }}
-              className="absolute top-3 right-3 w-10 h-10 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-800 transition-all duration-200 group z-50 shadow-lg border-2 border-red-300"
-              aria-label="Cerrar y continuar sin anuncio"
-              title="Cerrar y continuar sin descuento"
-            >
-              <svg
-                className="w-5 h-5 group-hover:scale-110 transition-transform"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
             
-            {/* Icono animado */}
-            <div className="relative mb-6">
-              <div className="w-20 h-20 mx-auto">
-                <div className="relative">
-                  <div className="w-20 h-20 border-4 border-gray-200 rounded-full"></div>
-                  <div className="absolute top-0 left-0 w-20 h-20 border-4 border-transparent border-t-[#41e0b3] rounded-full animate-spin"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <svg
-                      className="w-8 h-8 text-[#41e0b3]"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* X GIGANTE PARA CERRAR - ALWAYS VISIBLE */}
+            <button
+              onClick={() => {
+                console.log("🚫 CERRANDO MODAL FORZADAMENTE");
+                setIsAdLoading(false);
+              }}
+              className="absolute -top-2 -right-2 w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-xl z-50 border-4 border-white"
+              style={{ zIndex: 9999 }}
+            >
+              ✕
+            </button>
 
-            {/* Título */}
-            <h3 className="text-xl font-bold mb-2">
-              <span className="bg-gradient-to-r from-[#41e0b3] to-[#2bbd8c] bg-clip-text text-transparent">
-                Cargando anuncio
-              </span>
-            </h3>
-
-            {/* Mensaje de estado */}
-            <p className="text-gray-600 text-sm mb-4">
-              Esto puede tardar unos segundos...
-              <br />
-              <span className="text-xs text-gray-500 mt-1 block">
-                Puedes cerrar este aviso en cualquier momento
-              </span>
-            </p>
-
-            {/* Botón para cancelar - SIEMPRE visible */}
-            <div className="mt-6">
+            {/* Contenido súper simple */}
+            <div className="pt-4">
+              <div className="w-12 h-12 mx-auto mb-4 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <h3 className="text-lg font-bold mb-4">Cargando anuncio...</h3>
+              
               <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log("🚫 Botón 'Continuar sin descuento' clicado");
-                  cancelAdLoading();
-                }}
-                className="w-full bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-lg text-sm font-bold transition-all duration-200 transform hover:scale-105 shadow-lg"
+                onClick={() => setIsAdLoading(false)}
+                className="w-full bg-red-500 text-white py-3 px-4 rounded font-bold text-lg"
               >
-                ⏭️ Continuar sin descuento
+                CERRAR Y CONTINUAR
               </button>
-            </div>
-
-            {/* Tips mientras espera - SIEMPRE visible */}
-            <div className="mt-4">
-              <div className="p-3 bg-gradient-to-r from-[#41e0b3]/10 to-[#2bbd8c]/10 rounded-lg border border-[#41e0b3]/20">
-                <p className="text-xs text-gray-600">
-                  💡 <span className="font-semibold">¿Sabías?</span> Ver anuncios te da hasta{" "}
-                  <span className="font-bold text-[#2bbd8c]">$15,000 de descuento</span> en tu envío
-                </p>
-              </div>
             </div>
           </div>
         </div>
