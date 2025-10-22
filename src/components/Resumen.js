@@ -80,6 +80,7 @@ export default function Resumen() {
   const [adState, setAdState] = useState("idle");
   const [retryCount, setRetryCount] = useState(0);
   const [hideAdErrorModal, setHideAdErrorModal] = useState(false);
+  const [userClosedAdModal, setUserClosedAdModal] = useState(false); // 🚫 Flag para saber si el usuario cerró manualmente
   const adTimeoutRef = useRef(null);
   const adErrorModalTimerRef = useRef(null);
   const messagePortRef = useRef(null);
@@ -326,6 +327,7 @@ export default function Resumen() {
     setAdLoadProgress(0);
     setShowAdErrorModal(false);
     setHideAdErrorModal(false);
+    setUserClosedAdModal(false); // Resetear el flag de cierre manual
     setLastAdError(null);
     setRewardBanner(null);
     setRewardChainProgress(null);
@@ -1484,13 +1486,14 @@ export default function Resumen() {
 
         {/* Indicador de carga de anuncios con timeout */}
         <AdLoadingIndicator
-          isLoading={costoTotal > 0 && (adState === "loading" || adState === "preloading" || (adState === "error" && !showAdErrorModal && !hideAdErrorModal))}
+          isLoading={!userClosedAdModal && costoTotal > 0 && (adState === "loading" || adState === "preloading" || (adState === "error" && !showAdErrorModal && !hideAdErrorModal))}
           hasTimeout={adLoadTimeout}
           progress={adLoadProgress}
           currentAttempt={adLoadAttempts}
           maxAttempts={MAX_AD_LOAD_ATTEMPTS}
           onContinueWithoutAd={() => {
-            console.log("🚫 Usuario cerró modal de anuncio - reseteando estado");
+            console.log("🚫 Usuario cerró modal de anuncio - marcando como cerrado manualmente");
+            setUserClosedAdModal(true); // 🚫 Marcar que el usuario cerró manualmente
             resetAdStateCompletely();
           }}
           onRetry={() => {
