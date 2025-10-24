@@ -25,7 +25,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-eval' 'unsafe-inline' accounts.google.com gstatic.com https://sdk.mercadopago.com https://www.mercadopago.com https://*.mercadopago.com https://*.mercadolibre.com https://http2.mlstatic.com;
+              script-src 'self' 'unsafe-eval' 'unsafe-inline' accounts.google.com gstatic.com https://sdk.mercadopago.com https://www.mercadopago.com https://*.mercadopago.com https://*.mercadolibre.com https://http2.mlstatic.com https://cdn.jsdelivr.net;
               style-src 'self' 'unsafe-inline' fonts.googleapis.com;
               font-src 'self' fonts.gstatic.com;
               img-src 'self' data: https: blob:;
