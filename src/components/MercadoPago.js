@@ -65,44 +65,83 @@ const MercadoPagoComponent = () => {
   const showWarning = (title, message) => {
     showError(title, message); // Usar showError como fallback
   };
-  const [initializationConfig, setInitializationConfig] = useState(null); // Para guardar { amount: XXX }
+  const [initializationConfig, setInitializationConfig] = useState(null); // Para guardar { preferenceId: XXX }
+  const [paymentAmount, setPaymentAmount] = useState(null); // Para mostrar el monto
   const [isLoadingAmount, setIsLoadingAmount] = useState(true); // Para mostrar "Cargando..."
   const [initError, setInitError] = useState(null);
 
-  useEffect(() => {
-    setIsLoadingAmount(true); // Indicar que empezamos a cargar
-    setInitError(null); // Limpiar errores previos
-    setInitializationConfig(null); // Limpiar config previa
+  // ✅ Nueva función para crear preferencia de pago
+  const createPaymentPreference = async (amount, email) => {
+    try {
+      console.log("🔄 Creando preferencia de pago en MercadoPago...");
+      console.log("  - Monto:", amount);
+      console.log("  - Email:", email);
 
-    const candidateKeys = [
-      "cotizacion",
-      "formCotizador",
-      "cotizador",
-    ];
+      const response = await fetch("/api/mercadopago", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          transaction_amount: amount,
+          description: "Envío Bisonte Logística",
+          payer: {
+            email: email || "guest@bisonteapp.com",
+          },
+        }),
+      });
 
-    const extractNumericAmount = (value) => {
-      const numeric = Number(value);
-      return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
-    };
-
-    const persistNormalizedCotizacion = (data, amount, sourceKey) => {
-      if (!data || typeof data !== "object") {
-        return;
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("❌ Error creando preferencia:", error);
+        throw new Error(error.details || "Error al crear preferencia de pago");
       }
 
-      try {
-        let merged = data;
+      const data = await response.json();
+      console.log("✅ Preferencia creada exitosamente:", data.preference_id);
+      
+      return data.preference_id;
+    } catch (error) {
+      console.error("❌ Error en createPaymentPreference:", error);
+      throw error;
+    }
+  };
 
-        if (sourceKey !== "cotizacion") {
-          const existingRaw = localStorage.getItem("cotizacion");
-          if (existingRaw) {
-            try {
-              const existing = JSON.parse(existingRaw);
-              merged = {
-                ...existing,
-                ...data,
-              };
-            } catch (mergeError) {
+  useEffect(() => {
+    const initializePayment = async () => {
+      setIsLoadingAmount(true);
+      setInitError(null);
+      setInitializationConfig(null);
+
+      const candidateKeys = [
+        "cotizacion",
+        "formCotizador",
+        "cotizador",
+      ];
+
+      const extractNumericAmount = (value) => {
+        const numeric = Number(value);
+        return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+      };
+
+      const persistNormalizedCotizacion = (data, amount, sourceKey) => {
+        if (!data || typeof data !== "object") {
+          return;
+        }
+
+        try {
+          let merged = data;
+
+          if (sourceKey !== "cotizacion") {
+            const existingRaw = localStorage.getItem("cotizacion");
+            if (existingRaw) {
+              try {
+                const existing = JSON.parse(existingRaw);
+                merged = {
+                  ...existing,
+                  ...data,
+                };
+              } catch (mergeError) {
               console.warn(
                 "[MercadoPago] No se pudo combinar la cotización existente con la de respaldo:",
                 mergeError
@@ -166,11 +205,24 @@ const MercadoPagoComponent = () => {
           "Monto cargado para inicializar Mercado Pago:",
           amount
         );
-        // ✅ Configuración para Payment Brick en modo directo (sin preferenceId)
-        setInitializationConfig({ 
-          amount,
-          // NO incluir preferenceId para modo directo
-        });
+        
+        // Guardar el monto para mostrarlo en la UI
+        setPaymentAmount(amount);
+        
+        // ✅ Crear preferencia de pago en el backend
+        try {
+          const preferenceId = await createPaymentPreference(amount, userEmail);
+          
+          console.log("✅ Configurando Payment Brick con preferenceId:", preferenceId);
+          setInitializationConfig({ 
+            preferenceId,
+          });
+        } catch (prefError) {
+          console.error("❌ Error creando preferencia:", prefError);
+          setInitError(
+            "Error al crear la preferencia de pago. Por favor intenta nuevamente."
+          );
+        }
       } else {
         console.error("No se encontraron datos válidos de cotización para el pago.");
         setInitError(
@@ -180,7 +232,10 @@ const MercadoPagoComponent = () => {
     } finally {
       setIsLoadingAmount(false); // Indicar que terminamos de intentar cargar
     }
-  }, []);
+    };
+
+    initializePayment();
+  }, [userEmail]);
   // Cargar el perfil solo si no ha sido cargado
   useEffect(() => {
     const loadPerfil = async () => {
@@ -620,33 +675,15 @@ const MercadoPagoComponent = () => {
     }
   };
 
-  // ✅ Mejorar configuración de inicialización
-  const enhancedInitConfig = initializationConfig ? {
-    ...initializationConfig,
-    // Configuración adicional para mejorar la generación de tokens
-    callbacks: {
-      onReady: () => {
-        console.log("🎯 Payment Brick inicializado correctamente");
-        console.log("📋 Configuración actual:", {
-          amount: initializationConfig.amount,
-          customization: customization
-        });
-      },
-      onError: (error) => {
-        console.error("❌ Error en Payment Brick:", error);
-      }
-    }
-  } : null;
-  
   // ✅ Log detallado antes de renderizar
   useEffect(() => {
-    if (enhancedInitConfig) {
+    if (initializationConfig) {
       console.log("🔍 [DEBUG] Payment Brick va a renderizar con:");
-      console.log("  - Monto:", enhancedInitConfig.amount);
+      console.log("  - Preference ID:", initializationConfig.preferenceId);
       console.log("  - Tipos de pago excluidos:", customization.paymentMethods.types.excluded);
       console.log("  - Cuotas:", customization.paymentMethods.minInstallments, "-", customization.paymentMethods.maxInstallments);
     }
-  }, [enhancedInitConfig]);
+  }, [initializationConfig]);
   return (
     <InternalProvider context={{ paymentId }}>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
@@ -684,13 +721,13 @@ const MercadoPagoComponent = () => {
               </div>
             </div>
 
-            {initializationConfig && (
+            {initializationConfig && paymentAmount && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Total a pagar</p>
                     <p className="text-3xl font-bold text-gray-800">
-                      ${Number(initializationConfig.amount).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      ${Number(paymentAmount).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </p>
                   </div>
                   <div className="text-right">
@@ -774,10 +811,18 @@ const MercadoPagoComponent = () => {
               {/* Payment Form */}
               <section className={`mercadopago-payment-section ${paymentMethods}`}>
                 <Payment
-                  initialization={enhancedInitConfig || initializationConfig}
+                  initialization={initializationConfig}
                   customization={customization}
                   onSubmit={onSubmit}
                   onError={onError}
+                  onReady={() => {
+                    console.log("🎯 Payment Brick inicializado correctamente");
+                    console.log("📋 Configuración actual:", {
+                      preferenceId: initializationConfig.preferenceId,
+                      amount: paymentAmount,
+                      customization: customization
+                    });
+                  }}
                 />
               </section>
 
