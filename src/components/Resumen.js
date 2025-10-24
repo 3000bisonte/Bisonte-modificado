@@ -61,6 +61,9 @@ export default function Resumen() {
   const [showDestinatario, setShowDestinatario] = useState(false);
   const [showMegaSale, setShowMegaSale] = useState(false);
 
+  // 🌐 Estado de conexión
+  const [isOnline, setIsOnline] = useState(true);
+
   // Notification Modal
   const { modalState, showSuccess, showError, showWarning, showInfo, closeModal } = useNotification();
 
@@ -73,6 +76,49 @@ export default function Resumen() {
     showRewardedAd, 
     prepareRewardedAd,
   } = useAdMob();
+
+  // 🌐 Detector de conexión a internet
+  useEffect(() => {
+    const checkConnection = () => {
+      const online = navigator.onLine;
+      setIsOnline(online);
+      
+      if (!online) {
+        console.log("🔴 [Resumen] Sin conexión a internet");
+        showWarning(
+          "Sin Conexión",
+          "No hay conexión a internet. Algunas funciones pueden no estar disponibles."
+        );
+      } else {
+        console.log("🟢 [Resumen] Conexión a internet disponible");
+      }
+    };
+
+    checkConnection();
+
+    const handleOnline = () => {
+      console.log("✅ [Resumen] Conexión restaurada");
+      setIsOnline(true);
+      showSuccess("Conexión Restaurada", "La conexión a internet se ha restablecido.");
+    };
+
+    const handleOffline = () => {
+      console.log("❌ [Resumen] Conexión perdida");
+      setIsOnline(false);
+      showWarning(
+        "Sin Conexión",
+        "Se perdió la conexión a internet. Por favor verifica tu conexión."
+      );
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [showWarning, showSuccess]);
 
   // Legacy Ad State for backward compatibility
   const [adState, setAdState] = useState("idle");
@@ -925,6 +971,16 @@ export default function Resumen() {
   const handlePagar = async () => {
     console.log("💳 [handlePagar] Usuario hizo click en 'Pagar'");
     setShowMegaSale(false);
+    
+    // 🌐 Verificar conexión a internet PRIMERO
+    if (!navigator.onLine) {
+      console.error("🔴 [handlePagar] Sin conexión a internet");
+      showError(
+        'Sin Conexión',
+        'No se puede procesar el pago sin conexión a internet. Por favor verifica tu conexión WiFi o datos móviles e intenta nuevamente.'
+      );
+      return;
+    }
     
     // Validar que tenemos todos los datos necesarios ANTES de redirigir
     if (!remitente || !destinatario || !cotizador) {

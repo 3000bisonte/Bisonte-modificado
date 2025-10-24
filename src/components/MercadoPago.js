@@ -44,12 +44,57 @@ const MercadoPagoComponent = () => {
 
   const userEmail = session?.user?.email; // Extrae el email al inicio del componente
 
+  // 🌐 Estado de conexión a internet
+  const [isOnline, setIsOnline] = useState(true);
+  const [showOfflineWarning, setShowOfflineWarning] = useState(false);
+
+  // 🔍 Detector de conexión a internet
+  useEffect(() => {
+    // Verificar conexión inicial
+    const checkConnection = () => {
+      const online = navigator.onLine;
+      setIsOnline(online);
+      
+      if (!online) {
+        console.log("🔴 Sin conexión a internet detectada");
+        setShowOfflineWarning(true);
+      } else {
+        console.log("🟢 Conexión a internet disponible");
+        setShowOfflineWarning(false);
+      }
+    };
+
+    checkConnection();
+
+    // Listeners para cambios de conexión
+    const handleOnline = () => {
+      console.log("✅ Conexión restaurada");
+      setIsOnline(true);
+      setShowOfflineWarning(false);
+    };
+
+    const handleOffline = () => {
+      console.log("❌ Conexión perdida");
+      setIsOnline(false);
+      setShowOfflineWarning(true);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // 🔍 Log de diagnóstico al montar el componente
   useEffect(() => {
     console.log("🚀 MercadoPago Component montado");
     console.log("📧 Email de usuario:", userEmail || "No disponible");
     console.log("🔑 MercadoPago inicializado:", !!initMPago);
     console.log("🌍 Entorno:", process.env.NODE_ENV);
+    console.log("🌐 Conexión:", navigator.onLine ? "Online" : "Offline");
   }, [userEmail]);
 
   // � Detectar retorno de PSE al cargar el componente
@@ -81,6 +126,12 @@ const MercadoPagoComponent = () => {
   // ✅ Nueva función para crear preferencia de pago
   const createPaymentPreference = async (amount, email) => {
     try {
+      // 🌐 Verificar conexión a internet ANTES de hacer la petición
+      if (!navigator.onLine) {
+        console.error("🔴 No hay conexión a internet");
+        throw new Error("No hay conexión a internet. Por favor verifica tu conexión y vuelve a intentar.");
+      }
+
       console.log("🔄 Creando preferencia de pago en MercadoPago...");
       console.log("  - Monto:", amount);
       console.log("  - Email:", email);
@@ -122,8 +173,17 @@ const MercadoPagoComponent = () => {
     } catch (error) {
       console.error("❌ Error en createPaymentPreference:", error);
       
+      // Verificar si perdimos la conexión durante la petición
+      if (!navigator.onLine) {
+        throw new Error("Se perdió la conexión a internet durante el proceso. Por favor verifica tu conexión.");
+      }
+      
       if (error.name === 'AbortError') {
-        throw new Error("Timeout: El servidor tardó demasiado en responder. Por favor verifica tu conexión.");
+        throw new Error("La conexión está muy lenta. El servidor tardó más de 15 segundos en responder. Por favor intenta nuevamente.");
+      }
+      
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        throw new Error("No se pudo conectar al servidor. Verifica tu conexión a internet e intenta nuevamente.");
       }
       
       throw error;
@@ -218,6 +278,13 @@ const MercadoPagoComponent = () => {
     try {
       if (typeof window === "undefined") {
         setInitError("Error: Entorno no compatible (localStorage no disponible).");
+        return;
+      }
+
+      // 🌐 Verificar conexión antes de intentar cargar
+      if (!navigator.onLine) {
+        console.warn("⚠️ Sin conexión a internet - esperando conexión para inicializar pago");
+        setInitError("Sin conexión a internet. Por favor verifica tu conexión.");
         return;
       }
 
@@ -734,6 +801,31 @@ const MercadoPagoComponent = () => {
             </svg>
             <span className="font-medium">Volver al resumen</span>
           </button>
+
+          {/* 🌐 Alerta de Sin Conexión */}
+          {!isOnline && (
+            <div className="bg-red-50 border-2 border-red-500 rounded-2xl p-4 mb-6 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-red-800 mb-1">Sin Conexión a Internet</h3>
+                  <p className="text-sm text-red-700">
+                    No se puede procesar el pago sin conexión. Por favor verifica tu conexión WiFi o datos móviles e intenta nuevamente.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-3 w-full bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-xl transition-colors"
+              >
+                🔄 Reintentar
+              </button>
+            </div>
+          )}
 
           {/* Header Section */}
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
