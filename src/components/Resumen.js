@@ -923,16 +923,39 @@ export default function Resumen() {
   // --- Handlers ---
 
   const handlePagar = async () => {
+    console.log("💳 [handlePagar] Usuario hizo click en 'Pagar'");
     setShowMegaSale(false);
+    
+    // Validar que tenemos todos los datos necesarios ANTES de redirigir
+    if (!remitente || !destinatario || !cotizador) {
+      console.error("❌ [handlePagar] Faltan datos para el pago");
+      showWarning('Datos Incompletos', 'Faltan datos del envío. Por favor, regresa y completa toda la información requerida.');
+      return;
+    }
+    
+    // Guardar TODOS los datos en localStorage antes de redirigir
     if (cotizador) {
+      console.log("💾 [handlePagar] Guardando datos de cotización...");
       syncCotizacionStores({
         ...cotizador,
         costoTotal,
       });
     }
+    
+    // Guardar remitente y destinatario también
+    try {
+      console.log("💾 [handlePagar] Guardando remitente y destinatario...");
+      localStorage.setItem("remitente", JSON.stringify(remitente));
+      localStorage.setItem("destinatario", JSON.stringify(destinatario));
+    } catch (error) {
+      console.error("❌ [handlePagar] Error guardando datos:", error);
+    }
+    
     if (costoTotal === 0) {
+      console.log("🆓 [handlePagar] Envío gratuito - Creando envío...");
       await handleFreeShipment();
     } else {
+      console.log("💳 [handlePagar] Redirigiendo a MercadoPago...");
       router.push("/mercadopago");
     }
   };
