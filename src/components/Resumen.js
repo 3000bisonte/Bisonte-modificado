@@ -552,13 +552,11 @@ export default function Resumen() {
           clearAdErrorState();
           setAdState("done");
           
-          // 🔄 Después de ver el anuncio, resetear estado y precargar el siguiente
-          console.log("🔄 Anuncio visto exitosamente, preparando siguiente anuncio...");
-          setTimeout(() => {
-            console.log("🔄 Reseteando estado a 'idle' y precargando...");
-            setAdState("idle");
-            preloadAd();
-          }, 2000);
+          // ✅ Solo resetear si es el ÚLTIMO anuncio de la cadena
+          // finalizeChain() se encargará del reset global al final
+          if (index === totalAds - 1) {
+            console.log("🔄 Último anuncio visto, finalizeChain se encargará de la precarga");
+          }
         } catch (error) {
           console.error("❌ Error mostrando anuncio AdMob:", error);
           handleAdError("show_exception");
@@ -1592,6 +1590,8 @@ export default function Resumen() {
                   clearAdErrorState();
                   setAdState("idle");
                   setRetryCount(0);
+                  // Precargar anuncio después de cerrar modal de error
+                  setTimeout(() => preloadAd(), 500);
                 }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1628,6 +1628,8 @@ export default function Resumen() {
                     clearAdErrorState();
                     setAdState("idle");
                     setRetryCount(0);
+                    // Precargar anuncio después de cerrar modal de error
+                    setTimeout(() => preloadAd(), 500);
                   }}
                 >
                   Cerrar
@@ -1646,6 +1648,8 @@ export default function Resumen() {
                   } catch (error) {
                     console.warn("[Resumen] No se pudo guardar la preferencia hideAdErrorModal:", error);
                   }
+                  // Precargar anuncio después de ocultar errores
+                  setTimeout(() => preloadAd(), 500);
                 }}
               >
                 No volver a mostrar este aviso
