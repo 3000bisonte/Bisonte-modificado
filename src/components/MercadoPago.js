@@ -743,8 +743,14 @@ const MercadoPagoComponent = () => {
       console.log("🔍 [DEBUG] Payment Brick va a renderizar con:");
       console.log("  - Preference ID:", initializationConfig.preferenceId);
       console.log("  - Amount:", initializationConfig.amount); // ✅ Mostrar amount
-      console.log("  - Tipos de pago excluidos:", customization.paymentMethods.types.excluded);
-      console.log("  - Cuotas:", customization.paymentMethods.minInstallments, "-", customization.paymentMethods.maxInstallments);
+      // Evitar acceder a estructuras inexistentes; mostrar configuración de métodos habilitados
+      console.log("  - Métodos habilitados:", customization.paymentMethods);
+      console.log(
+        "  - Cuotas:",
+        customization.paymentMethods?.minInstallments,
+        "-",
+        customization.paymentMethods?.maxInstallments
+      );
     }
   }, [initializationConfig]);
   return (
