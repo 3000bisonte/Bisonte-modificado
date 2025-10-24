@@ -78,6 +78,8 @@ const MercadoPagoComponent = () => {
   const [paymentAmount, setPaymentAmount] = useState(null); // Para mostrar el monto
   const [isLoadingAmount, setIsLoadingAmount] = useState(true); // Para mostrar "Cargando..."
   const [initError, setInitError] = useState(null);
+  const preferenceCreated = useRef(false); // ✅ Evitar múltiples llamadas
+  const amountLoaded = useRef(false); // ✅ Evitar recalcular el monto
 
   // ✅ Nueva función para crear preferencia de pago
   const createPaymentPreference = async (amount, email) => {
@@ -137,6 +139,18 @@ const MercadoPagoComponent = () => {
 
   useEffect(() => {
     const initializePayment = async () => {
+      // ✅ Evitar múltiples ejecuciones
+      if (preferenceCreated.current) {
+        console.log("⏭️ Preferencia ya creada, omitiendo...");
+        return;
+      }
+
+      // ✅ Verificar que tenemos email antes de proceder
+      if (!userEmail) {
+        console.log("⏳ Esperando email de usuario...");
+        return;
+      }
+
       setIsLoadingAmount(true);
       setInitError(null);
       setInitializationConfig(null);
@@ -230,16 +244,17 @@ const MercadoPagoComponent = () => {
 
       if (amount !== null) {
         console.log(
-          "Monto cargado para inicializar Mercado Pago:",
+          "💰 Monto cargado para inicializar Mercado Pago:",
           amount
         );
         
         // Guardar el monto para mostrarlo en la UI
         setPaymentAmount(amount);
+        amountLoaded.current = true;
         
         // ✅ Crear preferencia de pago en el backend
         try {
-          console.log("🔍 Intentando crear preferencia de pago...");
+          console.log("🔍 Creando preferencia de pago...");
           const preferenceId = await createPaymentPreference(amount, userEmail);
           
           if (!preferenceId) {
@@ -250,6 +265,10 @@ const MercadoPagoComponent = () => {
           setInitializationConfig({ 
             preferenceId,
           });
+          
+          // ✅ Marcar como creada para evitar duplicados
+          preferenceCreated.current = true;
+          
         } catch (prefError) {
           console.error("❌ Error creando preferencia:", prefError);
           
