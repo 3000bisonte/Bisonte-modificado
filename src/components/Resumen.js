@@ -93,7 +93,7 @@ export default function Resumen() {
   const adLoadTimeoutRef = useRef(null);
   const adProgressIntervalRef = useRef(null);
   const MAX_AD_LOAD_ATTEMPTS = 1; // 🚀 Solo 1 intento para cargar rápido
-  const AD_LOAD_TIMEOUT = 8000; // ⚡ 8 segundos - tiempo real de carga de AdMob
+  const AD_LOAD_TIMEOUT = 5000; // ⚡ 5 segundos - balanceado entre dar tiempo y no bloquear al usuario
 
   // 🎯 Monitorear múltiples estados de loading
   useMultipleLoadingMonitor({
@@ -819,11 +819,42 @@ export default function Resumen() {
     };
   }, [processRewardPayload, clearAdErrorState, clearAdLoadTimeout]);
 
-  // Lógica de reintento para errores de anuncios
+  // Precarga inicial - SIMPLIFICADA para evitar llamadas múltiples
+  useEffect(() => {
+    // Solo precargar si:
+    // 1. Tenemos todos los datos necesarios
+    // 2. No es envío gratuito
+    // 3. AdMob está listo O hay datos de cotización
+    if (cotizador && remitente && destinatario && costoTotal > 0) {
+      // Verificar si el anuncio ya está precargado desde Home
+      if (AdMobService.wasRewardReady()) {
+        console.log("✅ Anuncio precargado desde Home - No recargar");
+        setAdState("ready");
+        return;
+      }
+      
+      // Si AdMob está listo, precargar inmediatamente
+      if (adMobSupported && adMobInitialized) {
+        console.log("🚀 [Resumen] AdMob listo - Precargando anuncio...");
+        preloadAd();
+      } else {
+        // Si no, esperar un poco y intentar (solo si no está precargado)
+        console.log("⏳ [Resumen] Esperando AdMob...");
+        const timer = setTimeout(() => {
+          if (!AdMobService.wasRewardReady()) {
+            preloadAd();
+          }
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [cotizador, remitente, destinatario, costoTotal, adMobSupported, adMobInitialized, preloadAd]);
+
+  // Lógica de reintento SOLO para errores críticos
   useEffect(() => {
     if (adState === "error" && retryCount < MAX_RETRIES) {
       const delay = Math.pow(2, retryCount) * 1000;
-      console.log(`🔄 Reintentando precarga en ${delay / 1000}s...`);
+      console.log(`🔄 Reintentando precarga en ${delay / 1000}s (intento ${retryCount + 1}/${MAX_RETRIES})...`);
       const timer = setTimeout(() => {
         setRetryCount(prev => prev + 1);
         preloadAd();
@@ -831,29 +862,6 @@ export default function Resumen() {
       return () => clearTimeout(timer);
     }
   }, [adState, retryCount, preloadAd]);
-
-  // Precarga inicial y muestra del modal de oferta
-  useEffect(() => {
-    if (cotizador && remitente && destinatario && costoTotal > 0) {
-      // Precarga más temprana para que esté listo antes
-      const timer = setTimeout(preloadAd, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [cotizador, remitente, destinatario, costoTotal, preloadAd]);
-
-  // Precarga inmediata cuando AdMob esté listo
-  useEffect(() => {
-    const shouldTriggerPreload =
-      adMobSupported &&
-      adMobInitialized &&
-      (costoTotal === null || costoTotal > 0) &&
-      !AdMobService.wasRewardReady();
-
-    if (shouldTriggerPreload) {
-      console.log("🚀 AdMob listo, iniciando precarga inmediata del anuncio...");
-      preloadAd();
-    }
-  }, [adMobSupported, adMobInitialized, costoTotal, preloadAd]);
 
   useEffect(() => {
     // Mostrar Mega Sale cuando el anuncio esté listo O después de que pase el timeout
