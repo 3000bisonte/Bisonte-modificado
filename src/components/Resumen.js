@@ -1726,6 +1726,25 @@ export default function Resumen() {
           message={modalState.message}
           details={modalState.details}
         />
+
+        {/* Botón DEBUG visible */}
+        <button
+          onClick={() => {
+            const logs = [
+              `adState: ${adState}`,
+              `isRewardedReady: ${isRewardedReady}`,
+              `adMobInitialized: ${adMobInitialized}`,
+              `showMegaSale: ${showMegaSale}`,
+              `costoTotal: ${costoTotal}`,
+              `rewardBanner: ${JSON.stringify(rewardBanner)}`,
+            ];
+            alert('DEBUG INFO:\n\n' + logs.join('\n'));
+          }}
+          className="fixed bottom-20 right-4 z-[9999] bg-red-600 text-white px-6 py-4 rounded-full font-bold text-lg shadow-2xl border-4 border-white"
+          style={{ fontSize: '18px', fontWeight: 'bold' }}
+        >
+          📱 DEBUG
+        </button>
       </div>
       <BottomNav />
     </div>
