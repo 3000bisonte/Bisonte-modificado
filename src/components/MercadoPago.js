@@ -44,6 +44,14 @@ const MercadoPagoComponent = () => {
 
   const userEmail = session?.user?.email; // Extrae el email al inicio del componente
 
+  // 🔍 Log de diagnóstico al montar el componente
+  useEffect(() => {
+    console.log("🚀 MercadoPago Component montado");
+    console.log("📧 Email de usuario:", userEmail || "No disponible");
+    console.log("🔑 MercadoPago inicializado:", !!initMPago);
+    console.log("🌍 Entorno:", process.env.NODE_ENV);
+  }, [userEmail]);
+
   // � Detectar retorno de PSE al cargar el componente
   useEffect(() => {
     const currentUrl = window.location.href;
@@ -77,6 +85,10 @@ const MercadoPagoComponent = () => {
       console.log("  - Monto:", amount);
       console.log("  - Email:", email);
 
+      // ⏰ Timeout para evitar espera infinita
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos
+
       const response = await fetch("/api/mercadopago", {
         method: "POST",
         headers: {
@@ -89,20 +101,31 @@ const MercadoPagoComponent = () => {
             email: email || "guest@bisonteapp.com",
           },
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+
+      console.log("📡 Respuesta recibida del servidor:", response.status);
 
       if (!response.ok) {
         const error = await response.json();
-        console.error("❌ Error creando preferencia:", error);
-        throw new Error(error.details || "Error al crear preferencia de pago");
+        console.error("❌ Error del servidor creando preferencia:", error);
+        throw new Error(error.error || error.details || "Error al crear preferencia de pago");
       }
 
       const data = await response.json();
       console.log("✅ Preferencia creada exitosamente:", data.preference_id);
+      console.log("📦 Datos completos:", data);
       
       return data.preference_id;
     } catch (error) {
       console.error("❌ Error en createPaymentPreference:", error);
+      
+      if (error.name === 'AbortError') {
+        throw new Error("Timeout: El servidor tardó demasiado en responder. Por favor verifica tu conexión.");
+      }
+      
       throw error;
     }
   };
@@ -211,7 +234,12 @@ const MercadoPagoComponent = () => {
         
         // ✅ Crear preferencia de pago en el backend
         try {
+          console.log("🔍 Intentando crear preferencia de pago...");
           const preferenceId = await createPaymentPreference(amount, userEmail);
+          
+          if (!preferenceId) {
+            throw new Error("No se recibió un ID de preferencia válido");
+          }
           
           console.log("✅ Configurando Payment Brick con preferenceId:", preferenceId);
           setInitializationConfig({ 
@@ -219,8 +247,16 @@ const MercadoPagoComponent = () => {
           });
         } catch (prefError) {
           console.error("❌ Error creando preferencia:", prefError);
+          
+          const errorMessage = prefError.message || "Error desconocido";
+          console.error("📋 Detalles del error:", {
+            nombre: prefError.name,
+            mensaje: errorMessage,
+            stack: prefError.stack
+          });
+          
           setInitError(
-            "Error al crear la preferencia de pago. Por favor intenta nuevamente."
+            `No se pudo inicializar el pago: ${errorMessage}. Por favor verifica tu conexión a internet e intenta nuevamente.`
           );
         }
       } else {
