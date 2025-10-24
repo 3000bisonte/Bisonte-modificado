@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import Screen from "@/components/BrickStatusScreen";
+import NoConnectionLayout from "@/components/NoConnectionLayout";
 
 import InternalProvider from "../app/ContextProvider";
 import { useNotification } from "../hooks/useNotification";
@@ -789,6 +790,16 @@ const MercadoPagoComponent = () => {
   }, [initializationConfig]);
   return (
     <InternalProvider context={{ paymentId }}>
+      {/* 🌐 Mostrar Layout de Sin Conexión si no hay internet */}
+      {!isOnline ? (
+        <NoConnectionLayout 
+          onRetry={() => {
+            if (navigator.onLine) {
+              window.location.reload();
+            }
+          }} 
+        />
+      ) : (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
         <div className="max-w-4xl mx-auto">
           {/* Back Button */}
@@ -801,31 +812,6 @@ const MercadoPagoComponent = () => {
             </svg>
             <span className="font-medium">Volver al resumen</span>
           </button>
-
-          {/* 🌐 Alerta de Sin Conexión */}
-          {!isOnline && (
-            <div className="bg-red-50 border-2 border-red-500 rounded-2xl p-4 mb-6 animate-pulse">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-red-800 mb-1">Sin Conexión a Internet</h3>
-                  <p className="text-sm text-red-700">
-                    No se puede procesar el pago sin conexión. Por favor verifica tu conexión WiFi o datos móviles e intenta nuevamente.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-3 w-full bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-xl transition-colors"
-              >
-                🔄 Reintentar
-              </button>
-            </div>
-          )}
 
           {/* Header Section */}
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
@@ -989,6 +975,7 @@ const MercadoPagoComponent = () => {
           </div>
         </div>
       </div>
+      )}
 
       <Screen />
 
