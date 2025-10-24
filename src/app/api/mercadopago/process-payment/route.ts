@@ -61,10 +61,13 @@ const validatePaymentData = (data: unknown): PaymentFormData => {
     throw new Error("Método de pago inválido");
   }
 
-  // ⚠️ PSE no envía token, solo tarjetas lo requieren
+  // ⚠️ PSE y métodos en efectivo NO envían token, solo tarjetas lo requieren
   const isPSE = payment.payment_method_id === 'pse';
-  if (!isPSE && (!payment.token || typeof payment.token !== "string")) {
-    throw new Error("Token de pago inválido");
+  const isCashPayment = ['efecty', 'puntored', 'bancolombia', 'gana', 'pago_efectivo'].includes(payment.payment_method_id as string);
+  const isCardPayment = !isPSE && !isCashPayment;
+  
+  if (isCardPayment && (!payment.token || typeof payment.token !== "string")) {
+    throw new Error("Token de pago inválido - requerido para tarjetas");
   }
 
   if (!payment.payer || typeof payment.payer !== "object") {
@@ -175,12 +178,18 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Solo agregar token para tarjetas (no para PSE)
-    if (paymentData.payment_method_id !== 'pse' && paymentData.token) {
+    // Solo agregar token para tarjetas (no para PSE ni pagos en efectivo)
+    const isCashMethod = ['efecty', 'puntored', 'bancolombia', 'gana', 'pago_efectivo'].includes(paymentData.payment_method_id);
+    const isPSEMethod = paymentData.payment_method_id === 'pse';
+    
+    if (!isPSEMethod && !isCashMethod && paymentData.token) {
       paymentPayload.token = paymentData.token;
       console.log("🔑 Token agregado para tarjeta:", paymentData.token.substring(0, 20) + '...');
-    } else if (paymentData.payment_method_id !== 'pse') {
+    } else if (!isPSEMethod && !isCashMethod) {
       console.log("⚠️  ADVERTENCIA: Pago con tarjeta sin token - esto causará error");
+    } else if (isCashMethod) {
+      console.log("💵 Pago en efectivo detectado:", paymentData.payment_method_id);
+      console.log("ℹ️  No se requiere token para pagos en efectivo");
     }
 
     // 🏦 PSE requiere campos adicionales específicos

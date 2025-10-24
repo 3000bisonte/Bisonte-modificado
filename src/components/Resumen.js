@@ -93,7 +93,7 @@ export default function Resumen() {
   const adLoadTimeoutRef = useRef(null);
   const adProgressIntervalRef = useRef(null);
   const MAX_AD_LOAD_ATTEMPTS = 1; // 🚀 Solo 1 intento para cargar rápido
-  const AD_LOAD_TIMEOUT = 5000; // 🚀 5 segundos MÁXIMO - después mostrar opciones
+  const AD_LOAD_TIMEOUT = 3000; // 🚀 3 segundos MÁXIMO - cierre automático más rápido
 
   // 🎯 Monitorear múltiples estados de loading
   useMultipleLoadingMonitor({
@@ -846,11 +846,26 @@ export default function Resumen() {
   }, [adMobSupported, adMobInitialized, costoTotal, preloadAd]);
 
   useEffect(() => {
-    if (adState === "ready" && costoTotal > 0) {
-      const timer = setTimeout(() => setShowMegaSale(true), 1000);
-      return () => clearTimeout(timer);
+    // Mostrar Mega Sale cuando el anuncio esté listo O después de que pase el timeout
+    if (costoTotal > 0) {
+      if (adState === "ready") {
+        const timer = setTimeout(() => {
+          console.log("✅ Anuncio listo - Mostrando Mega Sale");
+          setShowMegaSale(true);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+      
+      // 🚀 NUEVO: Si el modal se cerró por timeout, mostrar Mega Sale después de 1s
+      if (userClosedAdModalRef.current && !showMegaSale) {
+        const fallbackTimer = setTimeout(() => {
+          console.log("🎯 Modal cerrado por timeout - Mostrando Mega Sale como fallback");
+          setShowMegaSale(true);
+        }, 1000);
+        return () => clearTimeout(fallbackTimer);
+      }
     }
-  }, [adState, costoTotal]);
+  }, [adState, costoTotal, showMegaSale]);
 
   // Limpieza de timeouts al desmontar
   useEffect(() => {
@@ -1406,22 +1421,27 @@ export default function Resumen() {
                 {costoTotal > 0 && (
                   <button
                     onClick={showAd}
-                    disabled={adMobLoading || adState === "loading" || (!adMobInitialized && !isRewardedReady)}
+                    disabled={adMobLoading || adState === "loading" || adState === "watching" || (!adMobInitialized && !isRewardedReady)}
                     className={`w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-2xl shadow transition-all duration-300 flex items-center justify-center gap-2 ${
-                      (adMobLoading || adState === "loading" || (!adMobInitialized && !isRewardedReady)) ? "opacity-50 cursor-not-allowed" : ""
+                      (adMobLoading || adState === "loading" || adState === "watching" || (!adMobInitialized && !isRewardedReady)) ? "opacity-50 cursor-not-allowed" : ""
                     }`}
                   >
-                    {(adMobLoading || adState === "loading") ? (
+                    {(adState === "watching") ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Preparando...</span>
+                        <span>Viendo anuncio...</span>
+                      </>
+                    ) : (adMobLoading || adState === "loading" || adState === "preloading") ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Cargando anuncio...</span>
                       </>
                     ) : !adMobInitialized ? (
                       <>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                           <path d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                         </svg>
-                        <span>Inicializando anuncios...</span>
+                        <span>Anuncios no disponibles</span>
                       </>
                     ) : (
                       <>
