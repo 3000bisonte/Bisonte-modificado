@@ -18,8 +18,18 @@ export default function RootLayout({ children }) {
         <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
         <script dangerouslySetInnerHTML={{ __html: `
           eruda.init();
-          eruda.position({ x: window.innerWidth - 60, y: 50 });
-          eruda.show();
+          
+          // Crear botón personalizado más visible
+          setTimeout(function() {
+            var btn = document.createElement('div');
+            btn.innerHTML = '📱 DEBUG';
+            btn.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#ff0000;color:white;padding:15px 25px;border-radius:50px;font-size:18px;font-weight:bold;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer;';
+            btn.onclick = function() {
+              eruda.show();
+              btn.style.display = 'none';
+            };
+            document.body.appendChild(btn);
+          }, 1000);
         ` }} />
       </head>
       <body className={inter.className}>
