@@ -8,8 +8,6 @@ import { ADMOB_CONFIG } from "../config/admob.config";
 import { useMultipleLoadingMonitor } from "../hooks/useLoadingMonitor";
 import { useNotification } from "../hooks/useNotification";
 import AdMobService, { useAdMob } from "../services/AdMobService";
-// ✅ REACTIVADO - Usando ruta relativa
-import { reloadAd } from "../services/AdPreloader";
 
 import AdLoadingIndicator from "./AdLoadingIndicator";
 import BottomNav from "./BottomNav";
@@ -554,9 +552,13 @@ export default function Resumen() {
           clearAdErrorState();
           setAdState("done");
           
-          // 🔄 Recargar anuncio para la próxima vez
-          console.log("🔄 Iniciando recarga del siguiente anuncio...");
-          reloadAd().catch(err => console.warn("⚠️ Error en recarga automática:", err));
+          // 🔄 Después de ver el anuncio, resetear estado y precargar el siguiente
+          console.log("🔄 Anuncio visto exitosamente, preparando siguiente anuncio...");
+          setTimeout(() => {
+            console.log("🔄 Reseteando estado a 'idle' y precargando...");
+            setAdState("idle");
+            preloadAd();
+          }, 2000);
         } catch (error) {
           console.error("❌ Error mostrando anuncio AdMob:", error);
           handleAdError("show_exception");
@@ -1460,15 +1462,20 @@ export default function Resumen() {
                 {costoTotal > 0 && (
                   <button
                     onClick={showAd}
-                    disabled={adMobLoading || adState === "loading" || adState === "watching" || (!adMobInitialized && !isRewardedReady)}
+                    disabled={adMobLoading || adState === "loading" || adState === "watching" || adState === "done" || (!adMobInitialized && !isRewardedReady)}
                     className={`w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-2xl shadow transition-all duration-300 flex items-center justify-center gap-2 ${
-                      (adMobLoading || adState === "loading" || adState === "watching" || (!adMobInitialized && !isRewardedReady)) ? "opacity-50 cursor-not-allowed" : ""
+                      (adMobLoading || adState === "loading" || adState === "watching" || adState === "done" || (!adMobInitialized && !isRewardedReady)) ? "opacity-50 cursor-not-allowed" : ""
                     }`}
                   >
                     {(adState === "watching") ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         <span>Viendo anuncio...</span>
+                      </>
+                    ) : (adState === "done") ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Preparando siguiente anuncio...</span>
                       </>
                     ) : (adMobLoading || adState === "loading" || adState === "preloading") ? (
                       <>
