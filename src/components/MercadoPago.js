@@ -166,7 +166,12 @@ const MercadoPagoComponent = () => {
           "Monto cargado para inicializar Mercado Pago:",
           amount
         );
-        setInitializationConfig({ amount });
+        // ✅ Configuración completa con todos los campos necesarios
+        setInitializationConfig({ 
+          amount,
+          // Configuración adicional para evitar errores de payment type
+          preferenceId: null, // Usar null para payment brick directo
+        });
       } else {
         console.error("No se encontraron datos válidos de cotización para el pago.");
         setInitError(
@@ -601,15 +606,18 @@ const MercadoPagoComponent = () => {
   );
   const customization = {
     paymentMethods: {
-      // ✅ Configuración específica para Colombia
-      // No restringir tipos de pago, dejar que MercadoPago maneje las opciones disponibles
+      // ✅ Habilitar TODOS los tipos de pago disponibles en Colombia
+      types: {
+        excluded: [], // No excluir ningún tipo de pago
+      },
       minInstallments: 1,
       maxInstallments: 12,
     },
     visual: {
       style: {
         theme: "default"
-      }
+      },
+      hidePaymentButton: false, // Asegurar que el botón de pago sea visible
     }
   };
 
@@ -620,12 +628,26 @@ const MercadoPagoComponent = () => {
     callbacks: {
       onReady: () => {
         console.log("🎯 Payment Brick inicializado correctamente");
+        console.log("📋 Configuración actual:", {
+          amount: initializationConfig.amount,
+          customization: customization
+        });
       },
       onError: (error) => {
         console.error("❌ Error en Payment Brick:", error);
       }
     }
   } : null;
+  
+  // ✅ Log detallado antes de renderizar
+  useEffect(() => {
+    if (enhancedInitConfig) {
+      console.log("🔍 [DEBUG] Payment Brick va a renderizar con:");
+      console.log("  - Monto:", enhancedInitConfig.amount);
+      console.log("  - Tipos de pago excluidos:", customization.paymentMethods.types.excluded);
+      console.log("  - Cuotas:", customization.paymentMethods.minInstallments, "-", customization.paymentMethods.maxInstallments);
+    }
+  }, [enhancedInitConfig]);
   return (
     <InternalProvider context={{ paymentId }}>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
