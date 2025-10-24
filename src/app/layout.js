@@ -16,7 +16,11 @@ export default function RootLayout({ children }) {
       <head>
         {/* Eruda - Mobile debugging console */}
         <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-        <script dangerouslySetInnerHTML={{ __html: `eruda.init();` }} />
+        <script dangerouslySetInnerHTML={{ __html: `
+          eruda.init();
+          eruda.position({ x: window.innerWidth - 60, y: 50 });
+          eruda.show();
+        ` }} />
       </head>
       <body className={inter.className}>
         <Providers>
