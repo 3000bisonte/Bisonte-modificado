@@ -82,12 +82,6 @@ const MercadoPagoComponent = () => {
   // ✅ Nueva función para crear preferencia de pago
   const createPaymentPreference = async (amount, email) => {
     try {
-      // 🌐 Verificar conexión a internet ANTES de hacer la petición
-      if (!navigator.onLine) {
-        console.error("🔴 No hay conexión a internet");
-        throw new Error("No hay conexión a internet. Por favor verifica tu conexión y vuelve a intentar.");
-      }
-
       console.log("🔄 Creando preferencia de pago en MercadoPago...");
       console.log("  - Monto:", amount);
       console.log("  - Email:", email);
@@ -128,11 +122,6 @@ const MercadoPagoComponent = () => {
       return data.preference_id;
     } catch (error) {
       console.error("❌ Error en createPaymentPreference:", error);
-      
-      // Verificar si perdimos la conexión durante la petición
-      if (!navigator.onLine) {
-        throw new Error("Se perdió la conexión a internet durante el proceso. Por favor verifica tu conexión.");
-      }
       
       if (error.name === 'AbortError') {
         throw new Error("La conexión está muy lenta. El servidor tardó más de 15 segundos en responder. Por favor intenta nuevamente.");
@@ -234,13 +223,6 @@ const MercadoPagoComponent = () => {
     try {
       if (typeof window === "undefined") {
         setInitError("Error: Entorno no compatible (localStorage no disponible).");
-        return;
-      }
-
-      // 🌐 Verificar conexión antes de intentar cargar
-      if (!navigator.onLine) {
-        console.warn("⚠️ Sin conexión a internet - esperando conexión para inicializar pago");
-        setInitError("Sin conexión a internet. Por favor verifica tu conexión.");
         return;
       }
 
