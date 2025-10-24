@@ -502,6 +502,11 @@ export default function Resumen() {
 
     clearAdErrorState();
 
+    console.log("🔍 [showAd] Verificando paths disponibles:");
+    console.log(`   - adMobInitialized && adMobSupported: ${adMobInitialized && adMobSupported}`);
+    console.log(`   - messagePortRef.current: ${!!messagePortRef.current}`);
+    console.log(`   - window.AndroidInterface?.showRewardedAd: ${!!window.AndroidInterface?.showRewardedAd}`);
+
     // Usar nuevo servicio AdMob si está disponible
     if (adMobInitialized && adMobSupported) {
       console.log("✅ [showAd] Usando AdMob (nueva API)");
@@ -1052,27 +1057,16 @@ export default function Resumen() {
     console.log(`   - isRewardedReady: ${isRewardedReady}`);
     console.log(`   - wasRewardReady: ${AdMobService.wasRewardReady()}`);
     
-    // ✅ Verificación: Solo proceder si el anuncio está realmente listo
-    const anuncioListo = adState === "ready" || isRewardedReady || AdMobService.wasRewardReady();
-    
-    if (!anuncioListo) {
-      console.error("❌ [handleWatchAdFromModal] ANUNCIO NO ESTÁ LISTO - Abortando");
-      console.log("   → Forzando precarga...");
-      setShowMegaSale(false);
-      preloadAd();
-      showWarning('Anuncio no disponible', 'El anuncio aún no está listo. Por favor, espera un momento e intenta nuevamente.');
-      return;
-    }
-    
-    console.log("✅ [handleWatchAdFromModal] Anuncio verificado como listo - Procediendo");
     setShowMegaSale(false);
     
-    // Pequeño delay para que el modal se cierre suavemente antes de mostrar el anuncio
+    // ⚡ FORZAR LLAMADA DIRECTA - Si MegaSale apareció, el anuncio DEBE estar listo
+    // No hacer más verificaciones, simplemente intentar mostrar
     setTimeout(() => {
-      console.log("🚀 [handleWatchAdFromModal] Llamando a showAd()...");
+      console.log("🚀 [handleWatchAdFromModal] FORZANDO llamada a showAd()...");
+      console.log("   → Sin verificaciones previas, confiando en que está listo");
       showAd();
     }, 300);
-  }, [showAd, adState, isRewardedReady, preloadAd, showWarning]);
+  }, [showAd, adState, isRewardedReady]);
 
   useEffect(() => {
     if (!rewardBanner) {
