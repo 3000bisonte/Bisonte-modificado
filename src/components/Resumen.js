@@ -1091,14 +1091,7 @@ export default function Resumen() {
     }, 300);
   }, [showAd, adState, isRewardedReady]);
 
-  useEffect(() => {
-    if (!rewardBanner) {
-      return undefined;
-    }
-
-    const timeoutId = setTimeout(() => setRewardBanner(null), 8000);
-    return () => clearTimeout(timeoutId);
-  }, [rewardBanner]);
+  // ✅ Banner de felicitaciones ahora es PERMANENTE (no se oculta automáticamente)
 
   // Detectar cambios en localStorage cuando el usuario regresa después de editar
   useEffect(() => {
@@ -1229,30 +1222,72 @@ export default function Resumen() {
         </div>
 
         {rewardBanner && (
-          <div className="mb-10 rounded-3xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 via-white to-amber-100 p-6 text-center shadow-xl">
-            <p className="text-3xl font-extrabold uppercase tracking-wide text-amber-600 drop-shadow-sm">
-              ¡Felicidades!
-            </p>
-            <p className="mt-3 text-lg font-semibold text-slate-700">
-              Tu precio anterior:
-              <span className="ml-2 text-2xl font-black text-amber-700">
-                {formatPrice(rewardBanner.previous)}
-              </span>
-            </p>
-            <p className="mt-1 text-lg font-semibold text-emerald-600">
-              Precio con descuento:
-              <span className="ml-2 text-2xl font-black text-emerald-700">
-                {formatPrice(rewardBanner.current)}
-              </span>
-            </p>
-            {Number.isFinite(Number(rewardBanner?.discount)) && Number(rewardBanner.discount) > 0 && (
-              <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-emerald-500">
-                Ahorro total:
-                <span className="ml-2 text-emerald-600">
-                  {formatPrice(rewardBanner.discount)}
-                </span>
-              </p>
-            )}
+          <div className="mb-8 relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 p-1 shadow-2xl animate-pulse">
+            <div className="relative bg-white rounded-[22px] p-6">
+              {/* Confetti decoration */}
+              <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+                <div className="absolute top-2 left-4 text-3xl">🎉</div>
+                <div className="absolute top-1 right-6 text-2xl">✨</div>
+                <div className="absolute bottom-2 left-8 text-2xl">🎊</div>
+                <div className="absolute bottom-1 right-4 text-3xl">💰</div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl opacity-10">🎯</div>
+              </div>
+              
+              {/* Content */}
+              <div className="relative z-10">
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <span className="text-4xl">🎉</span>
+                  <h3 className="text-3xl font-black bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent uppercase tracking-wider">
+                    ¡Felicidades!
+                  </h3>
+                  <span className="text-4xl">🎉</span>
+                </div>
+                
+                {/* Ahorro destacado */}
+                {Number.isFinite(Number(rewardBanner?.discount)) && Number(rewardBanner.discount) > 0 && (
+                  <div className="mb-4 bg-gradient-to-r from-amber-100 to-yellow-100 rounded-2xl p-4 border-2 border-amber-300">
+                    <p className="text-sm font-bold text-amber-700 uppercase tracking-wide mb-1">
+                      💸 Ahorro Total
+                    </p>
+                    <p className="text-4xl font-black text-amber-600">
+                      {formatPrice(rewardBanner.discount)}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Comparación de precios */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Precio anterior */}
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200 relative">
+                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      ANTES
+                    </div>
+                    <p className="text-xs font-semibold text-red-600 mb-1">Precio anterior</p>
+                    <p className="text-2xl font-black text-red-700 line-through">
+                      {formatPrice(rewardBanner.previous)}
+                    </p>
+                  </div>
+                  
+                  {/* Precio nuevo */}
+                  <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-4 border-2 border-emerald-400 relative">
+                    <div className="absolute -top-2 -right-2 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-bounce">
+                      AHORA
+                    </div>
+                    <p className="text-xs font-semibold text-emerald-600 mb-1">Nuevo precio</p>
+                    <p className="text-2xl font-black text-emerald-700">
+                      {formatPrice(rewardBanner.current)}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Mensaje motivacional */}
+                <div className="mt-4 text-center">
+                  <p className="text-sm font-semibold text-gray-600">
+                    🎯 ¡Sigue viendo anuncios para más descuentos!
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
