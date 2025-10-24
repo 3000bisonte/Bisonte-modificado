@@ -166,11 +166,10 @@ const MercadoPagoComponent = () => {
           "Monto cargado para inicializar Mercado Pago:",
           amount
         );
-        // ✅ Configuración completa con todos los campos necesarios
+        // ✅ Configuración para Payment Brick en modo directo (sin preferenceId)
         setInitializationConfig({ 
           amount,
-          // Configuración adicional para evitar errores de payment type
-          preferenceId: null, // Usar null para payment brick directo
+          // NO incluir preferenceId para modo directo
         });
       } else {
         console.error("No se encontraron datos válidos de cotización para el pago.");
