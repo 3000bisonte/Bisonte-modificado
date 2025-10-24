@@ -421,18 +421,23 @@ const MercadoPagoComponent = () => {
           setpaymentId(paymentId);
           setstatus(paymentStatus);
 
-          // Manejar diferentes estados de pago
+          // ✅ CORREGIDO: Manejar diferentes estados de pago correctamente
           if (paymentStatus === "approved") {
-            console.log("✅ Pago aprobado - Registrando envío...");
+            console.log("✅ Pago APROBADO - Registrando envío y redirigiendo...");
             resolve();
           } else if (paymentStatus === "in_process" || paymentStatus === "pending") {
-            console.log("⏳ Pago en proceso - Estado:", statusDetail);
-            showWarning(
-              'Pago en Proceso',
-              'Tu pago está siendo procesado. Te notificaremos cuando sea aprobado.'
+            console.log("⏳ Pago PENDIENTE - Estado:", statusDetail);
+            
+            // ✅ Para pagos pendientes (Efecty, PSE, etc.), NO registrar envío automáticamente
+            // El webhook de MercadoPago lo hará cuando el pago sea confirmado
+            showInfo(
+              'Pago Pendiente de Confirmación',
+              'Tu pago está en proceso de confirmación. Recibirás un correo cuando se complete. Por ahora, no podemos procesar el envío.'
             );
-            // También registrar el envío para pagos pendientes
-            resolve();
+            
+            // ✅ NO resolver la promesa para pagos pendientes
+            // Esto evita que se registre el envío prematuramente
+            reject('pending_payment');
           } else {
             console.error("❌ Pago rechazado - Estado:", paymentStatus, statusDetail);
             showError(
@@ -696,10 +701,13 @@ const MercadoPagoComponent = () => {
   useEffect(() => {
     console.log("🔍 Estado del pago actualizado:", status);
     
-    // Registrar envío cuando el pago es aprobado o está en proceso
-    if (status === "approved" || status === "in_process" || status === "pending") {
-      console.log(`📦 Registrando envío con estado de pago: ${status}`);
+    // ✅ CORREGIDO: SOLO registrar envío cuando el pago es APROBADO
+    if (status === "approved") {
+      console.log(`✅ Pago APROBADO - Registrando envío con estado: ${status}`);
       void manejarEnvioAprobado();
+    } else if (status === "in_process" || status === "pending") {
+      console.warn(`⏳ Pago ${status} - NO se registrará el envío aún. Esperando confirmación.`);
+      // No hacer nada, el webhook lo manejará cuando sea aprobado
     } else if (status === "rejected" || status === "cancelled") {
       console.error(`❌ Pago ${status} - No se registrará el envío`);
       showError(
