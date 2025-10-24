@@ -490,10 +490,16 @@ const MercadoPagoComponent = () => {
     const numeroGuia = generarNumeroGuia();
     
     try {
-      const destinatarioString = localStorage.getItem("destinatarioInfo");
-      const remitenteString = localStorage.getItem("formDataRemitente");
+      // ✅ CORREGIDO: Usar las claves correctas de localStorage
+      const destinatarioString = localStorage.getItem("formDestinatario");
+      const remitenteString = localStorage.getItem("formRemitente");
 
       if (!destinatarioString || !remitenteString) {
+        console.error("❌ Datos faltantes en localStorage:", {
+          destinatario: destinatarioString ? "✓" : "✗",
+          remitente: remitenteString ? "✓" : "✗",
+          todasLasClaves: Object.keys(localStorage)
+        });
         throw new Error("Faltan datos de destinatario o remitente para registrar el envío.");
       }
 
@@ -501,6 +507,12 @@ const MercadoPagoComponent = () => {
       const datosLocalStorageformDataRemitente = JSON.parse(remitenteString);
       const cotizacionString = localStorage.getItem("cotizacion");
       const cotizacionLocal = cotizacionString ? JSON.parse(cotizacionString) : {};
+      
+      console.log("📦 Datos recuperados de localStorage:", {
+        destinatario: datosLocalStorage?.nombre,
+        remitente: datosLocalStorageformDataRemitente?.nombre,
+        cotizacion: cotizacionLocal?.costoTotal
+      });
 
       const sanitizeTelefono = (raw) => {
         if (!raw) {return "0000000000";}
