@@ -22,7 +22,8 @@ if (process.env.NODE_ENV !== "production") {
 // const apiServer = process.env.NEXT_PUBLIC_API_SERVER_URL;
 if (initMPago) {
   initMercadoPago(initMPago, {
-    locale: "es-CL",
+    // Usar configuración para Colombia
+    locale: "es-CO",
   });
 } else {
   console.error(
@@ -720,20 +721,20 @@ const MercadoPagoComponent = () => {
     paymentId
   );
   const customization = {
+    // Habilitar explícitamente métodos soportados para CO
     paymentMethods: {
-      // ✅ Habilitar TODOS los tipos de pago disponibles en Colombia
-      types: {
-        excluded: [], // No excluir ningún tipo de pago
-      },
+      creditCard: "all",
+      debitCard: "all",
+      ticket: "all", // efectivo
+      bankTransfer: "all", // incluye PSE
+      mercadoPago: "all",
       minInstallments: 1,
       maxInstallments: 12,
     },
     visual: {
-      style: {
-        theme: "default"
-      },
-      hidePaymentButton: false, // Asegurar que el botón de pago sea visible
-    }
+      style: { theme: "default" },
+      hidePaymentButton: false,
+    },
   };
 
   // ✅ Log detallado antes de renderizar
