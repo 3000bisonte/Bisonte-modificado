@@ -488,6 +488,13 @@ export default function Resumen() {
   }, [preloadAd, costoTotal]);
 
   const showAd = useCallback(async () => {
+    console.log("🎯 [showAd] INICIANDO - Estado del sistema:");
+    console.log(`   - costoTotal: ${costoTotal}`);
+    console.log(`   - adState: "${adState}"`);
+    console.log(`   - adMobInitialized: ${adMobInitialized}`);
+    console.log(`   - adMobSupported: ${adMobSupported}`);
+    console.log(`   - isRewardedReady: ${isRewardedReady}`);
+    
     if (costoTotal <= 0) {
       showSuccess('¡Felicidades!', 'Tu envío ya es gratuito. No necesitas ver más anuncios. 🎉');
       return;
@@ -497,6 +504,7 @@ export default function Resumen() {
 
     // Usar nuevo servicio AdMob si está disponible
     if (adMobInitialized && adMobSupported) {
+      console.log("✅ [showAd] Usando AdMob (nueva API)");
       const totalAds = pickRewardChainLength();
       setRewardChainProgress({ current: 0, total: totalAds });
       let successfulAds = 0;
@@ -1051,9 +1059,19 @@ export default function Resumen() {
   }, [router, costoTotal, session, remitente, destinatario, cotizador, showSuccess, showError, showWarning]);
 
   const handleWatchAdFromModal = useCallback(() => {
+    console.log("🎬 [handleWatchAdFromModal] Usuario hizo click en 'Ver anuncio'");
+    console.log(`   - Estado actual: adState="${adState}"`);
+    console.log(`   - isRewardedReady: ${isRewardedReady}`);
+    console.log(`   - wasRewardReady: ${AdMobService.wasRewardReady()}`);
+    
     setShowMegaSale(false);
-    setTimeout(showAd, 300);
-  }, [showAd]);
+    
+    // Pequeño delay para que el modal se cierre suavemente antes de mostrar el anuncio
+    setTimeout(() => {
+      console.log("🚀 [handleWatchAdFromModal] Llamando a showAd()...");
+      showAd();
+    }, 300);
+  }, [showAd, adState, isRewardedReady]);
 
   useEffect(() => {
     if (!rewardBanner) {
