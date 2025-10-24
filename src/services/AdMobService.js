@@ -160,14 +160,27 @@ export const AdMobService = {
       return false;
     }
 
+    // ✅ CRÍTICO: Asegurar que AdMob esté inicializado antes de preparar
+    if (!runtimeState.initialized) {
+      console.warn('⚠️ AdMob no está inicializado, inicializando ahora...');
+      const success = await this.initialize();
+      if (!success) {
+        console.error('❌ No se pudo inicializar AdMob para preparar anuncio');
+        return false;
+      }
+    }
+
     // Enfriamiento para evitar spam de prepares
     const now = Date.now();
     if (runtimeState.cooldownUntil && now < runtimeState.cooldownUntil) {
+      const remaining = Math.ceil((runtimeState.cooldownUntil - now) / 1000);
+      console.log(`⏳ Cooldown activo, espera ${remaining}s antes de preparar otro anuncio`);
       return runtimeState.rewardReady;
     }
 
     // Single-flight: si ya hay un prepare en curso, esperar ese resultado
     if (runtimeState.preparing && runtimeState.preparePromise) {
+      console.log('🔄 Ya hay un prepare en curso, esperando resultado...');
       try {
         const ok = await runtimeState.preparePromise;
         return ok;
@@ -179,18 +192,48 @@ export const AdMobService = {
     runtimeState.preparing = true;
     runtimeState.preparePromise = (async () => {
       try {
+        console.log('🚀 Preparando anuncio recompensado...');
         const info = await AdMob.prepareRewardVideoAd({
           adId: ADMOB_CONFIG.REWARDED_AD_UNIT_ID,
           isTesting: ADMOB_CONFIG.SETTINGS.isTesting,
         });
-        console.log('📺 Anuncio recompensado preparado', info);
+        console.log('✅ Anuncio recompensado preparado exitosamente', info);
         markRewardReady(true);
-        // Pequeño cooldown para evitar prepares consecutivos
-        runtimeState.cooldownUntil = Date.now() + 1500;
+        // Cooldown de 2s para evitar prepares consecutivos
+        runtimeState.cooldownUntil = Date.now() + 2000;
         return true;
       } catch (error) {
+        // Manejo detallado de errores de Capacitor
         console.error('❌ Error preparando anuncio recompensado:', error);
+        
+        // Extraer información útil del CapacitorException
+        if (error && typeof error === 'object') {
+          const code = error.code;
+          const message = error.message;
+          const data = error.data;
+          
+          console.error('📋 Detalles del error:', {
+            code: code ?? 'undefined',
+            message: message ?? 'No message',
+            data: data ?? 'undefined',
+            errorType: error.constructor?.name ?? 'Unknown'
+          });
+          
+          // Errores comunes de AdMob
+          if (message && typeof message === 'string') {
+            if (message.includes('No fill')) {
+              console.warn('⚠️ No hay anuncios disponibles en este momento (No fill)');
+            } else if (message.includes('Network')) {
+              console.warn('⚠️ Error de red al cargar anuncio');
+            } else if (message.includes('not initialized')) {
+              console.error('❌ AdMob no está inicializado correctamente');
+            }
+          }
+        }
+        
         markRewardReady(false);
+        // Cooldown más largo en caso de error para no saturar
+        runtimeState.cooldownUntil = Date.now() + 5000;
         return false;
       } finally {
         runtimeState.preparing = false;

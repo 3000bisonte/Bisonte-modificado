@@ -165,16 +165,48 @@ export async function POST(request) {
 
     return NextResponse.json(newOrder, { status: 201 });
   } catch (error) {
-    console.error('Error creating order:', error);
+    console.error('❌ Error creating order:', error);
+    
+    // 🔍 Logging detallado del error
+    console.error('📋 Detalles completos del error:', {
+      name: error?.name || 'Sin nombre',
+      message: error?.message || 'Sin mensaje',
+      code: error?.code || 'Sin código',
+      meta: error?.meta || 'Sin meta',
+      stack: error?.stack || 'Sin stack',
+    });
+    
+    // Manejar errores específicos de Prisma
     if (error?.code === 'P2002' && Array.isArray(error?.meta?.target) && error.meta.target.includes('NumeroGuia')) {
       return NextResponse.json({
         message: 'El número de guía ya existe',
         code: 'ORDER_DUPLICATE_TRACKING',
+        details: `El número de guía ${body.NumeroGuia || 'proporcionado'} ya está registrado en el sistema.`,
       }, { status: 409 });
     }
+    
+    if (error?.code === 'P2003') {
+      return NextResponse.json({
+        message: 'Error de relación en la base de datos',
+        code: 'ORDER_FOREIGN_KEY_CONSTRAINT',
+        details: 'El usuario asociado no existe o hay un problema con las relaciones.',
+      }, { status: 400 });
+    }
+    
+    if (error?.code === 'P2025') {
+      return NextResponse.json({
+        message: 'Registro no encontrado',
+        code: 'ORDER_NOT_FOUND',
+        details: 'No se pudo encontrar el registro especificado.',
+      }, { status: 404 });
+    }
+    
+    // Error genérico
     return NextResponse.json({ 
-      message: 'Error creating order',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Error al crear el envío',
+      code: 'ORDER_CREATE_ERROR',
+      details: error instanceof Error ? error.message : 'Error desconocido',
+      errorCode: error?.code || 'UNKNOWN',
     }, { status: 500 });
   }
 }

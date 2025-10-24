@@ -21,7 +21,7 @@ const Screen = ({ onClick: _onClick }) => {
   useEffect(() => {
     if (resolvedPaymentId) {setIsVisible(true);}
   }, [resolvedPaymentId]);
-  const baseReturnUrl = urlStatusScreen || (typeof window !== 'undefined' ? window.location.origin : '');
+  const baseReturnUrl = typeof window !== 'undefined' ? window.location.origin : (urlStatusScreen || '');
   const customization = {
     visual: {
       texts: {
@@ -36,6 +36,7 @@ const Screen = ({ onClick: _onClick }) => {
       //error: "<http://<your_domain>/error>",
       //return: "https://mercaenvios.com/dashboard/mis-envios",
       //return: "http://localhost:3000/misenvios",
+      // ✅ CRÍTICO: Usar mismo dominio que la página actual para evitar error de Brick
       return: `${baseReturnUrl}/misenvios`,
     },
   };

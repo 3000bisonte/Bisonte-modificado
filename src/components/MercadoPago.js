@@ -627,7 +627,24 @@ const MercadoPagoComponent = () => {
         showError('Error al Registrar', errorMessage);
       }
     } catch (error) {
-      console.error("Error al registrar el envío:", error);
+      console.error("❌ Error al registrar el envío:", error);
+      
+      // 🔍 Logging detallado del error
+      console.error("📋 Detalles completos del error:", {
+        message: error?.message || 'Sin mensaje',
+        name: error?.name || 'Sin nombre',
+        stack: error?.stack || 'Sin stack',
+        errorObject: error,
+      });
+      
+      // Intentar extraer más información si es un error de fetch
+      if (error?.response) {
+        console.error("📡 Respuesta HTTP del error:", {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+        });
+      }
       
       // 🚀 MEJORA: Detectar flujos que NO requieren mostrar error
       const currentUrl = window.location.href;
@@ -648,7 +665,12 @@ const MercadoPagoComponent = () => {
       const shouldSuppressError = isPSEFlow || isCashPaymentFlow;
       
       if (!shouldSuppressError) {
-        showError('Error de Conexión', 'Error de conexión al registrar el envío. Inténtalo nuevamente.');
+        // Construir mensaje de error más descriptivo
+        let errorMsg = 'Error de conexión al registrar el envío.';
+        if (error?.message) {
+          errorMsg += `\n\nDetalle: ${error.message}`;
+        }
+        showError('Error al Registrar Envío', errorMsg + '\n\nPor favor, verifica tu conexión e inténtalo nuevamente.');
       } else {
         console.log("🏦 Flujo PSE/Efectivo - Reintentando automáticamente sin mostrar error...");
         // Reintentar automáticamente sin mostrar error al usuario

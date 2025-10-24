@@ -180,7 +180,7 @@ export const POST = compose(
     request.headers.get("origin") ??
     process.env.NEXT_PUBLIC_SITE_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
-    "https://bisonte-logistica.vercel.app";
+    "https://www.bisonteapp.com";
 
   const preferencePayload = createPreferencePayload(body, origin);
 
