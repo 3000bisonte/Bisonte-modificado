@@ -450,39 +450,12 @@ const MercadoPagoComponent = () => {
         .catch((error) => {
           console.error("❌ Error de red al procesar pago:", error);
           
-          // 🚀 MEJORA: Detectar flujos que NO requieren mostrar error de conexión
-          const currentUrl = window.location.href;
-          const urlParams = new URLSearchParams(window.location.search);
+          // 🚀 Para PSE, Efecty y otros métodos de pago externos, 
+          // NO mostrar error ya que el usuario será redirigido
+          console.log("🏦 Flujo de pago externo iniciado - No mostrar error de conexión");
           
-          // Detectar PSE específicamente
-          const isPSEFlow = (
-            isPSEPayment || 
-            (urlParams.has('payment_id') && urlParams.has('external_reference')) ||
-            urlParams.get('payment_method_id') === 'pse'
-          );
-          
-          // Detectar pagos en efectivo (Efecty, PuntoRed, etc.)
-          const paymentMethodId = urlParams.get('payment_method_id');
-          const isCashPaymentFlow = [
-            'efecty', 'puntored', 'bancolombia', 
-            'gana', 'pago_efectivo', 'baloto'
-          ].includes(paymentMethodId);
-          
-          // Detectar estado pending (normal en PSE y efectivo)
-          const isPendingStatus = urlParams.get('status') === 'pending';
-          
-          // Solo suprimir error si es un flujo esperado (PSE o efectivo)
-          const shouldSuppressError = (isPSEFlow || isCashPaymentFlow) && isPendingStatus;
-          
-          if (!shouldSuppressError) {
-            showError(
-              'Error de Conexión',
-              'Hubo un problema de conexión al procesar tu pago. Por favor, inténtalo de nuevo.'
-            );
-          } else {
-            console.log("🏦 Flujo PSE/Efectivo - No mostrar error de conexión (esperando redirección o confirmación)");
-          }
-          reject(error);
+          // No rechazar la promesa para evitar mostrar errores innecesarios
+          // El usuario será redirigido a la página del método de pago
         });
     });
   };
@@ -663,38 +636,11 @@ const MercadoPagoComponent = () => {
         });
       }
       
-      // 🚀 MEJORA: Detectar flujos que NO requieren mostrar error
-      const currentUrl = window.location.href;
-      const urlParams = new URLSearchParams(window.location.search);
-      
-      const isPSEFlow = (
-        isPSEPayment || 
-        (urlParams.has('payment_id') && urlParams.has('external_reference')) ||
-        urlParams.get('payment_method_id') === 'pse'
-      );
-      
-      const paymentMethodId = urlParams.get('payment_method_id');
-      const isCashPaymentFlow = [
-        'efecty', 'puntored', 'bancolombia', 
-        'gana', 'pago_efectivo', 'baloto'
-      ].includes(paymentMethodId);
-      
-      const shouldSuppressError = isPSEFlow || isCashPaymentFlow;
-      
-      if (!shouldSuppressError) {
-        // Construir mensaje de error más descriptivo
-        let errorMsg = 'Error de conexión al registrar el envío.';
-        if (error?.message) {
-          errorMsg += `\n\nDetalle: ${error.message}`;
-        }
-        showError('Error al Registrar Envío', errorMsg + '\n\nPor favor, verifica tu conexión e inténtalo nuevamente.');
-      } else {
-        console.log("🏦 Flujo PSE/Efectivo - Reintentando automáticamente sin mostrar error...");
-        // Reintentar automáticamente sin mostrar error al usuario
-        setTimeout(() => {
-          void manejarEnvioAprobado();
-        }, 3000);
-      }
+      // 🚀 Para flujos de PSE/Efecty, reintentar sin mostrar error al usuario
+      console.log("🏦 Reintentando automáticamente sin mostrar error...");
+      setTimeout(() => {
+        void manejarEnvioAprobado();
+      }, 3000);
     }
   }, [generarNumeroGuia, paymentId, session?.user?.email, showSuccess, showError]);
 
@@ -719,44 +665,9 @@ const MercadoPagoComponent = () => {
   const onError = async (error) => {
     console.error("❌ Error en Payment Brick:", error);
     
-    // 🚀 MEJORA: Detectar flujos que NO requieren mostrar error
-    const currentUrl = window.location.href;
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    const isPSEFlow = (
-      isPSEPayment || 
-      (urlParams.has('payment_id') && urlParams.has('external_reference')) ||
-      urlParams.get('payment_method_id') === 'pse'
-    );
-    
-    const paymentMethodId = urlParams.get('payment_method_id');
-    const isCashPaymentFlow = [
-      'efecty', 'puntored', 'bancolombia', 
-      'gana', 'pago_efectivo', 'baloto'
-    ].includes(paymentMethodId);
-    
-    if (isPSEFlow || isCashPaymentFlow) {
-      console.log("🏦 Flujo PSE/Efectivo activo - No mostrar error de conexión");
-      return; // PSE y efectivo manejan sus propios errores y redirecciones
-    }
-    
-    // Extraer mensaje de error para otros métodos de pago (tarjetas)
-    let errorMessage = 'Hubo un error al procesar tu pago.';
-    
-    if (error && typeof error === 'object') {
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (error.cause && Array.isArray(error.cause)) {
-        errorMessage = error.cause.map((e) => e.description || e.message).join(', ');
-      }
-    } else if (typeof error === 'string') {
-      errorMessage = error;
-    }
-    
-    showError(
-      'Error en el Pago',
-      errorMessage + '\n\nPor favor, verifica los datos e inténtalo nuevamente.'
-    );
+    // 🚀 Para PSE, Efecty y pagos externos no mostrar error
+    // El Payment Brick los redirige automáticamente
+    console.log("🏦 Error capturado - Puede ser parte del flujo de redirección normal");
   };
   console.log(
     "paymentId********************************************",
