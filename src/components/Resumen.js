@@ -764,7 +764,7 @@ export default function Resumen() {
       switch (data.status) {
         case "ready":
           clearAdErrorState();
-          setAdState("ready");
+          setAdState((prev) => (prev === "ready" ? prev : "ready"));
           setRetryCount(0);
           break;
         case "opened":
@@ -844,7 +844,7 @@ export default function Resumen() {
       // Verificar si el anuncio ya está precargado desde Home
       if (AdMobService.wasRewardReady()) {
         console.log("✅ Anuncio precargado desde Home - No recargar");
-        setAdState("ready");
+        setAdState((prev) => (prev === "ready" ? prev : "ready"));
         return;
       }
       
@@ -1048,12 +1048,12 @@ export default function Resumen() {
     } finally {
       setIsCreatingShipment(false);
     }
-  }, [router, costoTotal, session, remitente, destinatario, cotizador, showSuccess, showError]);
+  }, [router, costoTotal, session, remitente, destinatario, cotizador, showSuccess, showError, showWarning]);
 
-  const handleWatchAdFromModal = () => {
+  const handleWatchAdFromModal = useCallback(() => {
     setShowMegaSale(false);
     setTimeout(showAd, 300);
-  };
+  }, [showAd]);
 
   useEffect(() => {
     if (!rewardBanner) {
