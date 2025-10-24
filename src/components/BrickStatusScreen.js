@@ -21,6 +21,7 @@ const Screen = ({ onClick: _onClick }) => {
   useEffect(() => {
     if (resolvedPaymentId) {setIsVisible(true);}
   }, [resolvedPaymentId]);
+  const baseReturnUrl = urlStatusScreen || (typeof window !== 'undefined' ? window.location.origin : '');
   const customization = {
     visual: {
       texts: {
@@ -31,11 +32,11 @@ const Screen = ({ onClick: _onClick }) => {
       },
       showExternalReference: true,
     },
-    backUrls: {
+  backUrls: {
       //error: "<http://<your_domain>/error>",
       //return: "https://mercaenvios.com/dashboard/mis-envios",
       //return: "http://localhost:3000/misenvios",
-      return: `${urlStatusScreen}/misenvios`,
+      return: `${baseReturnUrl}/misenvios`,
     },
   };
   // No montar el Brick si no hay paymentId para evitar llamadas a /bricks/payments/null
