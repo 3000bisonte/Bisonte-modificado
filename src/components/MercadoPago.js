@@ -324,18 +324,37 @@ const MercadoPagoComponent = () => {
         .catch((error) => {
           console.error("❌ Error de red al procesar pago:", error);
           
-          // 🚀 MEJORA PSE: Solo suprimir errores para flujos PSE específicos
+          // 🚀 MEJORA: Detectar flujos que NO requieren mostrar error de conexión
           const currentUrl = window.location.href;
-          const isPSEFlowActive = (
-            isPSEPayment || // Usuario seleccionó PSE
-            (currentUrl.includes('payment_id') && currentUrl.includes('external_reference')) // Retorno específico de PSE
+          const urlParams = new URLSearchParams(window.location.search);
+          
+          // Detectar PSE específicamente
+          const isPSEFlow = (
+            isPSEPayment || 
+            (urlParams.has('payment_id') && urlParams.has('external_reference')) ||
+            urlParams.get('payment_method_id') === 'pse'
           );
           
-          if (!isPSEFlowActive) {
+          // Detectar pagos en efectivo (Efecty, PuntoRed, etc.)
+          const paymentMethodId = urlParams.get('payment_method_id');
+          const isCashPaymentFlow = [
+            'efecty', 'puntored', 'bancolombia', 
+            'gana', 'pago_efectivo', 'baloto'
+          ].includes(paymentMethodId);
+          
+          // Detectar estado pending (normal en PSE y efectivo)
+          const isPendingStatus = urlParams.get('status') === 'pending';
+          
+          // Solo suprimir error si es un flujo esperado (PSE o efectivo)
+          const shouldSuppressError = (isPSEFlow || isCashPaymentFlow) && isPendingStatus;
+          
+          if (!shouldSuppressError) {
             showError(
               'Error de Conexión',
               'Hubo un problema de conexión al procesar tu pago. Por favor, inténtalo de nuevo.'
             );
+          } else {
+            console.log("🏦 Flujo PSE/Efectivo - No mostrar error de conexión (esperando redirección o confirmación)");
           }
           reject(error);
         });
@@ -489,21 +508,32 @@ const MercadoPagoComponent = () => {
     } catch (error) {
       console.error("Error al registrar el envío:", error);
       
-      // 🚀 MEJORA PSE: Solo suprimir errores para flujos PSE específicos
+      // 🚀 MEJORA: Detectar flujos que NO requieren mostrar error
       const currentUrl = window.location.href;
-      const isPSEFlowActive = (
-        isPSEPayment || // Usuario seleccionó PSE
-        (currentUrl.includes('payment_id') && currentUrl.includes('external_reference')) // Retorno específico de PSE
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      const isPSEFlow = (
+        isPSEPayment || 
+        (urlParams.has('payment_id') && urlParams.has('external_reference')) ||
+        urlParams.get('payment_method_id') === 'pse'
       );
       
-      if (!isPSEFlowActive) {
+      const paymentMethodId = urlParams.get('payment_method_id');
+      const isCashPaymentFlow = [
+        'efecty', 'puntored', 'bancolombia', 
+        'gana', 'pago_efectivo', 'baloto'
+      ].includes(paymentMethodId);
+      
+      const shouldSuppressError = isPSEFlow || isCashPaymentFlow;
+      
+      if (!shouldSuppressError) {
         showError('Error de Conexión', 'Error de conexión al registrar el envío. Inténtalo nuevamente.');
       } else {
-        console.log("🏦 Error de conexión durante flujo PSE - Reintentando automáticamente...");
-        // Para PSE, reintenta automáticamente sin mostrar error al usuario
+        console.log("🏦 Flujo PSE/Efectivo - Reintentando automáticamente sin mostrar error...");
+        // Reintentar automáticamente sin mostrar error al usuario
         setTimeout(() => {
           void manejarEnvioAprobado();
-        }, 3000); // Un poco más de tiempo para PSE
+        }, 3000);
       }
     }
   }, [generarNumeroGuia, paymentId, session?.user?.email, showSuccess, showError]);
@@ -526,19 +556,28 @@ const MercadoPagoComponent = () => {
   const onError = async (error) => {
     console.error("❌ Error en Payment Brick:", error);
     
-    // 🚀 MEJORA PSE: Solo suprimir errores para flujos PSE específicos
+    // 🚀 MEJORA: Detectar flujos que NO requieren mostrar error
     const currentUrl = window.location.href;
-    const isPSEFlowActive = (
-      isPSEPayment || // Usuario seleccionó PSE
-      (currentUrl.includes('payment_id') && currentUrl.includes('external_reference')) // Retorno específico de PSE
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    const isPSEFlow = (
+      isPSEPayment || 
+      (urlParams.has('payment_id') && urlParams.has('external_reference')) ||
+      urlParams.get('payment_method_id') === 'pse'
     );
     
-    if (isPSEFlowActive) {
-      console.log("🏦 Flujo PSE activo - No mostrar error de conexión");
-      return; // PSE maneja sus propios errores y redirecciones
+    const paymentMethodId = urlParams.get('payment_method_id');
+    const isCashPaymentFlow = [
+      'efecty', 'puntored', 'bancolombia', 
+      'gana', 'pago_efectivo', 'baloto'
+    ].includes(paymentMethodId);
+    
+    if (isPSEFlow || isCashPaymentFlow) {
+      console.log("🏦 Flujo PSE/Efectivo activo - No mostrar error de conexión");
+      return; // PSE y efectivo manejan sus propios errores y redirecciones
     }
     
-    // Extraer mensaje de error para otros métodos de pago
+    // Extraer mensaje de error para otros métodos de pago (tarjetas)
     let errorMessage = 'Hubo un error al procesar tu pago.';
     
     if (error && typeof error === 'object') {
@@ -562,11 +601,10 @@ const MercadoPagoComponent = () => {
   );
   const customization = {
     paymentMethods: {
-      ticket: "all",
-      bankTransfer: "all",
-      creditCard: "all",
-      debitCard: "all",
-      mercadoPago: "all",
+      // ✅ Configuración específica para Colombia
+      // No restringir tipos de pago, dejar que MercadoPago maneje las opciones disponibles
+      minInstallments: 1,
+      maxInstallments: 12,
     },
     visual: {
       style: {
