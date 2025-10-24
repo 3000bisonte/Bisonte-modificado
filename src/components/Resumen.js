@@ -1470,12 +1470,7 @@ export default function Resumen() {
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         <span>Viendo anuncio...</span>
                       </>
-                    ) : (adState === "done") ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Preparando siguiente anuncio...</span>
-                      </>
-                    ) : (adMobLoading || adState === "loading" || adState === "preloading") ? (
+                    ) : (adMobLoading || adState === "loading" || adState === "preloading" || adState === "done") ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         <span>Cargando anuncio...</span>
