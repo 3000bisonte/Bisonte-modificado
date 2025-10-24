@@ -21,6 +21,9 @@ const runtimeState = {
   initialized: false,
   rewardReady: false,
   lastPrepareAt: null,
+  preparing: false,
+  preparePromise: null,
+  cooldownUntil: 0,
 };
 
 const markInitialized = (value) => {
@@ -120,6 +123,10 @@ export const AdMobService = {
     }
 
     try {
+      // Evitar inicializaciones múltiples
+      if (runtimeState.initialized) {
+        return true;
+      }
       const isTesting = ADMOB_CONFIG.SETTINGS.isTesting;
       const initializeOptions = {
         requestTrackingAuthorization: true,
@@ -153,18 +160,48 @@ export const AdMobService = {
       return false;
     }
 
+    // Enfriamiento para evitar spam de prepares
+    const now = Date.now();
+    if (runtimeState.cooldownUntil && now < runtimeState.cooldownUntil) {
+      return runtimeState.rewardReady;
+    }
+
+    // Single-flight: si ya hay un prepare en curso, esperar ese resultado
+    if (runtimeState.preparing && runtimeState.preparePromise) {
+      try {
+        const ok = await runtimeState.preparePromise;
+        return ok;
+      } catch {
+        return false;
+      }
+    }
+
+    runtimeState.preparing = true;
+    runtimeState.preparePromise = (async () => {
+      try {
+        const info = await AdMob.prepareRewardVideoAd({
+          adId: ADMOB_CONFIG.REWARDED_AD_UNIT_ID,
+          isTesting: ADMOB_CONFIG.SETTINGS.isTesting,
+        });
+        console.log('📺 Anuncio recompensado preparado', info);
+        markRewardReady(true);
+        // Pequeño cooldown para evitar prepares consecutivos
+        runtimeState.cooldownUntil = Date.now() + 1500;
+        return true;
+      } catch (error) {
+        console.error('❌ Error preparando anuncio recompensado:', error);
+        markRewardReady(false);
+        return false;
+      } finally {
+        runtimeState.preparing = false;
+        runtimeState.preparePromise = null;
+      }
+    })();
+
     try {
-      const info = await AdMob.prepareRewardVideoAd({
-        adId: ADMOB_CONFIG.REWARDED_AD_UNIT_ID,
-        isTesting: ADMOB_CONFIG.SETTINGS.isTesting,
-      });
-      
-      console.log('📺 Anuncio recompensado preparado', info);
-      markRewardReady(true);
-      return true;
-    } catch (error) {
-      console.error('❌ Error preparando anuncio recompensado:', error);
-      markRewardReady(false);
+      const ok = await runtimeState.preparePromise;
+      return ok;
+    } catch {
       return false;
     }
   },

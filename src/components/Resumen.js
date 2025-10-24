@@ -128,7 +128,7 @@ export default function Resumen() {
   const adTimeoutRef = useRef(null);
   const adErrorModalTimerRef = useRef(null);
   const messagePortRef = useRef(null);
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 1; // reducir reintentos para evitar loops largos
   
   // 🕐 Estado para timeout de carga de anuncios
   const [adLoadTimeout, setAdLoadTimeout] = useState(false);
@@ -459,7 +459,11 @@ export default function Resumen() {
       void prepareRewardedAd()
         .then((ready) => {
           const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
-          console.log(`✅ Anuncio cargado en ${loadTime}s`);
+          if (ready) {
+            console.log(`✅ Anuncio cargado en ${loadTime}s`);
+          } else {
+            console.warn(`⛔ Precarga de anuncio falló en ${loadTime}s`);
+          }
           clearAdLoadTimeout(); // 🕐 Limpiar timeout si carga exitosamente
           setAdState(ready ? "ready" : "idle");
           if (!ready) {
