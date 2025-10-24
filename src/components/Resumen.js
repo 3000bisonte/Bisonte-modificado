@@ -124,7 +124,7 @@ export default function Resumen() {
   const [adState, setAdState] = useState("idle");
   const [retryCount, setRetryCount] = useState(0);
   const [hideAdErrorModal, setHideAdErrorModal] = useState(false);
-  const userClosedAdModalRef = useRef(false); // 🚫 Usar REF para cambio instantáneo
+  const [userClosedAdModal, setUserClosedAdModal] = useState(false); // ✅ Cambiar a STATE para forzar re-render
   const adTimeoutRef = useRef(null);
   const adErrorModalTimerRef = useRef(null);
   const messagePortRef = useRef(null);
@@ -376,6 +376,7 @@ export default function Resumen() {
     setRewardBanner(null);
     setRewardChainProgress(null);
     setRetryCount(0);
+    setUserClosedAdModal(false); // ✅ Resetear estado
     
     console.log("✅ Estado de anuncios reseteado completamente");
   }, [clearAdLoadTimeout]);
@@ -402,7 +403,7 @@ export default function Resumen() {
       adProgressIntervalRef.current = null;
       
       // Cerrar el modal visualmente
-      userClosedAdModalRef.current = true;
+      setUserClosedAdModal(true); // ✅ Usar estado
       setAdLoadProgress(0);
     }, 3000); // 3 segundos para el modal
 
@@ -951,7 +952,7 @@ export default function Resumen() {
         console.log(`   → wasRewardReady: ${AdMobService.wasRewardReady()}`);
         setShowMegaSale(true);
         // Resetear el flag de cierre de modal
-        userClosedAdModalRef.current = false;
+        setUserClosedAdModal(false); // ✅ Usar estado
       }, 500);
       return () => clearTimeout(timer);
     }
@@ -1664,16 +1665,14 @@ export default function Resumen() {
 
         {/* Indicador de carga de anuncios con timeout */}
         <AdLoadingIndicator
-          isLoading={!userClosedAdModalRef.current && costoTotal > 0 && (adState === "loading" || adState === "preloading" || (adState === "error" && !showAdErrorModal && !hideAdErrorModal))}
+          isLoading={!userClosedAdModal && costoTotal > 0 && (adState === "loading" || adState === "preloading" || (adState === "error" && !showAdErrorModal && !hideAdErrorModal))}
           hasTimeout={adLoadTimeout}
           progress={adLoadProgress}
           currentAttempt={adLoadAttempts}
           maxAttempts={MAX_AD_LOAD_ATTEMPTS}
           onContinueWithoutAd={() => {
-            console.log("🚫 Usuario cerró modal de anuncio - marcando ref como cerrado");
-            userClosedAdModalRef.current = true; // 🚫 Marcar ref como cerrado (instantáneo)
-            // Forzar re-render para actualizar el modal
-            setAdLoadProgress(prev => prev);
+            console.log("🚫 Usuario cerró modal de anuncio - marcando estado como cerrado");
+            setUserClosedAdModal(true); // ✅ Usar setState para forzar re-render
           }}
           onRetry={() => {
             console.log("🔄 Usuario solicitó reintentar anuncio");

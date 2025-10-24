@@ -72,7 +72,7 @@ async function preloadAds() {
       console.log('📺 [AdPreloader] Precargando anuncio recompensado...');
       const adStartTime = performance.now();
       
-      await AdMobService.prepareRewardAd();
+      await AdMobService.prepareRewardedAd();
       
       const adLoadTime = ((performance.now() - adStartTime) / 1000).toFixed(2);
       console.log(`✅ [AdPreloader] Anuncio precargado en ${adLoadTime}s`);
@@ -110,7 +110,7 @@ export async function reloadAd() {
   try {
     console.log('🔄 Recargando anuncio...');
     const { default: AdMobService } = await import('./AdMobService');
-    await AdMobService.prepareRewardAd();
+    await AdMobService.prepareRewardedAd();
     console.log('✅ Anuncio recargado');
   } catch (error) {
     console.warn('⚠️ Error recargando anuncio:', error);
