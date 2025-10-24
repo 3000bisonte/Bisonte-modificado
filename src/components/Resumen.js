@@ -1531,9 +1531,9 @@ export default function Resumen() {
                 {costoTotal > 0 && (
                   <button
                     onClick={showAd}
-                    disabled={adMobLoading || adState === "loading" || adState === "watching" || adState === "done" || (!adMobInitialized && !isRewardedReady)}
+                    disabled={adState !== "ready"}
                     className={`w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-2xl shadow transition-all duration-300 flex items-center justify-center gap-2 ${
-                      (adMobLoading || adState === "loading" || adState === "watching" || adState === "done" || (!adMobInitialized && !isRewardedReady)) ? "opacity-50 cursor-not-allowed" : ""
+                      adState !== "ready" ? "opacity-50 cursor-not-allowed" : "hover:scale-105 hover:shadow-xl"
                     }`}
                   >
                     {(adState === "watching") ? (
@@ -1541,17 +1541,10 @@ export default function Resumen() {
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         <span>Viendo anuncio...</span>
                       </>
-                    ) : (adMobLoading || adState === "loading" || adState === "preloading" || adState === "done") ? (
+                    ) : (adState === "loading" || adState === "preloading" || adState === "done" || adState === "idle" || adState === "error") ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         <span>Cargando anuncio...</span>
-                      </>
-                    ) : !adMobInitialized ? (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                          <path d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                        </svg>
-                        <span>Anuncios no disponibles</span>
                       </>
                     ) : (
                       <>
