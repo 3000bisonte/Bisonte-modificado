@@ -507,21 +507,36 @@ export default function Resumen() {
       const delay = async (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
       for (let index = 0; index < totalAds; index += 1) {
-        let prepared = index === 0 ? Boolean(isRewardedReady) : false;
+        // ✅ CRÍTICO: Verificar MÚLTIPLES fuentes para confirmar que el anuncio está listo
+        // 1. isRewardedReady (del hook useAdMob)
+        // 2. adState === "ready" (del state local)
+        // 3. AdMobService.wasRewardReady() (verificación directa del servicio)
+        let prepared = Boolean(isRewardedReady) || adState === "ready" || AdMobService.wasRewardReady();
+        
+        console.log(`📺 [showAd] Anuncio ${index + 1}/${totalAds}`);
+        console.log(`   - isRewardedReady: ${isRewardedReady}`);
+        console.log(`   - adState: ${adState}`);
+        console.log(`   - wasRewardReady: ${AdMobService.wasRewardReady()}`);
+        console.log(`   → prepared: ${prepared}`);
 
         if (!prepared) {
+          console.log(`⏳ [showAd] Anuncio NO está listo, preparando desde cero...`);
           setAdState((prev) => (prev === "loading" ? prev : "preloading"));
           try {
             prepared = await prepareRewardedAd();
+            console.log(`   → Resultado de prepareRewardedAd: ${prepared}`);
           } catch (error) {
             console.error("❌ Error preparando anuncio recompensado:", error);
             handleAdError("prepare_exception");
             chainAborted = true;
             break;
           }
+        } else {
+          console.log(`✅ [showAd] Anuncio YA ESTÁ LISTO - Mostrando inmediatamente`);
         }
 
         if (!prepared) {
+          console.error("❌ [showAd] No se pudo preparar el anuncio");
           handleAdError("prepare_failed");
           chainAborted = true;
           break;
@@ -539,7 +554,7 @@ export default function Resumen() {
           clearAdErrorState();
           setAdState("done");
           
-          // 🔄 Recargar anuncio para la próxima vez (REACTIVADO)
+          // 🔄 Recargar anuncio para la próxima vez
           console.log("🔄 Iniciando recarga del siguiente anuncio...");
           reloadAd().catch(err => console.warn("⚠️ Error en recarga automática:", err));
         } catch (error) {
