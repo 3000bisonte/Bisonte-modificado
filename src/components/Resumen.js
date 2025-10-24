@@ -887,32 +887,20 @@ export default function Resumen() {
   }, [adState, retryCount, preloadAd]);
 
   useEffect(() => {
-    // Mostrar Mega Sale cuando el anuncio esté listo O después de que pase el timeout
-    if (costoTotal > 0) {
-      if (adState === "ready") {
-        const timer = setTimeout(() => {
-          console.log("✅ Anuncio listo - Mostrando Mega Sale");
-          setShowMegaSale(true);
-          // Resetear el flag de cierre de modal
-          userClosedAdModalRef.current = false;
-        }, 500);
-        return () => clearTimeout(timer);
-      }
-      
-      // 🚀 Si el modal se cerró por timeout pero el anuncio aún no está listo
-      if (userClosedAdModalRef.current && adState !== "ready" && !showMegaSale) {
-        const fallbackTimer = setTimeout(() => {
-          console.log("🎯 Modal cerrado - Esperando anuncio o mostrando Mega Sale");
-          // Solo mostrar Mega Sale si el anuncio está listo O si pasó mucho tiempo
-          if (adState === "ready" || adState === "idle" || adState === "error") {
-            console.log("📱 Mostrando Mega Sale como fallback");
-            setShowMegaSale(true);
-          }
-        }, 2000); // Esperar 2s adicionales por si el anuncio termina de cargar
-        return () => clearTimeout(fallbackTimer);
-      }
+    // ✅ SOLO mostrar Mega Sale cuando el anuncio esté REALMENTE listo
+    if (costoTotal > 0 && adState === "ready") {
+      const timer = setTimeout(() => {
+        console.log("✅ Anuncio 100% listo - Mostrando Mega Sale");
+        console.log(`   → adState: "${adState}"`);
+        console.log(`   → isRewardedReady: ${isRewardedReady}`);
+        console.log(`   → wasRewardReady: ${AdMobService.wasRewardReady()}`);
+        setShowMegaSale(true);
+        // Resetear el flag de cierre de modal
+        userClosedAdModalRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [adState, costoTotal, showMegaSale]);
+  }, [adState, costoTotal, isRewardedReady]);
 
   // Limpieza de timeouts al desmontar
   useEffect(() => {
@@ -1064,6 +1052,19 @@ export default function Resumen() {
     console.log(`   - isRewardedReady: ${isRewardedReady}`);
     console.log(`   - wasRewardReady: ${AdMobService.wasRewardReady()}`);
     
+    // ✅ Verificación: Solo proceder si el anuncio está realmente listo
+    const anuncioListo = adState === "ready" || isRewardedReady || AdMobService.wasRewardReady();
+    
+    if (!anuncioListo) {
+      console.error("❌ [handleWatchAdFromModal] ANUNCIO NO ESTÁ LISTO - Abortando");
+      console.log("   → Forzando precarga...");
+      setShowMegaSale(false);
+      preloadAd();
+      showWarning('Anuncio no disponible', 'El anuncio aún no está listo. Por favor, espera un momento e intenta nuevamente.');
+      return;
+    }
+    
+    console.log("✅ [handleWatchAdFromModal] Anuncio verificado como listo - Procediendo");
     setShowMegaSale(false);
     
     // Pequeño delay para que el modal se cierre suavemente antes de mostrar el anuncio
@@ -1071,7 +1072,7 @@ export default function Resumen() {
       console.log("🚀 [handleWatchAdFromModal] Llamando a showAd()...");
       showAd();
     }, 300);
-  }, [showAd, adState, isRewardedReady]);
+  }, [showAd, adState, isRewardedReady, preloadAd, showWarning]);
 
   useEffect(() => {
     if (!rewardBanner) {
