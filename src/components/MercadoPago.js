@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import Screen from "@/components/BrickStatusScreen";
-import NoConnectionLayout from "@/components/NoConnectionLayout";
 
 import InternalProvider from "../app/ContextProvider";
 import { useNotification } from "../hooks/useNotification";
@@ -44,50 +43,6 @@ const MercadoPagoComponent = () => {
   const perfilLoaded = useRef(false);
 
   const userEmail = session?.user?.email; // Extrae el email al inicio del componente
-
-  // 🌐 Estado de conexión a internet
-  const [isOnline, setIsOnline] = useState(true);
-  const [showOfflineWarning, setShowOfflineWarning] = useState(false);
-
-  // 🔍 Detector de conexión a internet
-  useEffect(() => {
-    // Verificar conexión inicial
-    const checkConnection = () => {
-      const online = navigator.onLine;
-      setIsOnline(online);
-      
-      if (!online) {
-        console.log("🔴 Sin conexión a internet detectada");
-        setShowOfflineWarning(true);
-      } else {
-        console.log("🟢 Conexión a internet disponible");
-        setShowOfflineWarning(false);
-      }
-    };
-
-    checkConnection();
-
-    // Listeners para cambios de conexión
-    const handleOnline = () => {
-      console.log("✅ Conexión restaurada");
-      setIsOnline(true);
-      setShowOfflineWarning(false);
-    };
-
-    const handleOffline = () => {
-      console.log("❌ Conexión perdida");
-      setIsOnline(false);
-      setShowOfflineWarning(true);
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   // 🔍 Log de diagnóstico al montar el componente
   useEffect(() => {
@@ -790,16 +745,6 @@ const MercadoPagoComponent = () => {
   }, [initializationConfig]);
   return (
     <InternalProvider context={{ paymentId }}>
-      {/* 🌐 Mostrar Layout de Sin Conexión si no hay internet */}
-      {!isOnline ? (
-        <NoConnectionLayout 
-          onRetry={() => {
-            if (navigator.onLine) {
-              window.location.reload();
-            }
-          }} 
-        />
-      ) : (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
         <div className="max-w-4xl mx-auto">
           {/* Back Button */}
@@ -975,7 +920,6 @@ const MercadoPagoComponent = () => {
           </div>
         </div>
       </div>
-      )}
 
       <Screen />
 
