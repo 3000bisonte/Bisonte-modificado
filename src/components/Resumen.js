@@ -93,7 +93,7 @@ export default function Resumen() {
   const adLoadTimeoutRef = useRef(null);
   const adProgressIntervalRef = useRef(null);
   const MAX_AD_LOAD_ATTEMPTS = 1; // 🚀 Solo 1 intento para cargar rápido
-  const AD_LOAD_TIMEOUT = 3000; // 🚀 3 segundos MÁXIMO - cierre automático más rápido
+  const AD_LOAD_TIMEOUT = 8000; // ⚡ 8 segundos - tiempo real de carga de AdMob
 
   // 🎯 Monitorear múltiples estados de loading
   useMultipleLoadingMonitor({
@@ -343,7 +343,7 @@ export default function Resumen() {
     setAdLoadTimeout(false);
 
     // Barra de progreso visual
-    const progressIncrement = 100 / (AD_LOAD_TIMEOUT / 500); // Actualizar cada 500ms
+    const progressIncrement = 100 / (3000 / 500); // 🚀 Progreso basado en 3s visuales
     adProgressIntervalRef.current = setInterval(() => {
       setAdLoadProgress((prev) => {
         const next = prev + progressIncrement;
@@ -351,25 +351,35 @@ export default function Resumen() {
       });
     }, 500);
 
-    // Timeout principal
-    adLoadTimeoutRef.current = setTimeout(() => {
-      console.warn("⏰ Timeout de 5s alcanzado - Cerrando modal automáticamente");
+    // 🎯 TIMEOUT VISUAL: 3 segundos - cierra el modal pero continúa cargando
+    const visualTimeoutRef = setTimeout(() => {
+      console.log("⏰ 3 segundos - Cerrando modal de carga (anuncio sigue cargando en background)");
       clearInterval(adProgressIntervalRef.current);
       adProgressIntervalRef.current = null;
       
-      // 🚀 ESTRATEGIA NUEVA: Cerrar modal automáticamente y dejar que el usuario continúe
-      userClosedAdModalRef.current = true; // Marcar como cerrado
-      setAdLoadTimeout(false); // No mostrar mensaje de timeout
-      
-      // Si el anuncio está cargando en segundo plano, dejarlo cargar
-      // pero NO bloquear al usuario con el modal
-      console.log("ℹ️ El anuncio seguirá cargando en segundo plano");
-      console.log("ℹ️ Si se carga, aparecerá el modal Mega Sale automáticamente");
-      
-      // Forzar re-render para cerrar el modal
+      // Cerrar el modal visualmente
+      userClosedAdModalRef.current = true;
       setAdLoadProgress(0);
+    }, 3000); // 3 segundos para el modal
+
+    // ⚡ TIMEOUT REAL: 8 segundos - cancela la carga si aún no terminó
+    adLoadTimeoutRef.current = setTimeout(() => {
+      console.warn("⏰ 8 segundos - Timeout real alcanzado, cancelando carga de anuncio");
+      clearInterval(adProgressIntervalRef.current);
+      adProgressIntervalRef.current = null;
+      clearTimeout(visualTimeoutRef);
+      
+      // Marcar como timeout real (sin anuncio disponible)
+      setAdLoadTimeout(true);
+      setAdLoadAttempts(prev => prev + 1);
+      
+      // Si ya se agotaron intentos, mostrar Mega Sale como fallback
+      if (adLoadAttempts >= MAX_AD_LOAD_ATTEMPTS - 1) {
+        console.log("🎯 Intentos agotados - Mostrando Mega Sale sin anuncio");
+        setTimeout(() => setShowMegaSale(true), 500);
+      }
     }, AD_LOAD_TIMEOUT);
-  }, [clearAdLoadTimeout, AD_LOAD_TIMEOUT]);
+  }, [clearAdLoadTimeout, AD_LOAD_TIMEOUT, adLoadAttempts, MAX_AD_LOAD_ATTEMPTS]);
 
   const preloadAd = useCallback(() => {
     // No precargar si es envío gratuito
@@ -852,16 +862,22 @@ export default function Resumen() {
         const timer = setTimeout(() => {
           console.log("✅ Anuncio listo - Mostrando Mega Sale");
           setShowMegaSale(true);
+          // Resetear el flag de cierre de modal
+          userClosedAdModalRef.current = false;
         }, 500);
         return () => clearTimeout(timer);
       }
       
-      // 🚀 NUEVO: Si el modal se cerró por timeout, mostrar Mega Sale después de 1s
-      if (userClosedAdModalRef.current && !showMegaSale) {
+      // 🚀 Si el modal se cerró por timeout pero el anuncio aún no está listo
+      if (userClosedAdModalRef.current && adState !== "ready" && !showMegaSale) {
         const fallbackTimer = setTimeout(() => {
-          console.log("🎯 Modal cerrado por timeout - Mostrando Mega Sale como fallback");
-          setShowMegaSale(true);
-        }, 1000);
+          console.log("🎯 Modal cerrado - Esperando anuncio o mostrando Mega Sale");
+          // Solo mostrar Mega Sale si el anuncio está listo O si pasó mucho tiempo
+          if (adState === "ready" || adState === "idle" || adState === "error") {
+            console.log("📱 Mostrando Mega Sale como fallback");
+            setShowMegaSale(true);
+          }
+        }, 2000); // Esperar 2s adicionales por si el anuncio termina de cargar
         return () => clearTimeout(fallbackTimer);
       }
     }
