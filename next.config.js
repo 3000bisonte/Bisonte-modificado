@@ -25,12 +25,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-eval' 'unsafe-inline' accounts.google.com gstatic.com https://sdk.mercadopago.com https://www.mercadopago.com https://*.mercadopago.com https://http2.mlstatic.com;
+              script-src 'self' 'unsafe-eval' 'unsafe-inline' accounts.google.com gstatic.com https://sdk.mercadopago.com https://www.mercadopago.com https://*.mercadopago.com https://*.mercadolibre.com https://http2.mlstatic.com;
               style-src 'self' 'unsafe-inline' fonts.googleapis.com;
               font-src 'self' fonts.gstatic.com;
               img-src 'self' data: https: blob:;
-              connect-src 'self' accounts.google.com oauth2.googleapis.com www.googleapis.com https://api.mercadopago.com https://www.mercadopago.com https://*.mercadopago.com https://http2.mlstatic.com https://api.mercadolibre.com https://secure.mlstatic.com wss://api.mercadopago.com;
-              frame-src accounts.google.com https://www.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com;
+              connect-src 'self' accounts.google.com oauth2.googleapis.com www.googleapis.com https://api.mercadopago.com https://www.mercadopago.com https://*.mercadopago.com https://*.mercadolibre.com https://http2.mlstatic.com https://api.mercadolibre.com https://secure.mlstatic.com wss://api.mercadopago.com;
+              frame-src accounts.google.com https://www.mercadopago.com https://*.mercadopago.com https://*.mercadolibre.com;
               object-src 'none';
               base-uri 'self';
               form-action 'self';

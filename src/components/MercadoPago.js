@@ -264,6 +264,7 @@ const MercadoPagoComponent = () => {
           console.log("✅ Configurando Payment Brick con preferenceId:", preferenceId);
           setInitializationConfig({ 
             preferenceId,
+            amount: amount, // ✅ El Payment Brick necesita el amount también
           });
           
           // ✅ Marcar como creada para evitar duplicados
@@ -740,6 +741,7 @@ const MercadoPagoComponent = () => {
     if (initializationConfig) {
       console.log("🔍 [DEBUG] Payment Brick va a renderizar con:");
       console.log("  - Preference ID:", initializationConfig.preferenceId);
+      console.log("  - Amount:", initializationConfig.amount); // ✅ Mostrar amount
       console.log("  - Tipos de pago excluidos:", customization.paymentMethods.types.excluded);
       console.log("  - Cuotas:", customization.paymentMethods.minInstallments, "-", customization.paymentMethods.maxInstallments);
     }
