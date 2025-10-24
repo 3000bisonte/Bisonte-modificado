@@ -13,6 +13,11 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
+      <head>
+        {/* Eruda - Mobile debugging console */}
+        <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+        <script dangerouslySetInnerHTML={{ __html: `eruda.init();` }} />
+      </head>
       <body className={inter.className}>
         <Providers>
           <div className="min-h-screen bg-gray-50">
