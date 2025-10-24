@@ -873,6 +873,7 @@ const MercadoPagoComponent = () => {
               {/* Payment Form */}
               <section className={`mercadopago-payment-section ${paymentMethods}`}>
                 <Payment
+                  key={initializationConfig?.preferenceId || 'loading'}
                   initialization={initializationConfig}
                   customization={customization}
                   onSubmit={onSubmit}
