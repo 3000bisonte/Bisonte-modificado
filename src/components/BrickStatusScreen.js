@@ -24,8 +24,9 @@ const Screen = ({ onClick: _onClick }) => {
   const customization = {
     visual: {
       texts: {
-        ctaGeneralErrorLabel: "",
-        ctaCardErrorLabel: "",
+        // Evitar warnings del Brick por textos vacíos
+        ctaGeneralErrorLabel: "Intentar nuevamente",
+        ctaCardErrorLabel: "Verificar datos de tarjeta",
         ctaReturnLabel: "Ir a Mis Envíos",
       },
       showExternalReference: true,
@@ -37,14 +38,16 @@ const Screen = ({ onClick: _onClick }) => {
       return: `${urlStatusScreen}/misenvios`,
     },
   };
+  // No montar el Brick si no hay paymentId para evitar llamadas a /bricks/payments/null
+  if (!resolvedPaymentId) {
+    return null;
+  }
+
   return (
     <section className={shoppingCartClass}>
       <StatusScreen
         initialization={{ paymentId: resolvedPaymentId }} // ID del pago para mostrar
         customization={customization}
-
-        // onReady={onReady}
-        // onError={onError}
       />
     </section>
   );
