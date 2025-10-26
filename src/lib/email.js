@@ -337,6 +337,244 @@ Bisonte Logística
       },
     })
   }
+  if (transports.length === 0) {
+    result.reason = 'no_email_transport_configured'
+    return result
+  }
+
+  for (const transport of transports) {
+    try {
+      result.transportsTried.push(transport.type)
+      result.attempted = true
+
+      const emailResponse = await transport.send()
+      result.sent = true
+      result.transport = transport.type
+      result.id = emailResponse.id
+      result.previewUrl = emailResponse.previewUrl ?? null
+      result.reason = null
+      result.error = null
+      return result
+    } catch (err) {
+      result.error = err?.message || String(err)
+      result.reason = `${transport.type}_error`
+    }
+  }
+
+  return result
+}
+
+/**
+ * Envía un email de confirmación de pedido al cliente
+ * @param {Object} params
+ * @param {string} params.to - Email del cliente
+ * @param {string} params.customerName - Nombre del cliente
+ * @param {string} params.trackingNumber - Número de guía
+ * @param {string} params.origin - Ciudad de origen
+ * @param {string} params.destination - Ciudad de destino
+ * @param {string} params.recipientName - Nombre del destinatario
+ * @param {number} params.totalCost - Costo total del envío
+ * @param {string} params.orderDate - Fecha del pedido
+ * @returns {Promise<Object>} Resultado del envío
+ */
+export async function sendOrderConfirmationEmail({ 
+  to, 
+  customerName, 
+  trackingNumber, 
+  origin, 
+  destination, 
+  recipientName, 
+  totalCost, 
+  orderDate 
+}) {
+  const result = {
+    attempted: false,
+    sent: false,
+    id: null,
+    previewUrl: null,
+    error: null,
+    reason: null,
+    transport: null,
+    transportsTried: [],
+  }
+
+  const resend = getResendClient()
+  const smtpTransport = getSmtpTransport()
+
+  const formattedCost = new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+  }).format(totalCost)
+
+  const formattedDate = new Date(orderDate).toLocaleString('es-CO', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  })
+
+  // Formatear HTML del email
+  const htmlContent = `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Confirmación de pedido - Bisonte Logística</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background:#f5f5f5; padding:24px; color:#222">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 24px rgba(15,23,42,0.12)">
+      <tr>
+        <td style="background:linear-gradient(135deg, #41e0b3 0%, #2bbd8c 100%); padding:32px; text-align:center; color:#ffffff">
+          <h1 style="margin:0; font-size:24px; letter-spacing:0.4px; font-weight:700">✓ Pedido Confirmado</h1>
+          <p style="margin:8px 0 0 0; font-size:14px; opacity:0.95">Tu envío está en proceso</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:32px">
+          <p style="margin:0 0 16px 0; font-size:16px; font-weight:600; color:#111827">Hola ${customerName},</p>
+          <p style="margin:0 0 24px 0; font-size:15px; line-height:1.6; color:#374151">¡Gracias por confiar en Bisonte Logística! Tu pedido ha sido recibido exitosamente y está en proceso.</p>
+          
+          <!-- Número de Guía Destacado -->
+          <div style="background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border:2px solid #10b981; padding:24px; margin:0 0 24px 0; border-radius:8px; text-align:center">
+            <p style="margin:0 0 8px 0; font-size:13px; font-weight:600; color:#059669; text-transform:uppercase; letter-spacing:0.5px">Número de Guía</p>
+            <p style="margin:0; font-size:28px; font-weight:700; color:#047857; letter-spacing:1px; font-family:'Courier New', monospace">${trackingNumber}</p>
+            <p style="margin:12px 0 0 0; font-size:12px; color:#065f46">Guarda este número para rastrear tu envío</p>
+          </div>
+          
+          <!-- Detalles del Envío -->
+          <div style="background:#f9fafb; padding:20px; margin:0 0 24px 0; border-radius:8px; border:1px solid #e5e7eb">
+            <h2 style="margin:0 0 16px 0; font-size:16px; color:#111827; font-weight:600">📦 Detalles del envío</h2>
+            
+            <table style="width:100%; border-collapse:collapse">
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; width:40%">Origen:</td>
+                <td style="padding:8px 0; font-size:14px; color:#111827; font-weight:500">${origin}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; border-top:1px solid #e5e7eb">Destino:</td>
+                <td style="padding:8px 0; font-size:14px; color:#111827; font-weight:500; border-top:1px solid #e5e7eb">${destination}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; border-top:1px solid #e5e7eb">Destinatario:</td>
+                <td style="padding:8px 0; font-size:14px; color:#111827; font-weight:500; border-top:1px solid #e5e7eb">${recipientName}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; border-top:1px solid #e5e7eb">Fecha de solicitud:</td>
+                <td style="padding:8px 0; font-size:14px; color:#111827; font-weight:500; border-top:1px solid #e5e7eb">${formattedDate}</td>
+              </tr>
+              <tr style="background:#ecfdf5">
+                <td style="padding:12px 8px; font-size:15px; color:#047857; font-weight:600; border-top:2px solid #10b981; border-radius:4px">Costo Total:</td>
+                <td style="padding:12px 8px; font-size:16px; color:#047857; font-weight:700; border-top:2px solid #10b981; border-radius:4px">${formattedCost}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <!-- Próximos Pasos -->
+          <div style="background:#eff6ff; border-left:4px solid #3b82f6; padding:16px; margin:0 0 24px 0; border-radius:4px">
+            <p style="margin:0 0 12px 0; font-size:14px; font-weight:600; color:#1e40af">📋 Próximos pasos:</p>
+            <ul style="margin:0; padding-left:20px; font-size:14px; color:#1e3a8a; line-height:1.8">
+              <li>Tu pedido será procesado en las próximas horas</li>
+              <li>Recibirás actualizaciones del estado de tu envío</li>
+              <li>Puedes rastrear tu paquete con el número de guía</li>
+            </ul>
+          </div>
+          
+          <hr style="border:none; border-top:1px solid #e5e7eb; margin:32px 0" />
+          
+          <p style="margin:0 0 8px 0; font-size:14px; color:#111827; font-weight:600">¿Necesitas ayuda?</p>
+          <p style="margin:0 0 4px 0; font-size:14px; color:#6b7280">📧 Email: <a href="mailto:3000bisonte@gmail.com" style="color:#2563eb; text-decoration:none">3000bisonte@gmail.com</a></p>
+          <p style="margin:0; font-size:14px; color:#6b7280">🌐 Web: <a href="https://www.bisonteapp.com" style="color:#2563eb; text-decoration:none">www.bisonteapp.com</a></p>
+          
+          <p style="margin:32px 0 0 0; font-size:13px; color:#9ca3af; text-align:center">Gracias por elegir Bisonte Logística - Tu socio de confianza en envíos</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#f9fafb; padding:24px; text-align:center">
+          <p style="margin:0; font-size:12px; color:#9ca3af">Este correo se envió como confirmación de tu pedido.<br/>© ${new Date().getFullYear()} Bisonte Logística. Todos los derechos reservados.</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`
+
+  // Texto plano alternativo
+  const textContent = `✓ PEDIDO CONFIRMADO - Bisonte Logística
+
+Hola ${customerName},
+
+¡Gracias por confiar en Bisonte Logística! Tu pedido ha sido recibido exitosamente y está en proceso.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NÚMERO DE GUÍA: ${trackingNumber}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Guarda este número para rastrear tu envío.
+
+DETALLES DEL ENVÍO:
+• Origen: ${origin}
+• Destino: ${destination}
+• Destinatario: ${recipientName}
+• Fecha de solicitud: ${formattedDate}
+• Costo Total: ${formattedCost}
+
+PRÓXIMOS PASOS:
+• Tu pedido será procesado en las próximas horas
+• Recibirás actualizaciones del estado de tu envío
+• Puedes rastrear tu paquete con el número de guía
+
+¿NECESITAS AYUDA?
+📧 Email: 3000bisonte@gmail.com
+🌐 Web: www.bisonteapp.com
+
+Gracias por elegir Bisonte Logística - Tu socio de confianza en envíos
+
+© ${new Date().getFullYear()} Bisonte Logística. Todos los derechos reservados.`
+
+  const transports = []
+
+  if (resend) {
+    transports.push({
+      type: 'resend',
+      send: async () => {
+        const { data, error } = await resend.emails.send({
+          from: normalizeFromAddress(),
+          to,
+          replyTo: '3000bisonte@gmail.com',
+          subject: `✓ Pedido confirmado - Guía #${trackingNumber}`,
+          html: htmlContent,
+          text: textContent,
+        })
+
+        if (error) {
+          throw new Error(error.message || String(error))
+        }
+
+        return {
+          id: data?.id ?? null,
+          previewUrl: data?.previewUrl ?? null,
+        }
+      },
+    })
+  }
+
+  if (smtpTransport) {
+    transports.push({
+      type: 'smtp',
+      send: async () => {
+        const info = await smtpTransport.sendMail({
+          from: normalizeFromAddress(),
+          to,
+          replyTo: '3000bisonte@gmail.com',
+          subject: `✓ Pedido confirmado - Guía #${trackingNumber}`,
+          html: htmlContent,
+          text: textContent,
+        })
+
+        return {
+          id: info?.messageId ?? null,
+          previewUrl: info?.previewUrl ?? null,
+        }
+      },
+    })
+  }
 
   if (transports.length === 0) {
     result.reason = 'no_email_transport_configured'

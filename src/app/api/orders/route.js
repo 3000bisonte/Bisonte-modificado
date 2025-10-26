@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import prisma from '@/lib/prisma';
 import { crearEnvioSchema } from '@/schemas/envios';
+import { sendOrderConfirmationEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -162,6 +163,63 @@ export async function POST(request) {
 
       return created;
     });
+
+    // ✅ Enviar email de confirmación al cliente
+    try {
+      // Parse JSON fields to get names
+      const parseJsonField = (field) => {
+        if (!field) return 'N/A';
+        if (typeof field === 'string') {
+          try {
+            const parsed = JSON.parse(field);
+            if (typeof parsed === 'object' && parsed !== null) {
+              return parsed.nombre || parsed.name || parsed.Nombre || String(field);
+            }
+            return parsed;
+          } catch {
+            return field;
+          }
+        }
+        if (typeof field === 'object' && field !== null) {
+          return field.nombre || field.name || field.Nombre || String(field);
+        }
+        return String(field);
+      };
+
+      const customerName = usuario?.nombre || 'Cliente';
+      const recipientName = parseJsonField(newOrder.Destinatario);
+      
+      const emailResult = await sendOrderConfirmationEmail({
+        to: userEmail,
+        customerName,
+        trackingNumber: newOrder.NumeroGuia,
+        origin: newOrder.Origen || 'N/A',
+        destination: newOrder.Destino || 'N/A',
+        recipientName,
+        totalCost: validatedData.costoTotal || 0,
+        orderDate: newOrder.FechaSolicitud,
+      });
+
+      if (emailResult.sent) {
+        console.log('✅ Email de confirmación enviado:', {
+          emailId: emailResult.id,
+          transport: emailResult.transport,
+          to: userEmail,
+        });
+      } else {
+        console.warn('⚠️ No se pudo enviar email de confirmación:', {
+          reason: emailResult.reason,
+          error: emailResult.error,
+          transportsTried: emailResult.transportsTried,
+        });
+      }
+    } catch (emailError) {
+      // Email failure should not block order creation
+      console.error('❌ Error al enviar email de confirmación:', {
+        message: emailError?.message || String(emailError),
+        stack: emailError?.stack,
+      });
+    }
 
     return NextResponse.json(newOrder, { status: 201 });
   } catch (error) {

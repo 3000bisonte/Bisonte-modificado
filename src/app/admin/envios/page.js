@@ -253,12 +253,35 @@ export default function AdminEnvios() {
     });
   };
 
+  // ✅ Función helper para parsear campos JSON
+  const parseJsonField = (field) => {
+    if (!field) return '';
+    if (typeof field === 'string') {
+      try {
+        const parsed = JSON.parse(field);
+        if (typeof parsed === 'object' && parsed !== null) {
+          return parsed.nombre || parsed.name || parsed.Nombre || '';
+        }
+        return parsed;
+      } catch {
+        return field;
+      }
+    }
+    if (typeof field === 'object' && field !== null) {
+      return field.nombre || field.name || field.Nombre || '';
+    }
+    return String(field);
+  };
+
   // Filtrar envíos según búsqueda y estado
   const enviosFiltrados = envios.filter(envio => {
+    const destinatarioNombre = parseJsonField(envio.Destinatario).toLowerCase();
+    const remitenteNombre = parseJsonField(envio.Remitente).toLowerCase();
+    
     const matchSearch = (
       envio.NumeroGuia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      envio.Remitente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      envio.Destinatario?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      remitenteNombre.includes(searchTerm.toLowerCase()) ||
+      destinatarioNombre.includes(searchTerm.toLowerCase()) ||
       envio.Origen?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       envio.Destino?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -494,8 +517,8 @@ export default function AdminEnvios() {
                               <p className="text-xs text-slate-500 truncate">{formatearFecha(envio.FechaSolicitud)}</p>
                               {/* ✅ INFO MÓVIL - Solo en mobile */}
                               <div className="md:hidden mt-1 space-y-1">
-                                <p className="text-xs text-slate-600 truncate">📤 {envio.Remitente}</p>
-                                <p className="text-xs text-slate-600 truncate">📥 {envio.Destinatario}</p>
+                                <p className="text-xs text-slate-600 truncate">📤 {parseJsonField(envio.Remitente)}</p>
+                                <p className="text-xs text-slate-600 truncate">📥 {parseJsonField(envio.Destinatario)}</p>
                               </div>
                             </div>
                           </div>
@@ -505,7 +528,7 @@ export default function AdminEnvios() {
                             <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
-                            <span className="text-slate-700 text-sm truncate">{envio.Remitente}</span>
+                            <span className="text-slate-700 text-sm truncate">{parseJsonField(envio.Remitente)}</span>
                           </div>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 hidden md:table-cell">
@@ -513,7 +536,7 @@ export default function AdminEnvios() {
                             <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
-                            <span className="text-slate-700 text-sm truncate">{envio.Destinatario}</span>
+                            <span className="text-slate-700 text-sm truncate">{parseJsonField(envio.Destinatario)}</span>
                           </div>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 hidden lg:table-cell">
