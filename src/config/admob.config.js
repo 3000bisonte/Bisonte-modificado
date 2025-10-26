@@ -10,10 +10,20 @@ const GOOGLE_TEST = {
 };
 
 function chooseId(kind, real, test) {
-  if (IS_PRODUCTION) {
-    if (real && real.length > 10 && !real.includes('XXXX') && real !== test) {return real;}
+  // En desarrollo, usar IDs de prueba (tienen anuncios garantizados)
+  if (!IS_PRODUCTION) {
+    console.log(`[AdMob Config] Usando ${kind} TEST ID (desarrollo):`, test);
     return test;
   }
+  
+  // En producción, validar que el ID real sea válido
+  if (real && real.length > 10 && !real.includes('XXXX') && real !== test) {
+    console.log(`[AdMob Config] Usando ${kind} REAL ID (producción):`, real);
+    return real;
+  }
+  
+  // Fallback a test ID si el real no es válido
+  console.warn(`[AdMob Config] ⚠️ ${kind} REAL ID inválido, usando TEST ID:`, test);
   return test;
 }
 

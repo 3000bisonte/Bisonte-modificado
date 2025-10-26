@@ -12,6 +12,7 @@
     <!-- Google OAuth Configuration -->
     <string name="default_web_client_id">814463004364-kla2sr8s45pgu3gckkkamqlrequ5566e.apps.googleusercontent.com</string>
     <string name="server_client_id">814463004364-1pj3amqos1f59ju94uca5t6r9s18ek2m.apps.googleusercontent.com</string>
-    <!-- AdMob App ID (reemplazar por real) -->
-    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    
+    <!-- ✅ AdMob App ID REAL (PRODUCCIÓN) -->
+    <string name="admob_app_id">ca-app-pub-1352045169606160~5443732431</string>
 </resources>
