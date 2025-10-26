@@ -575,9 +575,23 @@ export function useAdMob() {
       markRewardReady(false);
       setLastReward(createRewardSnapshot('showRewardedAd', result));
       setLastError(null);
-      // Preparar el siguiente anuncio
+      
+      // ⚡ Preparar el siguiente anuncio CON MANEJO DE ERRORES
       setTimeout(() => {
-        void prepareRewardedAd();
+        console.log('🔄 [useAdMob] Preparando siguiente anuncio después de mostrar...');
+        prepareRewardedAd()
+          .then((success) => {
+            if (success) {
+              console.log('✅ [useAdMob] Siguiente anuncio preparado exitosamente');
+            } else {
+              console.warn('⚠️ [useAdMob] No se pudo preparar siguiente anuncio (probablemente No fill)');
+              // NO marcar como error, simplemente quedarse sin anuncio listo
+            }
+          })
+          .catch((error) => {
+            console.error('❌ [useAdMob] Error preparando siguiente anuncio:', error);
+            // No lanzar error, solo loguear
+          });
       }, 1000);
       
       return result;

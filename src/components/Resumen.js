@@ -462,23 +462,34 @@ export default function Resumen() {
           const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
           if (ready) {
             console.log(`✅ Anuncio cargado en ${loadTime}s`);
-          } else {
-            console.warn(`⛔ Precarga de anuncio falló en ${loadTime}s`);
-          }
-          clearAdLoadTimeout(); // 🕐 Limpiar timeout si carga exitosamente
-          setAdState(ready ? "ready" : "idle");
-          if (!ready) {
-            handleAdError("prepare_failed");
-          } else {
-            clearAdErrorState();
+            clearAdLoadTimeout(); // 🕐 Limpiar timeout si carga exitosamente
+            setAdState("ready");
             setAdLoadAttempts(0); // Resetear intentos en éxito
+            clearAdErrorState();
+          } else {
+            console.warn(`⛔ Precarga de anuncio falló en ${loadTime}s - No fill`);
+            clearAdLoadTimeout(); // 🕐 Limpiar timeout
+            
+            // 🚫 NO marcar como error, solo dejar en estado idle
+            // Esto evita el loop infinito de "cargando"
+            setAdState("idle");
+            setAdLoadAttempts(0);
+            
+            // Mostrar mensaje informativo al usuario (solo si es la primera vez)
+            if (adLoadAttempts === 0) {
+              console.log('ℹ️ No hay más anuncios disponibles en este momento');
+            }
           }
         })
         .catch((error) => {
           const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
           console.error(`❌ Error al precargar anuncio después de ${loadTime}s:`, error);
           clearAdLoadTimeout(); // 🕐 Limpiar timeout en error
-          handleAdError("prepare_exception");
+          
+          // 🚫 NO llamar handleAdError para evitar loop de reintentos
+          // Solo resetear estado a idle
+          setAdState("idle");
+          setAdLoadAttempts(0);
         });
       return;
     }
@@ -650,15 +661,31 @@ export default function Resumen() {
 
       const finalizeChain = (delayMs) => {
         setTimeout(() => {
+          console.log('🏁 [showAd] Finalizando cadena de anuncios');
           setRewardChainProgress(null);
           setAdState("idle");
+          
+          // 🔄 Intentar precargar siguiente anuncio (puede fallar si no hay inventario)
+          console.log('🔄 [showAd] Intentando precargar siguiente anuncio...');
           preloadAd();
+          
+          // ⏰ TIMEOUT: Si después de 8s sigue "cargando", resetear a idle
+          setTimeout(() => {
+            if (adState === "preloading" || adState === "loading") {
+              console.warn('⏰ [showAd] Timeout de precarga - No hay más anuncios disponibles');
+              setAdState("idle");
+              setRetryCount(0);
+            }
+          }, 8000);
         }, delayMs);
       };
 
       setRewardChainProgress(null);
 
       if (chainAborted && successfulAds === 0) {
+        // Si no se mostró ningún anuncio, resetear a idle inmediatamente
+        console.log('❌ [showAd] Cadena abortada sin anuncios - Reseteando estado');
+        setAdState("idle");
         return;
       } else {
         finalizeChain(2000);
@@ -929,17 +956,20 @@ export default function Resumen() {
     }
   }, [cotizador, remitente, destinatario, costoTotal, adMobSupported, adMobInitialized, preloadAd]);
 
-  // Lógica de reintento SOLO para errores críticos
+  // 🚫 REINTENTO AUTOMÁTICO DESHABILITADO - Evita loop infinito de "cargando"
+  // Si no hay anuncios (No fill), simplemente queda en estado idle
+  // El usuario puede usar el botón "FORZAR RECARGA" si lo desea
   useEffect(() => {
-    if (adState === "error" && retryCount < MAX_RETRIES) {
-      const delay = Math.pow(2, retryCount) * 1000;
-      console.log(`🔄 Reintentando precarga en ${delay / 1000}s (intento ${retryCount + 1}/${MAX_RETRIES})...`);
-      const timer = setTimeout(() => {
-        setRetryCount(prev => prev + 1);
-        preloadAd();
-      }, delay);
-      return () => clearTimeout(timer);
-    }
+    // COMENTADO: Esto causaba loop infinito cuando no había anuncios
+    // if (adState === "error" && retryCount < MAX_RETRIES) {
+    //   const delay = Math.pow(2, retryCount) * 1000;
+    //   console.log(`🔄 Reintentando precarga en ${delay / 1000}s (intento ${retryCount + 1}/${MAX_RETRIES})...`);
+    //   const timer = setTimeout(() => {
+    //     setRetryCount(prev => prev + 1);
+    //     preloadAd();
+    //   }, delay);
+    //   return () => clearTimeout(timer);
+    // }
   }, [adState, retryCount, preloadAd]);
 
   useEffect(() => {
