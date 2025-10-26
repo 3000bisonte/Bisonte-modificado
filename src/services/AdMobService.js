@@ -157,7 +157,14 @@ export const AdMobService = {
 
   async prepareRewardedAd() {
     if (!this.isSupported()) {
+      console.log('⏭️ AdMob no soportado en esta plataforma');
       return false;
+    }
+
+    // ✅ Si ya está listo, retornar inmediatamente
+    if (runtimeState.rewardReady) {
+      console.log('✅ Anuncio YA está listo - No recargar');
+      return true;
     }
 
     // ✅ CRÍTICO: Asegurar que AdMob esté inicializado antes de preparar
@@ -170,11 +177,11 @@ export const AdMobService = {
       }
     }
 
-    // Enfriamiento para evitar spam de prepares
+    // ⚡ COOLDOWN REDUCIDO - Solo para evitar spam excesivo
     const now = Date.now();
     if (runtimeState.cooldownUntil && now < runtimeState.cooldownUntil) {
       const remaining = Math.ceil((runtimeState.cooldownUntil - now) / 1000);
-      console.log(`⏳ Cooldown activo, espera ${remaining}s antes de preparar otro anuncio`);
+      console.log(`⏳ Cooldown activo (${remaining}s restantes) - Retornando estado actual: ${runtimeState.rewardReady}`);
       return runtimeState.rewardReady;
     }
 
@@ -193,14 +200,19 @@ export const AdMobService = {
     runtimeState.preparePromise = (async () => {
       try {
         console.log('🚀 Preparando anuncio recompensado...');
+        console.log(`   - Ad Unit ID: ${ADMOB_CONFIG.REWARDED_AD_UNIT_ID}`);
+        console.log(`   - Testing Mode: ${ADMOB_CONFIG.SETTINGS.isTesting}`);
+        
         const info = await AdMob.prepareRewardVideoAd({
           adId: ADMOB_CONFIG.REWARDED_AD_UNIT_ID,
           isTesting: ADMOB_CONFIG.SETTINGS.isTesting,
         });
+        
         console.log('✅ Anuncio recompensado preparado exitosamente', info);
         markRewardReady(true);
-        // Cooldown de 2s para evitar prepares consecutivos
-        runtimeState.cooldownUntil = Date.now() + 2000;
+        
+        // ⚡ Cooldown REDUCIDO de 1s (antes 2s) para permitir recarga más rápida
+        runtimeState.cooldownUntil = Date.now() + 1000;
         return true;
       } catch (error) {
         // Manejo detallado de errores de Capacitor
@@ -222,9 +234,9 @@ export const AdMobService = {
           // Errores comunes de AdMob
           if (message && typeof message === 'string') {
             if (message.includes('No fill')) {
-              console.warn('⚠️ No hay anuncios disponibles en este momento (No fill)');
+              console.warn('⚠️ No hay anuncios disponibles en este momento (No fill) - Esto es normal si los anuncios aún están en revisión');
             } else if (message.includes('Network')) {
-              console.warn('⚠️ Error de red al cargar anuncio');
+              console.warn('⚠️ Error de red al cargar anuncio - Verifica tu conexión a internet');
             } else if (message.includes('not initialized')) {
               console.error('❌ AdMob no está inicializado correctamente');
             }
@@ -232,8 +244,9 @@ export const AdMobService = {
         }
         
         markRewardReady(false);
-        // Cooldown más largo en caso de error para no saturar
-        runtimeState.cooldownUntil = Date.now() + 5000;
+        
+        // ⚡ COOLDOWN REDUCIDO en error de 2s (antes 5s) para permitir retry más rápido
+        runtimeState.cooldownUntil = Date.now() + 2000;
         return false;
       } finally {
         runtimeState.preparing = false;
@@ -308,6 +321,35 @@ export const AdMobService = {
 
   wasRewardReady() {
     return runtimeState.rewardReady;
+  },
+
+  // 🆕 Método para forzar recarga ignorando cooldown (útil para debugging)
+  async forceReloadAd() {
+    console.log('🔄 FORZANDO recarga de anuncio (ignorando cooldown)...');
+    // Resetear cooldown y estado de preparación
+    runtimeState.cooldownUntil = 0;
+    runtimeState.preparing = false;
+    runtimeState.preparePromise = null;
+    
+    // Preparar anuncio
+    return await this.prepareRewardedAd();
+  },
+
+  // 🆕 Obtener estado completo para debugging
+  getDebugState() {
+    return {
+      initialized: runtimeState.initialized,
+      rewardReady: runtimeState.rewardReady,
+      preparing: runtimeState.preparing,
+      lastPrepareAt: runtimeState.lastPrepareAt,
+      cooldownUntil: runtimeState.cooldownUntil,
+      cooldownRemaining: runtimeState.cooldownUntil ? Math.max(0, Math.ceil((runtimeState.cooldownUntil - Date.now()) / 1000)) : 0,
+      config: {
+        appId: ADMOB_CONFIG.APP_ID,
+        rewardedId: ADMOB_CONFIG.REWARDED_AD_UNIT_ID,
+        isTesting: ADMOB_CONFIG.SETTINGS.isTesting,
+      }
+    };
   }
 };
 

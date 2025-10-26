@@ -1788,22 +1788,62 @@ export default function Resumen() {
 
         {/* Botón DEBUG visible */}
         <button
-          onClick={() => {
+          onClick={async () => {
+            const debugState = AdMobService.getDebugState();
             const logs = [
-              `adState: ${adState}`,
-              `isRewardedReady: ${isRewardedReady}`,
-              `adMobInitialized: ${adMobInitialized}`,
-              `showMegaSale: ${showMegaSale}`,
-              `costoTotal: ${costoTotal}`,
-              `rewardBanner: ${JSON.stringify(rewardBanner)}`,
+              `📱 ESTADO DE ANUNCIOS:`,
+              ``,
+              `🔧 AdMob Service:`,
+              `  - Inicializado: ${debugState.initialized ? '✅' : '❌'}`,
+              `  - Anuncio listo: ${debugState.rewardReady ? '✅' : '❌'}`,
+              `  - Preparando: ${debugState.preparing ? '🔄' : '⏸️'}`,
+              `  - Cooldown restante: ${debugState.cooldownRemaining}s`,
+              `  - Última precarga: ${debugState.lastPrepareAt ? new Date(debugState.lastPrepareAt).toLocaleTimeString() : 'Nunca'}`,
+              ``,
+              `🎯 Estado del Componente:`,
+              `  - adState: ${adState}`,
+              `  - isRewardedReady: ${isRewardedReady ? '✅' : '❌'}`,
+              `  - adMobInitialized: ${adMobInitialized ? '✅' : '❌'}`,
+              `  - showMegaSale: ${showMegaSale ? '✅' : '❌'}`,
+              `  - userClosedAdModal: ${userClosedAdModal ? '✅' : '❌'}`,
+              ``,
+              `💰 Datos del Envío:`,
+              `  - costoTotal: $${costoTotal?.toLocaleString('es-CO')}`,
+              `  - rewardBanner: ${rewardBanner ? 'Activo' : 'Inactivo'}`,
+              ``,
+              `⚙️ Configuración:`,
+              `  - App ID: ${debugState.config.appId}`,
+              `  - Rewarded ID: ${debugState.config.rewardedId}`,
+              `  - Testing Mode: ${debugState.config.isTesting ? '✅' : '❌'}`,
             ];
-            alert('DEBUG INFO:\n\n' + logs.join('\n'));
+            
+            console.log('\n' + logs.join('\n'));
+            alert(logs.join('\n'));
           }}
-          className="fixed bottom-20 right-4 z-[9999] bg-red-600 text-white px-6 py-4 rounded-full font-bold text-lg shadow-2xl border-4 border-white"
+          className="fixed bottom-20 right-4 z-[9999] bg-red-600 hover:bg-red-700 text-white px-6 py-4 rounded-full font-bold text-lg shadow-2xl border-4 border-white transition-all duration-200 hover:scale-110"
           style={{ fontSize: '18px', fontWeight: 'bold' }}
         >
           📱 DEBUG
         </button>
+        
+        {/* Botón FORZAR RECARGA (solo visible si hay problemas) */}
+        {(adState === 'error' || adState === 'idle' || !isRewardedReady) && costoTotal > 0 && (
+          <button
+            onClick={async () => {
+              console.log('🔄 FORZANDO recarga de anuncio...');
+              const result = await AdMobService.forceReloadAd();
+              if (result) {
+                showSuccess('Anuncio Recargado', 'El anuncio se recargó exitosamente. Ya puedes verlo.');
+                setAdState('ready');
+              } else {
+                showError('Error al Recargar', 'No se pudo recargar el anuncio. Revisa tu conexión e intenta nuevamente.');
+              }
+            }}
+            className="fixed bottom-20 left-4 z-[9999] bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-full font-bold text-sm shadow-2xl border-4 border-white transition-all duration-200 hover:scale-110"
+          >
+            🔄 RECARGAR ANUNCIO
+          </button>
+        )}
       </div>
       <BottomNav />
     </div>
