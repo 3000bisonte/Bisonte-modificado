@@ -9,7 +9,16 @@ const GOOGLE_TEST = {
   BANNER: 'ca-app-pub-3940256099942544/6300978111'
 };
 
+// 🧪 MODO DE PRUEBA: Cambiar a true para usar Test IDs (anuncios garantizados)
+const FORCE_TEST_IDS = true; // ✅ TRUE = Test IDs (anuncios funcionan siempre) | FALSE = Production IDs
+
 function chooseId(kind, real, test) {
+  // 🧪 Forzar Test IDs si está habilitado
+  if (FORCE_TEST_IDS) {
+    console.log(`[AdMob Config] 🧪 FORZANDO ${kind} TEST ID (modo prueba):`, test);
+    return test;
+  }
+  
   // En desarrollo, usar IDs de prueba (tienen anuncios garantizados)
   if (!IS_PRODUCTION) {
     console.log(`[AdMob Config] Usando ${kind} TEST ID (desarrollo):`, test);

@@ -11,6 +11,12 @@ android {
         versionCode 4
         versionName "1.0.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Placeholder para OAuth redirect scheme
+        manifestPlaceholders = [
+            'appAuthRedirectScheme': 'com.bisonteapp'
+        ]
+        
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -38,6 +44,11 @@ android {
         debug {
             // Mantener firma debug automática
         }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 

@@ -1,10 +1,18 @@
 [
 	{
+		"pkg": "@bisonte/capacitor-bisonte-auth",
+		"classpath": "com.bisonte.auth.BisonteAuth"
+	},
+	{
 		"pkg": "@capacitor-community/admob",
 		"classpath": "com.getcapacitor.community.admob.AdMob"
 	},
 	{
 		"pkg": "@capacitor-firebase/authentication",
 		"classpath": "io.capawesome.capacitorjs.plugins.firebase.authentication.FirebaseAuthenticationPlugin"
+	},
+	{
+		"pkg": "@capacitor/browser",
+		"classpath": "com.capacitorjs.plugins.browser.BrowserPlugin"
 	}
 ]
