@@ -177,12 +177,15 @@ export const AdMobService = {
       }
     }
 
-    // ⚡ COOLDOWN REDUCIDO - Solo para evitar spam excesivo
+    // ⚡ COOLDOWN - Esperar si está activo en lugar de rechazar
     const now = Date.now();
     if (runtimeState.cooldownUntil && now < runtimeState.cooldownUntil) {
-      const remaining = Math.ceil((runtimeState.cooldownUntil - now) / 1000);
-      console.log(`⏳ Cooldown activo (${remaining}s restantes) - Retornando estado actual: ${runtimeState.rewardReady}`);
-      return runtimeState.rewardReady;
+      const remaining = runtimeState.cooldownUntil - now;
+      console.log(`⏳ Cooldown activo - Esperando ${Math.ceil(remaining / 1000)}s antes de continuar...`);
+      
+      // ✅ ESPERAR el cooldown en lugar de retornar false inmediatamente
+      await new Promise(resolve => setTimeout(resolve, remaining));
+      console.log(`✅ Cooldown completado - Continuando con prepare...`);
     }
 
     // Single-flight: si ya hay un prepare en curso, esperar ese resultado
