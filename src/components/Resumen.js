@@ -639,14 +639,37 @@ export default function Resumen() {
           break;
         }
 
+        // ✅ Si no es el último anuncio, preparar el siguiente
         if (index < totalAds - 1) {
+          console.log(`🔄 [showAd] Preparando siguiente anuncio (${index + 2}/${totalAds})...`);
           setAdState("preloading");
+          
+          // ⏰ Esperar 2s antes de intentar precargar (dar tiempo a AdMob)
+          await delay(2000);
+          
           try {
+            console.log(`🚀 [showAd] Llamando a prepareRewardedAd()...`);
             const nextReady = await prepareRewardedAd();
+            console.log(`   → Resultado: ${nextReady}`);
+            
             if (!nextReady) {
-              handleAdError("prepare_failed");
-              chainAborted = true;
-              break;
+              console.warn(`⚠️ [showAd] prepareRewardedAd() retornó false - Reintentando en 2s...`);
+              
+              // ⚡ RETRY: Dar una segunda oportunidad antes de abortar
+              await delay(2000);
+              const retryReady = await prepareRewardedAd();
+              console.log(`   → Retry resultado: ${retryReady}`);
+              
+              if (!retryReady) {
+                console.error(`❌ [showAd] Segundo intento falló - Abortando cadena`);
+                handleAdError("prepare_failed");
+                chainAborted = true;
+                break;
+              }
+              
+              console.log(`✅ [showAd] Retry exitoso - Continuando cadena`);
+            } else {
+              console.log(`✅ [showAd] Siguiente anuncio listo en primer intento`);
             }
           } catch (error) {
             console.error("❌ Error preparando siguiente anuncio recompensado:", error);

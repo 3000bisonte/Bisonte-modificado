@@ -576,23 +576,9 @@ export function useAdMob() {
       setLastReward(createRewardSnapshot('showRewardedAd', result));
       setLastError(null);
       
-      // ⚡ Preparar el siguiente anuncio CON MANEJO DE ERRORES
-      setTimeout(() => {
-        console.log('🔄 [useAdMob] Preparando siguiente anuncio después de mostrar...');
-        prepareRewardedAd()
-          .then((success) => {
-            if (success) {
-              console.log('✅ [useAdMob] Siguiente anuncio preparado exitosamente');
-            } else {
-              console.warn('⚠️ [useAdMob] No se pudo preparar siguiente anuncio (probablemente No fill)');
-              // NO marcar como error, simplemente quedarse sin anuncio listo
-            }
-          })
-          .catch((error) => {
-            console.error('❌ [useAdMob] Error preparando siguiente anuncio:', error);
-            // No lanzar error, solo loguear
-          });
-      }, 1000);
+      // ✅ NO auto-precargar aquí - El componente Resumen.js se encarga de la cadena
+      // Esto evita conflictos de llamadas simultáneas a prepareRewardedAd()
+      console.log('✅ [useAdMob] Anuncio mostrado - El caller se encargará de precargar el siguiente');
       
       return result;
     } finally {
