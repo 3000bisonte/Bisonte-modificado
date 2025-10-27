@@ -1335,6 +1335,67 @@ export default function Resumen() {
 
   // ✅ Banner de felicitaciones ahora es PERMANENTE (no se oculta automáticamente)
 
+  // 🔄 Cargar datos INMEDIATAMENTE al montar el componente
+  useEffect(() => {
+    console.log("🚀 [Resumen] Componente montado - Cargando datos desde localStorage...");
+    
+    const safeRead = (key) => {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+      } catch (error) {
+        console.error(`[Resumen] Error leyendo ${key}:`, error);
+        return null;
+      }
+    };
+
+    // Cargar cotizador y precio
+    const cotizadorData = safeRead("formCotizador");
+    const cotizacionData = safeRead("cotizacion");
+    
+    if (cotizadorData || cotizacionData) {
+      let mergedCotizador = null;
+      if (cotizadorData && cotizacionData) {
+        const costoCandidates = [cotizadorData.costoTotal, cotizacionData.costoTotal]
+          .filter((value) => typeof value === "number");
+
+        const selectedCosto =
+          costoCandidates.length > 0 ? Math.min(...costoCandidates) : undefined;
+
+        mergedCotizador = {
+          ...cotizadorData,
+          ...cotizacionData,
+          ...(typeof selectedCosto === "number" ? { costoTotal: selectedCosto } : {}),
+        };
+      } else {
+        mergedCotizador = cotizadorData || cotizacionData;
+      }
+
+      if (mergedCotizador) {
+        setCotizador(mergedCotizador);
+        if (typeof mergedCotizador.costoTotal === "number") {
+          setCostoTotal(mergedCotizador.costoTotal);
+          console.log("✅ [Resumen] Precio inicial cargado:", mergedCotizador.costoTotal);
+        }
+        syncCotizacionStores(mergedCotizador);
+      }
+    }
+
+    // Cargar remitente
+    const remitenteData = safeRead("formRemitente");
+    if (remitenteData) {
+      setRemitente(remitenteData);
+      console.log("✅ [Resumen] Datos de remitente cargados");
+    }
+
+    // Cargar destinatario
+    const destinatarioData = safeRead("formDestinatario");
+    if (destinatarioData) {
+      setDestinatario(destinatarioData);
+      console.log("✅ [Resumen] Datos de destinatario cargados");
+    }
+  }, [syncCotizacionStores]); // Solo se ejecuta una vez al montar
+
   // Detectar cambios en localStorage cuando el usuario regresa después de editar
   useEffect(() => {
     const handleStorageChange = () => {
