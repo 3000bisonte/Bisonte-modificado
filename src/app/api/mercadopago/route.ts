@@ -73,11 +73,11 @@ const createPreferencePayload = (data: PaymentData, origin: string) => {
     statement_descriptor: descriptor,
     back_urls: {
       success:
-        process.env.MP_BACK_URL_SUCCESS ?? `${origin.replace(/\/$/, "")}/misenvios?payment=success`,
+        process.env.MP_BACK_URL_SUCCESS ?? `${origin.replace(/\/$/, "")}/pagos/mercadopago/success`,
       failure:
-        process.env.MP_BACK_URL_FAILURE ?? `${origin.replace(/\/$/, "")}/resumen?payment=failure`,
+        process.env.MP_BACK_URL_FAILURE ?? `${origin.replace(/\/$/, "")}/pagos/mercadopago/failure`,
       pending:
-        process.env.MP_BACK_URL_PENDING ?? `${origin.replace(/\/$/, "")}/resumen?payment=pending`,
+        process.env.MP_BACK_URL_PENDING ?? `${origin.replace(/\/$/, "")}/pagos/mercadopago/pending`,
     },
     auto_return: "approved",
     metadata: {
