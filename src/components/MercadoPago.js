@@ -428,15 +428,18 @@ const MercadoPagoComponent = () => {
           } else if (paymentStatus === "in_process" || paymentStatus === "pending") {
             console.log("⏳ Pago PENDIENTE - Estado:", statusDetail);
             
-            // ✅ Para pagos pendientes (Efecty, PSE, etc.), NO registrar envío automáticamente
-            // El webhook de MercadoPago lo hará cuando el pago sea confirmado
-            showInfo(
+            // ✅ Para pagos pendientes (Efecty, PSE, etc.), mostrar mensaje informativo
+            showWarning(
               'Pago Pendiente de Confirmación',
-              'Tu pago está en proceso de confirmación. Recibirás un correo cuando se complete. Por ahora, no podemos procesar el envío.'
+              'Tu pago está en proceso de confirmación. Recibirás un correo cuando se complete. Te redirigiremos a Mis Envíos donde podrás consultar el estado.'
             );
             
-            // ✅ NO resolver la promesa para pagos pendientes
-            // Esto evita que se registre el envío prematuramente
+            // ✅ Redirigir a Mis Envíos después de mostrar el mensaje
+            setTimeout(() => {
+              console.log("🔄 Redirigiendo a Mis Envíos (pago pendiente)...");
+              router.push("/misenvios");
+            }, 3000);
+            
             reject('pending_payment');
           } else {
             console.error("❌ Pago rechazado - Estado:", paymentStatus, statusDetail);
@@ -604,13 +607,13 @@ const MercadoPagoComponent = () => {
         localStorage.removeItem("formRemitente");
         localStorage.removeItem("formDestinatario");
 
-        showSuccess('¡Pago Exitoso! 🎉', '¡Envío realizado exitosamente! Serás redirigido a Mis Envíos para ver el detalle.');
+        showSuccess('¡Pago Exitoso! 🎉', '¡Envío realizado exitosamente! Redirigiendo a Mis Envíos...');
 
-        // Esperar un poco más para asegurar que la DB se actualice
+        // ✅ Redirigir inmediatamente a Mis Envíos con router.push
         setTimeout(() => {
           console.log("🔄 Redirigiendo a Mis Envíos...");
-          window.location.href = "/misenvios";
-        }, 3000);
+          router.push("/misenvios");
+        }, 2000); // Reducido a 2 segundos para mejor UX
       } else {
         console.error("Error al registrar el envío:", response.status, responseData);
         const errorMessage = responseData?.message || responseData?.error || 'Hubo un error al registrar tu envío. Por favor contacta soporte.';

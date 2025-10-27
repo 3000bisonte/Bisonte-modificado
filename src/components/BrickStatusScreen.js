@@ -25,19 +25,22 @@ const Screen = ({ onClick: _onClick }) => {
   const customization = {
     visual: {
       texts: {
-        // Evitar warnings del Brick por textos vacíos
+        // Textos personalizados para mejor UX
         ctaGeneralErrorLabel: "Intentar nuevamente",
         ctaCardErrorLabel: "Verificar datos de tarjeta",
-        ctaReturnLabel: "Ir a Mis Envíos",
+        ctaReturnLabel: "Ver Mis Envíos",
       },
       showExternalReference: true,
+      style: {
+        theme: "default",
+      },
     },
-  backUrls: {
-      //error: "<http://<your_domain>/error>",
-      //return: "https://mercaenvios.com/dashboard/mis-envios",
-      //return: "http://localhost:3000/misenvios",
+    backUrls: {
       // ✅ CRÍTICO: Usar mismo dominio que la página actual para evitar error de Brick
       return: `${baseReturnUrl}/misenvios`,
+      // URLs adicionales para diferentes estados
+      error: `${baseReturnUrl}/pago`,
+      pending: `${baseReturnUrl}/misenvios`,
     },
   };
   // No montar el Brick si no hay paymentId para evitar llamadas a /bricks/payments/null
