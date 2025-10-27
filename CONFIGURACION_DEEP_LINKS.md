@@ -225,13 +225,47 @@ adb shell pm get-app-links --user 0 com.bisonteapp
 - [x] Configurar androidScheme en capacitor.config.json
 - [x] Agregar deep link schemes en plugins.App
 - [x] Actualizar assetlinks.json con package_name
-- [ ] **Obtener y agregar SHA-256 fingerprint** ⚠️ PENDIENTE
+- [x] **Obtener y agregar SHA-256 fingerprint DEBUG** ✅ COMPLETADO
+- [ ] **Crear/Obtener SHA-256 fingerprint RELEASE** ⚠️ PENDIENTE (PRODUCCIÓN)
 - [ ] Deploy del assetlinks.json actualizado
 - [ ] Sincronizar Capacitor (`npx cap sync android`)
 - [ ] Reconstruir la app
 - [ ] Probar con ADB
 - [ ] Probar flujo real de PSE
 - [ ] Verificar en configuración del dispositivo
+
+---
+
+## 🔐 Obtener SHA-256 de Release Keystore (Producción)
+
+### **Opción 1: Si ya tienes el keystore de release**
+
+Ejecuta:
+```powershell
+keytool -list -v -keystore android\app\bisonte-release-key.jks -alias bisonteRelease -storepass BisonteApp2024! -keypass BisonteApp2024!
+```
+
+### **Opción 2: Crear nuevo keystore de release**
+
+Ejecuta el script que creé:
+```powershell
+.\crear-release-keystore.bat
+```
+
+Este script:
+- ✅ Verifica si ya existe el keystore
+- ✅ Si no existe, crea uno nuevo automáticamente
+- ✅ Muestra el SHA-256 fingerprint
+- ✅ Te da las instrucciones para actualizarlo
+
+### **Después de obtener el SHA-256 de RELEASE:**
+
+1. Abre: `public/.well-known/assetlinks.json`
+2. Busca: `"AGREGAR_SHA256_DE_RELEASE_KEYSTORE_AQUI"`
+3. Reemplázalo con el SHA-256 de tu keystore de release
+4. Guarda y haz commit
+
+**NOTA:** El archivo actualmente tiene el SHA-256 del **debug keystore** para desarrollo/testing. Para producción necesitas agregar el SHA-256 del **release keystore**.
 
 ---
 

@@ -27,7 +27,17 @@
       "namespace": "android_app",
       "package_name": "com.bisonteapp",
       "sha256_cert_fingerprints": [
-        "REEMPLAZAR_CON_TU_SHA256_DE_KEYSTORE"
+        "1F:1C:BC:DF:34:44:7B:EA:32:3B:DE:C7:B5:34:1A:7E:09:49:53:DA:2A:43:45:CF:7A:D3:9F:97:1A:B3:55:3C"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bisonteapp",
+      "sha256_cert_fingerprints": [
+        "A0:59:E9:4C:0B:9B:AB:28:D7:3C:4E:AC:8A:73:F7:F1:60:97:98:29:F1:D5:F3:93:48:5A:69:C7:BC:5A:E1:FA"
       ]
     }
   }
