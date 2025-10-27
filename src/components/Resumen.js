@@ -149,10 +149,70 @@ export default function Resumen() {
     if (paymentStatus) {
       console.log("🔄 [Resumen] Usuario regresó desde MercadoPago con estado:", paymentStatus);
       
+      // 🔄 FORZAR RECARGA DE DATOS desde localStorage
+      const safeRead = (key) => {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+          console.error(`[Resumen] Error leyendo ${key}:`, error);
+          return null;
+        }
+      };
+
+      console.log("💾 [Resumen] Recargando datos desde localStorage...");
+      
+      // Recargar cotizador y precio
+      const cotizadorData = safeRead("formCotizador");
+      const cotizacionData = safeRead("cotizacion");
+      
+      if (cotizadorData || cotizacionData) {
+        let mergedCotizador = null;
+        if (cotizadorData && cotizacionData) {
+          const costoCandidates = [cotizadorData.costoTotal, cotizacionData.costoTotal]
+            .filter((value) => typeof value === "number");
+
+          const selectedCosto =
+            costoCandidates.length > 0 ? Math.min(...costoCandidates) : undefined;
+
+          mergedCotizador = {
+            ...cotizadorData,
+            ...cotizacionData,
+            ...(typeof selectedCosto === "number" ? { costoTotal: selectedCosto } : {}),
+          };
+        } else {
+          mergedCotizador = cotizadorData || cotizacionData;
+        }
+
+        if (mergedCotizador) {
+          setCotizador(mergedCotizador);
+          if (typeof mergedCotizador.costoTotal === "number") {
+            setCostoTotal(mergedCotizador.costoTotal);
+            console.log("✅ [Resumen] Precio actualizado a:", mergedCotizador.costoTotal);
+          }
+          syncCotizacionStores(mergedCotizador);
+        }
+      }
+
+      // Recargar remitente
+      const remitenteData = safeRead("formRemitente");
+      if (remitenteData) {
+        setRemitente(remitenteData);
+        console.log("✅ [Resumen] Datos de remitente actualizados");
+      }
+
+      // Recargar destinatario
+      const destinatarioData = safeRead("formDestinatario");
+      if (destinatarioData) {
+        setDestinatario(destinatarioData);
+        console.log("✅ [Resumen] Datos de destinatario actualizados");
+      }
+      
       // Limpiar el parámetro de la URL sin recargar la página
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
       
+      // Mostrar modal según el estado del pago
       if (paymentStatus === 'failure') {
         showError(
           "Pago Rechazado ❌",
@@ -165,7 +225,7 @@ export default function Resumen() {
         );
       }
     }
-  }, [showError, showWarning]);
+  }, [showError, showWarning, syncCotizacionStores]);
 
   // ⏳ Detector de pago pendiente (desde Payment Brick)
   useEffect(() => {
