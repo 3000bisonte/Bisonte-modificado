@@ -428,16 +428,21 @@ const MercadoPagoComponent = () => {
           } else if (paymentStatus === "in_process" || paymentStatus === "pending") {
             console.log("⏳ Pago PENDIENTE - Estado:", statusDetail);
             
-            // ✅ Para pagos pendientes (Efecty, PSE, etc.), mostrar mensaje informativo
+            // ✅ Guardar información del pago pendiente
+            localStorage.setItem("pagoPendiente", "true");
+            localStorage.setItem("pagoPendienteMotivo", statusDetail || 'Tu pago está siendo procesado');
+            localStorage.setItem("pagoPendienteId", paymentId || '');
+            
+            // ✅ Mostrar mensaje informativo
             showWarning(
-              'Pago Pendiente de Confirmación',
-              'Tu pago está en proceso de confirmación. Recibirás un correo cuando se complete. Te redirigiremos a Mis Envíos donde podrás consultar el estado.'
+              'Pago Pendiente por Procesar ⏳',
+              'Tu pago está en proceso de confirmación. Te mantendremos informado sobre el estado. Serás redirigido al resumen.'
             );
             
-            // ✅ Redirigir a Mis Envíos después de mostrar el mensaje
+            // ✅ Redirigir al resumen para que vea el estado
             setTimeout(() => {
-              console.log("🔄 Redirigiendo a Mis Envíos (pago pendiente)...");
-              router.push("/misenvios");
+              console.log("🔄 Redirigiendo al resumen (pago pendiente)...");
+              router.push("/resumen");
             }, 3000);
             
             reject('pending_payment');
@@ -686,7 +691,12 @@ const MercadoPagoComponent = () => {
       void manejarEnvioAprobado();
     } else if (status === "in_process" || status === "pending") {
       console.warn(`⏳ Pago ${status} - NO se registrará el envío aún. Esperando confirmación.`);
-      // No hacer nada, el webhook lo manejará cuando sea aprobado
+      
+      // Guardar información del pago pendiente
+      localStorage.setItem("pagoPendiente", "true");
+      localStorage.setItem("pagoPendienteMotivo", `Pago ${status === 'pending' ? 'pendiente' : 'en proceso'}`);
+      
+      // No hacer nada más aquí, el webhook lo manejará cuando sea aprobado
     } else if (status === "rejected" || status === "cancelled") {
       console.error(`❌ Pago ${status} - No se registrará el envío`);
       

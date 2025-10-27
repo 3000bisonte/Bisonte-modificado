@@ -139,6 +139,55 @@ export default function Resumen() {
     }
   }, [showError]);
 
+  // 🔄 Detector de retorno desde MercadoPago (PSE, etc.)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    
+    if (paymentStatus) {
+      console.log("🔄 [Resumen] Usuario regresó desde MercadoPago con estado:", paymentStatus);
+      
+      // Limpiar el parámetro de la URL sin recargar la página
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      
+      if (paymentStatus === 'failure') {
+        showError(
+          "Pago Rechazado ❌",
+          "El pago no pudo ser procesado. Por favor, verifica tus datos e intenta nuevamente con otro método de pago."
+        );
+      } else if (paymentStatus === 'pending') {
+        showWarning(
+          "Pago Pendiente por Procesar ⏳",
+          "Tu pago está siendo procesado por el banco. Recibirás un correo electrónico cuando se confirme. Puedes intentar con otro método de pago si lo prefieres."
+        );
+      }
+    }
+  }, [showError, showWarning]);
+
+  // ⏳ Detector de pago pendiente (desde Payment Brick)
+  useEffect(() => {
+    const pagoPendiente = localStorage.getItem("pagoPendiente");
+    const pagoPendienteMotivo = localStorage.getItem("pagoPendienteMotivo");
+    const pagoPendienteId = localStorage.getItem("pagoPendienteId");
+    
+    if (pagoPendiente === "true") {
+      console.log("⏳ [Resumen] Usuario regresó de pago pendiente:", pagoPendienteMotivo);
+      
+      showWarning(
+        "Pago Pendiente por Procesar ⏳",
+        `${pagoPendienteMotivo || 'Tu pago está siendo procesado'}. Recibirás un correo electrónico cuando se confirme el pago.${pagoPendienteId ? ` ID de pago: ${pagoPendienteId}` : ''} Puedes intentar con otro método de pago si lo prefieres.`
+      );
+      
+      // Limpiar flags
+      localStorage.removeItem("pagoPendiente");
+      localStorage.removeItem("pagoPendienteMotivo");
+      localStorage.removeItem("pagoPendienteId");
+    }
+  }, [showWarning]);
+
   // Legacy Ad State for backward compatibility
   const [adState, setAdState] = useState("idle");
   const [retryCount, setRetryCount] = useState(0);

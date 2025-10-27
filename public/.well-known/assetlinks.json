@@ -20,5 +20,15 @@
         "18:B6:CC:7E:AA:7A:9B:97:11:49:14:46:9F:5C:DE:73:C1:1A:4F:50:57:24:F4:4A:60:E4:DC:82:77:3E:E0:40"
       ]
     }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bisonteapp",
+      "sha256_cert_fingerprints": [
+        "REEMPLAZAR_CON_TU_SHA256_DE_KEYSTORE"
+      ]
+    }
   }
 ]
