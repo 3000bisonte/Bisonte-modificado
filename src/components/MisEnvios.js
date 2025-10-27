@@ -57,6 +57,26 @@ const getStatusDisplay = (statusKey) => {
   );
 };
 
+// Función para parsear campos JSON (Destinatario, Remitente)
+const parseJsonField = (field) => {
+  if (!field) return "";
+  
+  // Si ya es un string normal, devolverlo
+  if (typeof field === "string" && !field.startsWith("{")) {
+    return field;
+  }
+  
+  // Intentar parsear como JSON
+  try {
+    const parsed = typeof field === "string" ? JSON.parse(field) : field;
+    // Retornar el nombre si existe
+    return parsed?.Nombre || parsed?.nombre || field;
+  } catch (e) {
+    // Si falla el parse, devolver el campo original
+    return field;
+  }
+};
+
 export default function MisEnvios() {
   const { data: session } = useSession();
   const [envios, setEnvios] = useState([]);
@@ -160,8 +180,8 @@ export default function MisEnvios() {
       envio.NumeroGuia?.toLowerCase() || "",
       envio.Origen?.toLowerCase() || "",
       envio.Destino?.toLowerCase() || "",
-      envio.Destinatario?.toLowerCase() || "",
-      envio.Remitente?.toLowerCase() || "",
+      parseJsonField(envio.Destinatario)?.toLowerCase() || "",
+      parseJsonField(envio.Remitente)?.toLowerCase() || "",
       envio.Estado?.toLowerCase() || "",
       STATUS_STYLES[envio.Estado]?.label?.toLowerCase() || "",
       dayjs(envio.FechaSolicitud).isValid()
@@ -405,7 +425,9 @@ export default function MisEnvios() {
                         {/* Destinatario */}
                         <td className="px-2 sm:px-3 py-2 sm:py-3 text-white text-xs sm:text-sm">
                           <div className="truncate max-w-[120px] sm:max-w-[150px]">
-                            {search ? highlightText(envio.Destinatario, search) : envio.Destinatario}
+                            {search 
+                              ? highlightText(parseJsonField(envio.Destinatario), search) 
+                              : parseJsonField(envio.Destinatario)}
                           </div>
                         </td>
                         
