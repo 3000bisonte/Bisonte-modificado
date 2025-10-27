@@ -120,6 +120,25 @@ export default function Resumen() {
     };
   }, [showWarning, showSuccess]);
 
+  // 🚫 Detector de pago rechazado
+  useEffect(() => {
+    const pagoRechazado = localStorage.getItem("pagoRechazado");
+    const pagoRechazadoMotivo = localStorage.getItem("pagoRechazadoMotivo");
+    
+    if (pagoRechazado === "true") {
+      console.log("❌ [Resumen] Usuario regresó de pago rechazado:", pagoRechazadoMotivo);
+      
+      showError(
+        "Pago No Procesado",
+        `${pagoRechazadoMotivo || 'Tu pago no pudo ser procesado'}. Por favor, verifica los datos de tu método de pago e inténtalo nuevamente.`
+      );
+      
+      // Limpiar flags
+      localStorage.removeItem("pagoRechazado");
+      localStorage.removeItem("pagoRechazadoMotivo");
+    }
+  }, [showError]);
+
   // Legacy Ad State for backward compatibility
   const [adState, setAdState] = useState("idle");
   const [retryCount, setRetryCount] = useState(0);

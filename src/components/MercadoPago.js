@@ -443,22 +443,52 @@ const MercadoPagoComponent = () => {
             reject('pending_payment');
           } else {
             console.error("❌ Pago rechazado - Estado:", paymentStatus, statusDetail);
+            
+            // Guardar información del pago rechazado para mostrar en resumen
+            localStorage.setItem("pagoRechazado", "true");
+            localStorage.setItem("pagoRechazadoMotivo", statusDetail || 'Pago rechazado');
+            
             showError(
               'Pago Rechazado',
               `Tu pago fue rechazado. ${statusDetail || 'Por favor, verifica los datos e inténtalo nuevamente.'}`
             );
+            
+            // Redirigir al resumen después de mostrar el error
+            setTimeout(() => {
+              console.log("🔄 Redirigiendo al resumen (pago rechazado)...");
+              router.push("/resumen");
+            }, 3000);
+            
             reject(statusDetail || 'Pago rechazado');
           }
         })
         .catch((error) => {
           console.error("❌ Error de red al procesar pago:", error);
           
-          // 🚀 Para PSE, Efecty y otros métodos de pago externos, 
-          // NO mostrar error ya que el usuario será redirigido
-          console.log("🏦 Flujo de pago externo iniciado - No mostrar error de conexión");
+          // 🚀 Para PSE, Efecty y otros métodos de pago externos que redirigen,
+          // el error puede ser esperado (redirección en proceso)
+          if (isPSE || formData.payment_method_id === 'efecty') {
+            console.log("🏦 Flujo de pago externo iniciado - No mostrar error de conexión");
+            return; // No rechazar para métodos externos
+          }
           
-          // No rechazar la promesa para evitar mostrar errores innecesarios
-          // El usuario será redirigido a la página del método de pago
+          // Para otros errores de red, mostrar mensaje y redirigir al resumen
+          console.error("❌ Error de conexión no esperado:", error);
+          
+          localStorage.setItem("pagoRechazado", "true");
+          localStorage.setItem("pagoRechazadoMotivo", "Error de conexión al procesar el pago");
+          
+          showError(
+            'Error de Conexión',
+            'Hubo un problema de conexión al procesar tu pago. Por favor, verifica tu internet e inténtalo nuevamente.'
+          );
+          
+          setTimeout(() => {
+            console.log("🔄 Redirigiendo al resumen (error de conexión)...");
+            router.push("/resumen");
+          }, 3000);
+          
+          reject(error);
         });
     });
   };
@@ -659,12 +689,23 @@ const MercadoPagoComponent = () => {
       // No hacer nada, el webhook lo manejará cuando sea aprobado
     } else if (status === "rejected" || status === "cancelled") {
       console.error(`❌ Pago ${status} - No se registrará el envío`);
+      
+      // Guardar información del pago rechazado
+      localStorage.setItem("pagoRechazado", "true");
+      localStorage.setItem("pagoRechazadoMotivo", status === 'rejected' ? 'Pago rechazado' : 'Pago cancelado');
+      
       showError(
         'Pago No Exitoso',
-        `Tu pago fue ${status === 'rejected' ? 'rechazado' : 'cancelado'}. Por favor, inténtalo nuevamente con otro método de pago.`
+        `Tu pago fue ${status === 'rejected' ? 'rechazado' : 'cancelado'}. Serás redirigido al resumen para intentar nuevamente.`
       );
+      
+      // Redirigir al resumen después de 3 segundos
+      setTimeout(() => {
+        console.log("🔄 Redirigiendo al resumen (pago no exitoso)...");
+        router.push("/resumen");
+      }, 3000);
     }
-  }, [manejarEnvioAprobado, status, showError]);
+  }, [manejarEnvioAprobado, status, showError, router]);
   const onError = async (error) => {
     console.error("❌ Error en Payment Brick:", error);
     
