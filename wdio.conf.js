@@ -61,7 +61,7 @@ exports.config = {
     // Connection settings
     hostname: process.env.APPIUM_HOST || 'localhost',
     port: parseInt(process.env.APPIUM_PORT || '4723'),
-    path: '/wd/hub/',
+    path: '/',
     
     // Services
     // NOTA: El servicio de Appium está deshabilitado porque el batch script
