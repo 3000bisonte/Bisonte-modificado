@@ -139,7 +139,42 @@ export default function Resumen() {
     }
   }, [showError]);
 
-  // 🔄 Detector de retorno desde MercadoPago (PSE, etc.)
+  // � Helper function para sincronizar cotización (ANTES de los useEffects)
+  const syncCotizacionStores = useCallback((data) => {
+    if (!data || typeof data !== "object") {
+      return;
+    }
+
+    try {
+      localStorage.setItem("formCotizador", JSON.stringify(data));
+    } catch (error) {
+      console.error("[Resumen] Error actualizando formCotizador:", error);
+    }
+
+    try {
+      const existingRaw = localStorage.getItem("cotizacion");
+      if (existingRaw) {
+        const existing = JSON.parse(existingRaw);
+        const merged = {
+          ...existing,
+          ...data,
+          costoTotal: data.costoTotal,
+        };
+        localStorage.setItem("cotizacion", JSON.stringify(merged));
+      } else {
+        localStorage.setItem("cotizacion", JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error("[Resumen] Error sincronizando cotizacion:", error);
+      try {
+        localStorage.setItem("cotizacion", JSON.stringify(data));
+      } catch (persistError) {
+        console.error("[Resumen] Error persistiendo cotizacion:", persistError);
+      }
+    }
+  }, []);
+
+  // �🔄 Detector de retorno desde MercadoPago (PSE, etc.)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
@@ -309,40 +344,6 @@ export default function Resumen() {
     },
     [DEFAULT_REWARD_AMOUNT]
   );
-
-  const syncCotizacionStores = useCallback((data) => {
-    if (!data || typeof data !== "object") {
-      return;
-    }
-
-    try {
-      localStorage.setItem("formCotizador", JSON.stringify(data));
-    } catch (error) {
-      console.error("[Resumen] Error actualizando formCotizador:", error);
-    }
-
-    try {
-      const existingRaw = localStorage.getItem("cotizacion");
-      if (existingRaw) {
-        const existing = JSON.parse(existingRaw);
-        const merged = {
-          ...existing,
-          ...data,
-          costoTotal: data.costoTotal,
-        };
-        localStorage.setItem("cotizacion", JSON.stringify(merged));
-      } else {
-        localStorage.setItem("cotizacion", JSON.stringify(data));
-      }
-    } catch (error) {
-      console.error("[Resumen] Error sincronizando cotizacion:", error);
-      try {
-        localStorage.setItem("cotizacion", JSON.stringify(data));
-      } catch (persistError) {
-        console.error("[Resumen] Error persistiendo cotizacion:", persistError);
-      }
-    }
-  }, []);
 
   const applyRewardDiscount = useCallback(
     (rawAmount) => {
