@@ -64,19 +64,9 @@ exports.config = {
     path: '/wd/hub/',
     
     // Services
-    services: [
-        ['appium', {
-            args: {
-                relaxedSecurity: true,
-                address: process.env.APPIUM_HOST || 'localhost',
-                port: parseInt(process.env.APPIUM_PORT || '4723'),
-                basePath: '/wd/hub/',
-            },
-            logPath: './tests/mobile/logs/',
-            // No auto-start si APPIUM_NO_START está definido
-            command: process.env.APPIUM_NO_START ? undefined : 'appium',
-        }]
-    ],
+    // NOTA: El servicio de Appium está deshabilitado porque el batch script
+    // run-mobile-tests-local.bat ya inicia Appium automáticamente
+    services: [],
     
     // Framework
     framework: 'mocha',
