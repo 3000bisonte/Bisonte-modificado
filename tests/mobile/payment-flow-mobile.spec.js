@@ -122,6 +122,24 @@ describe('Bisonte Logística - Tests Móviles E2E', () => {
             
             console.log('✅ En página de cotizador');
             
+            // Seleccionar tipo de envío (Contenedor/Paquete)
+            console.log('📦 Seleccionando tipo de envío...');
+            try {
+                // Intentar encontrar botones de tipo de envío
+                const tipoEnvioButtons = await driver.$$('button');
+                for (const btn of tipoEnvioButtons) {
+                    const text = await btn.getText().catch(() => '');
+                    if (text.toLowerCase().includes('contener') || text.toLowerCase().includes('paquete')) {
+                        console.log(`👆 Haciendo click en: ${text}`);
+                        await btn.click();
+                        await driver.pause(1000);
+                        break;
+                    }
+                }
+            } catch (error) {
+                console.log('⚠️ No se encontró selector de tipo de envío, continuando...');
+            }
+            
             // Llenar peso
             console.log('⚖️ Ingresando peso del paquete...');
             const pesoInput = await driver.$('input[name="peso"]');
