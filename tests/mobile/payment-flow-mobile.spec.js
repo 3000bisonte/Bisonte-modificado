@@ -24,9 +24,9 @@ describe('Bisonte Logística - Tests Móviles E2E', () => {
         // Esperar a que la app cargue completamente
         await driver.pause(5000);
         
-        console.log('📱 Dispositivo:', (await driver.getCapabilities()).platformName);
-        console.log('📦 App:', (await driver.getCapabilities())['appium:appPackage']);
-        console.log('🔢 Versión Android:', (await driver.getCapabilities())['appium:platformVersion']);
+        console.log('📱 Dispositivo:', driver.capabilities.platformName);
+        console.log('📦 App:', driver.capabilities['appium:appPackage']);
+        console.log('🔢 Versión Android:', driver.capabilities['appium:platformVersion']);
     });
     
     // ====================================
