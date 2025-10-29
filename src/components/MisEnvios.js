@@ -92,6 +92,13 @@ export default function MisEnvios() {
     if (envioExitoso === "true") {
       setShowSuccessMessage(true);
       localStorage.removeItem("envioExitoso");
+      
+      // 🛡️ LIMPIAR FLAG de envío registrado después de mostrar éxito
+      // Esto permite crear nuevos envíos después
+      setTimeout(() => {
+        localStorage.removeItem("envioRegistrado");
+        console.log("🧹 Flag 'envioRegistrado' limpiado después de confirmar éxito");
+      }, 2000);
 
       // Log para debugging
       if (envioDatos) {

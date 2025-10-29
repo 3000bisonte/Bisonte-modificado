@@ -1158,6 +1158,10 @@ export default function Resumen() {
     console.log("💳 [handlePagar] Usuario hizo click en 'Pagar'");
     setShowMegaSale(false);
     
+    // 🛡️ LIMPIAR FLAG de envío registrado para permitir nueva orden
+    localStorage.removeItem("envioRegistrado");
+    console.log("🧹 Flag 'envioRegistrado' limpiado - preparando nuevo pago");
+    
     // 🌐 Verificar conexión a internet PRIMERO
     if (!navigator.onLine) {
       console.error("🔴 [handlePagar] Sin conexión a internet");
@@ -1210,6 +1214,10 @@ export default function Resumen() {
     if (costoTotal > 0) {
       return;
     }
+
+    // 🛡️ LIMPIAR FLAG de envío registrado para permitir nueva orden
+    localStorage.removeItem("envioRegistrado");
+    console.log("🧹 Flag 'envioRegistrado' limpiado - preparando envío gratuito");
 
     // Validar que tenemos todos los datos necesarios
     if (!remitente || !destinatario || !cotizador) {
