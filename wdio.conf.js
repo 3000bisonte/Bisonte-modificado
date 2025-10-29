@@ -58,16 +58,23 @@ exports.config = {
     connectionRetryTimeout: 120000,
     connectionRetryCount: 3,
     
+    // Connection settings
+    hostname: process.env.APPIUM_HOST || 'localhost',
+    port: parseInt(process.env.APPIUM_PORT || '4723'),
+    path: '/wd/hub/',
+    
     // Services
     services: [
         ['appium', {
             args: {
                 relaxedSecurity: true,
-                address: 'localhost',
-                port: 4723,
+                address: process.env.APPIUM_HOST || 'localhost',
+                port: parseInt(process.env.APPIUM_PORT || '4723'),
                 basePath: '/wd/hub/',
             },
-            logPath: './tests/mobile/logs/'
+            logPath: './tests/mobile/logs/',
+            // No auto-start si APPIUM_NO_START está definido
+            command: process.env.APPIUM_NO_START ? undefined : 'appium',
         }]
     ],
     
