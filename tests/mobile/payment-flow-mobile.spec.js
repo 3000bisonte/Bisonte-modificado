@@ -163,11 +163,49 @@ describe('Bisonte Logística - Tests Móviles E2E', () => {
                 console.log('⚠️ Selects de ciudad no encontrados, continuando...');
             }
             
-            // Botón cotizar
+            // Hacer scroll hacia abajo para asegurar que el botón está visible
+            console.log('📜 Haciendo scroll hacia abajo...');
+            await driver.execute('window.scrollTo(0, document.body.scrollHeight)');
+            await driver.pause(1000);
+            
+            // Botón cotizar - intentar múltiples selectores
             console.log('🔍 Buscando botón de cotizar...');
-            const cotizarButton = await driver.$('button*=Cotizar');
-            await cotizarButton.waitForDisplayed({ timeout: 30000 });
-            console.log('✅ Botón de cotizar encontrado');
+            let cotizarButton;
+            
+            try {
+                // Intento 1: Buscar por texto exacto
+                cotizarButton = await driver.$('button=Cotizar');
+                await cotizarButton.waitForDisplayed({ timeout: 5000 });
+                console.log('✅ Botón encontrado con selector: button=Cotizar');
+            } catch (e1) {
+                try {
+                    // Intento 2: Buscar por texto parcial (case-insensitive)
+                    cotizarButton = await driver.$('//button[contains(translate(., "COTIZAR", "cotizar"), "cotizar")]');
+                    await cotizarButton.waitForDisplayed({ timeout: 5000 });
+                    console.log('✅ Botón encontrado con xpath case-insensitive');
+                } catch (e2) {
+                    try {
+                        // Intento 3: Buscar por tipo y clase común
+                        cotizarButton = await driver.$('button[type="submit"]');
+                        await cotizarButton.waitForDisplayed({ timeout: 5000 });
+                        console.log('✅ Botón encontrado como submit button');
+                    } catch (e3) {
+                        // Intento 4: Buscar cualquier botón visible después del formulario
+                        const buttons = await driver.$$('button');
+                        for (const btn of buttons) {
+                            const text = await btn.getText();
+                            if (text && text.toLowerCase().includes('cotiz')) {
+                                cotizarButton = btn;
+                                console.log('✅ Botón encontrado iterando todos los botones');
+                                break;
+                            }
+                        }
+                        if (!cotizarButton) {
+                            throw new Error('No se pudo encontrar el botón de cotizar con ningún método');
+                        }
+                    }
+                }
+            }
             
             console.log('👆 Haciendo click en Cotizar...');
             await cotizarButton.click();
@@ -195,9 +233,19 @@ describe('Bisonte Logística - Tests Móviles E2E', () => {
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
             
             // Continuar desde cotización
-            console.log('👆 Click en Siguiente...');
-            const nextButton = await driver.$('button*=Siguiente');
-            await nextButton.waitForDisplayed({ timeout: 30000 });
+            console.log('👆 Buscando botón Siguiente...');
+            let nextButton;
+            
+            try {
+                nextButton = await driver.$('button=Siguiente');
+                await nextButton.waitForDisplayed({ timeout: 5000 });
+            } catch (e) {
+                // Buscar por xpath case-insensitive
+                nextButton = await driver.$('//button[contains(translate(., "SIGUIENTE", "siguiente"), "siguiente")]');
+                await nextButton.waitForDisplayed({ timeout: 30000 });
+            }
+            
+            console.log('✅ Botón Siguiente encontrado, haciendo click...');
             await nextButton.click();
             await driver.pause(3000);
             
