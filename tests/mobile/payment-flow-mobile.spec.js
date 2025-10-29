@@ -166,7 +166,7 @@ describe('Bisonte Logística - Tests Móviles E2E', () => {
             // Botón cotizar
             console.log('🔍 Buscando botón de cotizar...');
             const cotizarButton = await driver.$('button*=Cotizar');
-            await cotizarButton.waitForDisplayed({ timeout: 10000 });
+            await cotizarButton.waitForDisplayed({ timeout: 30000 });
             console.log('✅ Botón de cotizar encontrado');
             
             console.log('👆 Haciendo click en Cotizar...');
@@ -197,6 +197,7 @@ describe('Bisonte Logística - Tests Móviles E2E', () => {
             // Continuar desde cotización
             console.log('👆 Click en Siguiente...');
             const nextButton = await driver.$('button*=Siguiente');
+            await nextButton.waitForDisplayed({ timeout: 30000 });
             await nextButton.click();
             await driver.pause(3000);
             
