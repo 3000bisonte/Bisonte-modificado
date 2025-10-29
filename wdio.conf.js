@@ -25,7 +25,7 @@ exports.config = {
         // Configuración para dispositivo Android real
         platformName: 'Android',
         'appium:deviceName': 'Android Device',
-        'appium:platformVersion': '12.0', // Ajusta según tu dispositivo
+        'appium:platformVersion': '15', // Android 15 (detectado automáticamente)
         'appium:automationName': 'UiAutomator2',
         
         // Configuración de la app
