@@ -15,12 +15,55 @@ export default function MercadoPagoSuccessPage() {
     const crearEnvio = async () => {
       console.log("✅ [MercadoPago Success] Usuario llegó desde pago exitoso");
       
+      // 🛡️ PROTECCIÓN 1: Verificar si el envío ya fue registrado
+      const envioYaRegistrado = localStorage.getItem("envioRegistrado");
+      if (envioYaRegistrado === "true") {
+        console.log("⚠️ Envío ya registrado previamente. Redirigiendo a Mis Envíos...");
+        localStorage.setItem("envioExitoso", "true");
+        setIsProcessing(false);
+        setTimeout(() => {
+          router.replace("/misenvios");
+        }, 1000);
+        return;
+      }
+
+      // 🛡️ PROTECCIÓN 2: Verificar origen del pago
+      const origenPago = sessionStorage.getItem("origenPago");
+      if (origenPago === "payment_brick") {
+        console.log("💳 Pago de Payment Brick ya manejado por MercadoPago.js. Redirigiendo...");
+        localStorage.setItem("envioExitoso", "true");
+        setIsProcessing(false);
+        setTimeout(() => {
+          router.replace("/misenvios");
+        }, 1000);
+        return;
+      }
+
       // Capturar parámetros de MercadoPago
       const paymentId = searchParams.get("payment_id");
       const status = searchParams.get("status");
       const externalReference = searchParams.get("external_reference");
       
       console.log("💳 Parámetros de pago:", { paymentId, status, externalReference });
+
+      // 🛡️ PROTECCIÓN 3: Verificar paymentId duplicado
+      if (paymentId) {
+        const ordenesExistentes = localStorage.getItem("ordenesCreadas") || "[]";
+        try {
+          const ordenes = JSON.parse(ordenesExistentes);
+          if (ordenes.includes(paymentId)) {
+            console.log("⚠️ Orden con este paymentId ya existe:", paymentId);
+            localStorage.setItem("envioExitoso", "true");
+            setIsProcessing(false);
+            setTimeout(() => {
+              router.replace("/misenvios");
+            }, 1000);
+            return;
+          }
+        } catch (e) {
+          console.warn("⚠️ Error parseando ordenesCreadas, continuando:", e);
+        }
+      }
 
       try {
         // Leer datos del localStorage
@@ -109,6 +152,22 @@ export default function MercadoPagoSuccessPage() {
         if (response.ok) {
           console.log("✅ Envío registrado exitosamente:", responseData);
 
+          // 🛡️ MARCAR ENVÍO COMO REGISTRADO para evitar duplicados
+          localStorage.setItem("envioRegistrado", "true");
+
+          // 🛡️ REGISTRAR paymentId para evitar duplicados
+          if (paymentId) {
+            const ordenesExistentes = localStorage.getItem("ordenesCreadas") || "[]";
+            try {
+              const ordenes = JSON.parse(ordenesExistentes);
+              ordenes.push(paymentId);
+              localStorage.setItem("ordenesCreadas", JSON.stringify(ordenes));
+              console.log("✅ PaymentId registrado:", paymentId);
+            } catch (e) {
+              console.warn("⚠️ Error guardando paymentId:", e);
+            }
+          }
+
           // Guardar información del envío
           localStorage.setItem("envioDatos", JSON.stringify({
             ...responseData,
@@ -126,6 +185,11 @@ export default function MercadoPagoSuccessPage() {
           localStorage.removeItem("formRemitente");
           localStorage.removeItem("formDestinatario");
 
+          // 🛡️ Limpiar flags de proceso
+          sessionStorage.removeItem("pagoEnProceso");
+          sessionStorage.removeItem("origenPago");
+          sessionStorage.removeItem("timestampPago");
+
           setIsProcessing(false);
 
           // Redirigir a Mis Envíos
@@ -140,6 +204,9 @@ export default function MercadoPagoSuccessPage() {
         console.error("❌ Error creando envío:", err);
         setError(err.message);
         setIsProcessing(false);
+
+        // 🛡️ Limpiar flags de proceso en caso de error
+        sessionStorage.removeItem("pagoEnProceso");
 
         // Guardar flag de error y redirigir a resumen después de 3s
         localStorage.setItem("pagoRechazado", "true");

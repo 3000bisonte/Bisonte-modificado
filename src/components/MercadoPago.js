@@ -54,7 +54,31 @@ const MercadoPagoComponent = () => {
     console.log("🌐 Conexión:", navigator.onLine ? "Online" : "Offline");
   }, [userEmail]);
 
-  // � Detectar retorno de PSE al cargar el componente
+  // 🧹 Limpiar flags antiguos cuando el usuario vuelve a /pago
+  useEffect(() => {
+    const limpiarFlagsAnteriores = () => {
+      const timestampPago = sessionStorage.getItem("timestampPago");
+      if (timestampPago) {
+        const tiempoTranscurrido = Date.now() - parseInt(timestampPago);
+        const CINCO_MINUTOS = 5 * 60 * 1000;
+        
+        if (tiempoTranscurrido > CINCO_MINUTOS) {
+          console.log("🧹 Limpiando flags de pago anterior (>5 min)");
+          localStorage.removeItem("envioRegistrado");
+          localStorage.removeItem("pagoPendiente");
+          localStorage.removeItem("pagoRechazado");
+          localStorage.removeItem("envioExitoso");
+          sessionStorage.removeItem("pagoEnProceso");
+          sessionStorage.removeItem("origenPago");
+          sessionStorage.removeItem("timestampPago");
+        }
+      }
+    };
+    
+    limpiarFlagsAnteriores();
+  }, []);
+
+  // 🏦 Detectar retorno de PSE al cargar el componente
   useEffect(() => {
     const currentUrl = window.location.href;
     const isReturningFromPSE = currentUrl.includes('payment_id') || 
@@ -353,11 +377,25 @@ const MercadoPagoComponent = () => {
     console.log("💳 Procesando pago con Payment Brick...");
     console.log("📋 Datos del formulario (completos):", JSON.stringify(formData, null, 2));
     
+    // 🛡️ PROTECCIÓN: Marcar que un pago está en proceso
+    sessionStorage.setItem("pagoEnProceso", "true");
+    sessionStorage.setItem("timestampPago", Date.now().toString());
+    
     // 🏦 Detectar si es pago PSE y resetear estado previo
     const isPSE = formData.payment_method_id === 'pse';
+    const isEfecty = formData.payment_method_id === 'efecty';
     setIsPSEPayment(isPSE);
     
-    console.log(`🎯 Método de pago detectado: ${formData.payment_method_id} ${isPSE ? '(PSE)' : '(Otro método)'}`);
+    // 🏦 Marcar el origen del pago según el método
+    if (isPSE || isEfecty) {
+      console.log("🏦 Pago externo detectado - success/page.js manejará la creación de orden");
+      sessionStorage.setItem("origenPago", "redirect_externo");
+    } else {
+      console.log("💳 Pago Payment Brick - MercadoPago.js manejará la creación de orden");
+      sessionStorage.setItem("origenPago", "payment_brick");
+    }
+    
+    console.log(`🎯 Método de pago detectado: ${formData.payment_method_id} ${isPSE ? '(PSE)' : isEfecty ? '(Efecty)' : '(Otro método)'}`);
     
     console.log("📋 Resumen:", {
       amount: formData.transaction_amount,
@@ -365,6 +403,8 @@ const MercadoPagoComponent = () => {
       installments: formData.installments,
       email: formData.payer?.email,
       isPSE: isPSE,
+      isEfecty: isEfecty,
+      origenPago: sessionStorage.getItem("origenPago"),
       hasFinancialInstitution: !!formData.transaction_details?.financial_institution || !!formData.financial_institution,
     });
 
@@ -503,6 +543,34 @@ const MercadoPagoComponent = () => {
 
   // Función que maneja el envío aprobado
   const manejarEnvioAprobado = useCallback(async () => {
+    // 🛡️ PROTECCIÓN 1: Verificar si el envío ya fue registrado
+    const envioYaRegistrado = localStorage.getItem("envioRegistrado");
+    if (envioYaRegistrado === "true") {
+      console.log("⚠️ Envío ya registrado previamente. Evitando duplicación.");
+      return;
+    }
+
+    // 🛡️ PROTECCIÓN 2: Solo ejecutar si el pago se inició desde Payment Brick
+    const origenPago = sessionStorage.getItem("origenPago");
+    if (origenPago === "redirect_externo") {
+      console.log("🏦 Pago externo - success/page.js manejará la creación. Saltando ejecución.");
+      return;
+    }
+
+    // 🛡️ PROTECCIÓN 3: Verificar que paymentId no esté duplicado
+    if (paymentId) {
+      const ordenesExistentes = localStorage.getItem("ordenesCreadas") || "[]";
+      try {
+        const ordenes = JSON.parse(ordenesExistentes);
+        if (ordenes.includes(paymentId)) {
+          console.log("⚠️ Orden con este paymentId ya existe:", paymentId);
+          return;
+        }
+      } catch (e) {
+        console.warn("⚠️ Error parseando ordenesCreadas, continuando:", e);
+      }
+    }
+
     const numeroGuia = generarNumeroGuia();
     
     try {
@@ -625,6 +693,22 @@ const MercadoPagoComponent = () => {
           PaymentId: responseData.PaymentId,
         });
 
+        // 🛡️ MARCAR ENVÍO COMO REGISTRADO para evitar duplicados
+        localStorage.setItem("envioRegistrado", "true");
+
+        // 🛡️ REGISTRAR paymentId para evitar duplicados
+        if (paymentId) {
+          const ordenesExistentes = localStorage.getItem("ordenesCreadas") || "[]";
+          try {
+            const ordenes = JSON.parse(ordenesExistentes);
+            ordenes.push(paymentId);
+            localStorage.setItem("ordenesCreadas", JSON.stringify(ordenes));
+            console.log("✅ PaymentId registrado:", paymentId);
+          } catch (e) {
+            console.warn("⚠️ Error guardando paymentId:", e);
+          }
+        }
+
         // Guardar información del envío
         localStorage.setItem("envioDatos", JSON.stringify({
           ...responseData,
@@ -642,6 +726,11 @@ const MercadoPagoComponent = () => {
         localStorage.removeItem("formRemitente");
         localStorage.removeItem("formDestinatario");
 
+        // 🛡️ Limpiar flags de proceso
+        sessionStorage.removeItem("pagoEnProceso");
+        sessionStorage.removeItem("origenPago");
+        sessionStorage.removeItem("timestampPago");
+
         showSuccess('¡Pago Exitoso! 🎉', '¡Envío realizado exitosamente! Redirigiendo a Mis Envíos...');
 
         // ✅ Redirigir inmediatamente a Mis Envíos con router.push
@@ -657,7 +746,10 @@ const MercadoPagoComponent = () => {
     } catch (error) {
       console.error("❌ Error al registrar el envío:", error);
       
-      // 🔍 Logging detallado del error
+      // �️ Limpiar flags de proceso en caso de error
+      sessionStorage.removeItem("pagoEnProceso");
+      
+      // �🔍 Logging detallado del error
       console.error("📋 Detalles completos del error:", {
         message: error?.message || 'Sin mensaje',
         name: error?.name || 'Sin nombre',
@@ -685,7 +777,21 @@ const MercadoPagoComponent = () => {
   useEffect(() => {
     console.log("🔍 Estado del pago actualizado:", status);
     
-    // ✅ CORREGIDO: SOLO registrar envío cuando el pago es APROBADO
+    // 🛡️ PROTECCIÓN 1: No procesar si el envío ya fue registrado
+    const envioYaRegistrado = localStorage.getItem("envioRegistrado");
+    if (envioYaRegistrado === "true") {
+      console.log("⚠️ Envío ya registrado. Saltando procesamiento de pago.");
+      return;
+    }
+
+    // 🛡️ PROTECCIÓN 2: Solo ejecutar para Payment Brick (no para redirects externos)
+    const origenPago = sessionStorage.getItem("origenPago");
+    if (origenPago === "redirect_externo") {
+      console.log("🏦 Pago externo - success/page.js lo manejará. Saltando ejecución.");
+      return;
+    }
+    
+    // ✅ SOLO registrar envío cuando el pago es APROBADO
     if (status === "approved") {
       console.log(`✅ Pago APROBADO - Registrando envío con estado: ${status}`);
       void manejarEnvioAprobado();
