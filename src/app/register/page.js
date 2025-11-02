@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import TemporaryStorage from "@/lib/temporaryStorage";
 import { sanitizeName, sanitizeEmail, sanitizePhone } from "@/lib/sanitize";
+import { validatePassword, getStrengthColor, getStrengthMessage } from "@/lib/passwordValidator";
 
 export default function Register() {
   const [nombre, setNombre] = useState("");
@@ -30,6 +31,7 @@ export default function Register() {
   const [ciudadError, setCiudadError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState(null);
 
   // Handlers de validación en vivo
   const handleNombreBlur = () => {
@@ -53,9 +55,19 @@ export default function Register() {
     else {setEmailError("");}
   };
   const handlePasswordBlur = () => {
-    if (!password) {setPasswordError("La contraseña es obligatoria.");}
-    else if (!validarPassword(password)) {setPasswordError("Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 caracter especial.");}
-    else {setPasswordError("");}
+    if (!password) {
+      setPasswordError("La contraseña es obligatoria.");
+      setPasswordStrength(null);
+    } else {
+      const validation = validatePassword(password);
+      setPasswordStrength(validation);
+      
+      if (!validation.isValid && validation.errors.length > 0) {
+        setPasswordError(validation.errors[0]);
+      } else {
+        setPasswordError("");
+      }
+    }
   };
 
   // Limpiar errores automáticamente al corregir
@@ -84,9 +96,24 @@ export default function Register() {
     }
   };
   const handlePasswordChange = (e) => {
-    setPassword(e.target.value);
-    if (passwordError) {
-      if (e.target.value && validarPassword(e.target.value)) {setPasswordError("");}
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    
+    // Validar fortaleza en tiempo real
+    if (newPassword.length >= 3) {
+      const validation = validatePassword(newPassword);
+      setPasswordStrength(validation);
+      
+      if (!validation.isValid && validation.errors.length > 0) {
+        setPasswordError(validation.errors[0]);
+      } else {
+        setPasswordError("");
+      }
+    } else {
+      setPasswordStrength(null);
+      if (passwordError && newPassword.length > 0) {
+        setPasswordError("");
+      }
     }
   };
 
@@ -255,11 +282,57 @@ export default function Register() {
             onBlur={handlePasswordBlur}
             autoComplete="new-password"
           />
+          
+          {/* Indicador de fortaleza de contraseña */}
+          {passwordStrength && (
+            <div className="mt-2 mb-1">
+              <div className="flex gap-1 mb-1">
+                <div className={`h-1 flex-1 rounded transition-all ${
+                  passwordStrength.strength === 'weak' || passwordStrength.strength === 'invalid' ? 'bg-red-500' :
+                  passwordStrength.strength === 'fair' ? 'bg-yellow-500' :
+                  passwordStrength.strength === 'good' ? 'bg-blue-500' :
+                  passwordStrength.strength === 'strong' ? 'bg-green-500' :
+                  'bg-green-600'
+                }`} />
+                <div className={`h-1 flex-1 rounded transition-all ${
+                  passwordStrength.strength === 'fair' || passwordStrength.strength === 'good' || 
+                  passwordStrength.strength === 'strong' || passwordStrength.strength === 'very-strong' ? 
+                  (passwordStrength.strength === 'fair' ? 'bg-yellow-500' :
+                   passwordStrength.strength === 'good' ? 'bg-blue-500' :
+                   passwordStrength.strength === 'strong' ? 'bg-green-500' : 'bg-green-600') : 'bg-gray-300'
+                }`} />
+                <div className={`h-1 flex-1 rounded transition-all ${
+                  passwordStrength.strength === 'good' || passwordStrength.strength === 'strong' || 
+                  passwordStrength.strength === 'very-strong' ? 
+                  (passwordStrength.strength === 'good' ? 'bg-blue-500' :
+                   passwordStrength.strength === 'strong' ? 'bg-green-500' : 'bg-green-600') : 'bg-gray-300'
+                }`} />
+                <div className={`h-1 flex-1 rounded transition-all ${
+                  passwordStrength.strength === 'strong' || passwordStrength.strength === 'very-strong' ? 
+                  (passwordStrength.strength === 'strong' ? 'bg-green-500' : 'bg-green-600') : 'bg-gray-300'
+                }`} />
+              </div>
+              <p className={`text-xs ${
+                passwordStrength.strength === 'weak' || passwordStrength.strength === 'invalid' ? 'text-red-400' :
+                passwordStrength.strength === 'fair' ? 'text-yellow-400' :
+                passwordStrength.strength === 'good' ? 'text-blue-400' :
+                'text-green-400'
+              }`}>
+                Fortaleza: {getStrengthMessage(passwordStrength.strength)} ({passwordStrength.entropy} bits)
+              </p>
+              {passwordStrength.warnings.length > 0 && (
+                <p className="text-xs text-yellow-400 mt-1">
+                  💡 {passwordStrength.warnings[0]}
+                </p>
+              )}
+            </div>
+          )}
+          
           <span className="text-gray-400 text-xs">
             Debe tener longitud mínima de 8 caracteres, 1 mayúscula, 1 número y 1
             caracter especial
           </span>
-          {passwordError && <span className="block text-red-400 text-xs">{passwordError}</span>}
+          {passwordError && <span className="block text-red-400 text-xs mt-1">{passwordError}</span>}
         </div>
         <div className="flex items-center mt-2">
           <input
