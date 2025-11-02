@@ -1,6 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import TemporaryStorage from "@/lib/temporaryStorage";
+import { sanitizeName, sanitizeEmail, sanitizePhone } from "@/lib/sanitize";
 
 export default function Register() {
   const [nombre, setNombre] = useState("");
@@ -118,11 +120,21 @@ export default function Register() {
       return;
     }
     setLoading(true);
+    
+    // Sanitizar datos antes de enviar
+    const sanitizedData = {
+      nombre: sanitizeName(nombre),
+      celular: sanitizePhone(celular),
+      ciudad: sanitizeName(ciudad),
+      email: sanitizeEmail(email),
+      password: password // No sanitizar password, solo validar
+    };
+    
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, celular, ciudad, email, password }),
+        body: JSON.stringify(sanitizedData),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -132,9 +144,11 @@ export default function Register() {
         console.log("✅ [Registro] Usuario registrado exitosamente:", data);
         setMsg("¡Registro exitoso!");
         
-        // Guardar datos temporales para página de éxito (sin contraseña)
-        localStorage.setItem("nombreRegistro", nombre);
-        localStorage.setItem("emailRegistro", email);
+        // Guardar datos temporales con expiración de 5 minutos (sin contraseña)
+        TemporaryStorage.set("registrationData", {
+          nombre: sanitizeName(nombre),
+          email: sanitizeEmail(email)
+        }, 5);
         
         // Limpiar formulario
         setNombre("");

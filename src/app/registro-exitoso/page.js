@@ -2,33 +2,32 @@
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
+import PasswordModal from "@/components/PasswordModal";
+import TemporaryStorage from "@/lib/temporaryStorage";
 
 export default function RegistroExitoso() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleIrALogin = () => {
     console.log("🔄 [RegistroExitoso] Usuario eligió ir a login");
     // Limpiar datos temporales
-    localStorage.removeItem("nombreRegistro");
-    localStorage.removeItem("emailRegistro");
+    TemporaryStorage.remove("registrationData");
     router.push("/");
   };
 
-  const handleIrAHome = async () => {
+  const handleIrAHome = () => {
     console.log("🔄 [RegistroExitoso] Usuario eligió iniciar sesión e ir a home");
-    
-    // Pedir la contraseña al usuario
-    const password = prompt(`Por favor, ingresa tu contraseña para iniciar sesión:\n\nCorreo: ${email}`);
-    
-    if (!password) {
-      console.log("❌ Usuario canceló el inicio de sesión");
-      return;
-    }
+    setShowPasswordModal(true);
+  };
 
-    setLoading(true);
+  const handlePasswordConfirm = async (password) => {
+    setShowPasswordModal(false);
+    setIsLoggingIn(true);
     
     try {
       console.log("🔐 Intentando login con:", email);
@@ -45,8 +44,7 @@ export default function RegistroExitoso() {
         console.log("✅ Login exitoso, redirigiendo a /home");
         
         // Limpiar datos temporales
-        localStorage.removeItem("nombreRegistro");
-        localStorage.removeItem("emailRegistro");
+        TemporaryStorage.remove("registrationData");
         
         // Redirigir a home
         router.push("/home");
@@ -54,12 +52,12 @@ export default function RegistroExitoso() {
       } else {
         console.error("❌ Error en login:", res?.error);
         alert("Error al iniciar sesión. Por favor, verifica tu contraseña e intenta nuevamente.");
-        setLoading(false);
+        setIsLoggingIn(false);
       }
     } catch (error) {
-      console.error("❌ Error en handleIrAHome:", error);
+      console.error("❌ Error al intentar login:", error);
       alert("Error de conexión. Por favor, intenta nuevamente.");
-      setLoading(false);
+      setIsLoggingIn(false);
     }
   };
 
@@ -68,21 +66,19 @@ export default function RegistroExitoso() {
     const loadingTimer = setTimeout(() => {
       setLoading(false);
       
-      // Leer datos del registro
-      const nombreGuardado = localStorage.getItem("nombreRegistro") || "";
-      const emailGuardado = localStorage.getItem("emailRegistro") || "";
+      // Leer datos del registro desde TemporaryStorage
+      const registrationData = TemporaryStorage.get("registrationData");
       
-      console.log("📋 [RegistroExitoso] Datos del registro:", { 
-        nombre: nombreGuardado, 
-        email: emailGuardado
-      });
-      
-      setNombre(nombreGuardado);
-      setEmail(emailGuardado);
-      
-      // Si no hay email, redirigir inmediatamente
-      if (!emailGuardado) {
-        console.log("⚠️ [RegistroExitoso] No hay datos de registro, redirigiendo a login");
+      if (registrationData) {
+        console.log("📋 [RegistroExitoso] Datos del registro:", { 
+          nombre: registrationData.nombre, 
+          email: registrationData.email
+        });
+        
+        setNombre(registrationData.nombre);
+        setEmail(registrationData.email);
+      } else {
+        console.log("⚠️ [RegistroExitoso] No hay datos de registro o expiraron, redirigiendo a login");
         router.push("/");
       }
     }, 1000);
@@ -149,9 +145,9 @@ export default function RegistroExitoso() {
           <button
             onClick={handleIrAHome}
             className="w-full bg-[#41e0b3] text-white font-bold py-3 rounded hover:bg-[#2bbd8c] transition disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
+            disabled={isLoggingIn}
           >
-            {loading ? (
+            {isLoggingIn ? (
               <span className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 Iniciando sesión...
@@ -164,11 +160,20 @@ export default function RegistroExitoso() {
           <button
             onClick={handleIrALogin}
             className="w-full bg-transparent border-2 border-[#41e0b3] text-[#41e0b3] font-bold py-3 rounded hover:bg-[#41e0b3] hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
+            disabled={isLoggingIn}
           >
             Ir a página de inicio de sesión
           </button>
         </div>
+
+        {/* Modal seguro de contraseña */}
+        <PasswordModal
+          isOpen={showPasswordModal}
+          onConfirm={handlePasswordConfirm}
+          onCancel={() => setShowPasswordModal(false)}
+          email={email}
+          title="Iniciar sesión"
+        />
       </div>
     </div>
   );
