@@ -53,6 +53,61 @@ export async function validatePayment(paymentId, maxRetries = 3) {
     };
   }
 
+  // ══════════════════════════════════════════════════════════════
+  // DETECCIÓN DE PAGOS DE PRUEBA (TEST-PSE-*)
+  // ══════════════════════════════════════════════════════════════
+  if (paymentId && String(paymentId).startsWith('TEST-PSE-')) {
+    console.log('🧪 [PaymentValidator] Detectado pago de prueba, simulando respuesta');
+    
+    // Extraer el estado del payment ID: TEST-PSE-{STATUS}-{timestamp}
+    const parts = String(paymentId).split('-');
+    const testStatus = parts[2]?.toLowerCase() || 'approved';
+    
+    console.log('🎭 [PaymentValidator] Estado simulado:', testStatus);
+    
+    // Simular delay de red (500ms)
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Mapear estado de prueba a PaymentStatus
+    const statusMap = {
+      'approved': PaymentStatus.APPROVED,
+      'pending': PaymentStatus.PENDING,
+      'in_process': PaymentStatus.IN_PROCESS,
+      'rejected': PaymentStatus.REJECTED,
+      'cancelled': PaymentStatus.CANCELLED,
+    };
+    
+    const mappedStatus = statusMap[testStatus] || PaymentStatus.APPROVED;
+    const statusDetail = testStatus === 'rejected' ? 'cc_rejected_insufficient_amount' : 'accredited';
+    
+    console.log('✅ [PaymentValidator] Simulación completada:', {
+      status: mappedStatus,
+      statusDetail,
+      shouldProceed: mappedStatus === PaymentStatus.APPROVED,
+    });
+    
+    return {
+      isValid: true,
+      status: mappedStatus,
+      statusDetail: statusDetail,
+      paymentData: {
+        id: paymentId,
+        status: mappedStatus,
+        status_detail: statusDetail,
+        transaction_amount: 50000,
+        payment_method_id: 'pse',
+        payment_type_id: 'bank_transfer',
+        date_created: new Date().toISOString(),
+      },
+      shouldProceed: mappedStatus === PaymentStatus.APPROVED,
+      shouldRetry: false,
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // VALIDACIÓN CON API REAL DE MERCADOPAGO
+  // ══════════════════════════════════════════════════════════════
+
   let attempt = 0;
   let lastError = null;
 
