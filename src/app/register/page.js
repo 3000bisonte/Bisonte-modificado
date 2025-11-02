@@ -4,6 +4,7 @@ import { useState } from "react";
 import TemporaryStorage from "@/lib/temporaryStorage";
 import { sanitizeName, sanitizeEmail, sanitizePhone } from "@/lib/sanitize";
 import { validatePassword, getStrengthColor, getStrengthMessage } from "@/lib/passwordValidator";
+import { useCsrf } from "@/hooks/useCsrf";
 
 export default function Register() {
   const [nombre, setNombre] = useState("");
@@ -15,6 +16,9 @@ export default function Register() {
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  
+  // Hook para protección CSRF
+  const { csrfToken, loading: csrfLoading } = useCsrf();
 
   // Validaciones
   const validarNombre = (nombre) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.trim());
@@ -148,6 +152,13 @@ export default function Register() {
     }
     setLoading(true);
     
+    // Verificar token CSRF
+    if (!csrfToken) {
+      setMsg("Error de seguridad. Por favor, recarga la página.");
+      setLoading(false);
+      return;
+    }
+    
     // Sanitizar datos antes de enviar
     const sanitizedData = {
       nombre: sanitizeName(nombre),
@@ -160,7 +171,10 @@ export default function Register() {
     try {
       const res = await fetch("/api/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken
+        },
         body: JSON.stringify(sanitizedData),
       });
       const data = await res.json();
