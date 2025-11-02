@@ -8,6 +8,7 @@ import { ADMOB_CONFIG } from "../config/admob.config";
 import { useMultipleLoadingMonitor } from "../hooks/useLoadingMonitor";
 import { useNotification } from "../hooks/useNotification";
 import AdMobService, { useAdMob } from "../services/AdMobService";
+import SecureStorage from "@/lib/secureStorage";
 
 import AdLoadingIndicator from "./AdLoadingIndicator";
 import BottomNav from "./BottomNav";
@@ -122,20 +123,18 @@ export default function Resumen() {
 
   // 🚫 Detector de pago rechazado
   useEffect(() => {
-    const pagoRechazado = localStorage.getItem("pagoRechazado");
-    const pagoRechazadoMotivo = localStorage.getItem("pagoRechazadoMotivo");
+    const pagoRechazado = SecureStorage.getItem("pagoRechazado");
     
-    if (pagoRechazado === "true") {
-      console.log("❌ [Resumen] Usuario regresó de pago rechazado:", pagoRechazadoMotivo);
+    if (pagoRechazado?.status === true) {
+      console.log("❌ [Resumen] Usuario regresó de pago rechazado:", pagoRechazado.motivo);
       
       showError(
         "Pago No Procesado",
-        `${pagoRechazadoMotivo || 'Tu pago no pudo ser procesado'}. Por favor, verifica los datos de tu método de pago e inténtalo nuevamente.`
+        `${pagoRechazado.motivo || 'Tu pago no pudo ser procesado'}. Por favor, verifica los datos de tu método de pago e inténtalo nuevamente.`
       );
       
       // Limpiar flags
-      localStorage.removeItem("pagoRechazado");
-      localStorage.removeItem("pagoRechazadoMotivo");
+      SecureStorage.removeItem("pagoRechazado");
     }
   }, [showError]);
 
@@ -146,28 +145,27 @@ export default function Resumen() {
     }
 
     try {
-      localStorage.setItem("formCotizador", JSON.stringify(data));
+      SecureStorage.setItem("formCotizador", data, { ttl: 24 * 60 * 60 * 1000 }); // 24 horas
     } catch (error) {
       console.error("[Resumen] Error actualizando formCotizador:", error);
     }
 
     try {
-      const existingRaw = localStorage.getItem("cotizacion");
-      if (existingRaw) {
-        const existing = JSON.parse(existingRaw);
+      const existing = SecureStorage.getItem("cotizacion");
+      if (existing) {
         const merged = {
           ...existing,
           ...data,
           costoTotal: data.costoTotal,
         };
-        localStorage.setItem("cotizacion", JSON.stringify(merged));
+        SecureStorage.setItem("cotizacion", merged, { ttl: 24 * 60 * 60 * 1000 }); // 24 horas
       } else {
-        localStorage.setItem("cotizacion", JSON.stringify(data));
+        SecureStorage.setItem("cotizacion", data, { ttl: 24 * 60 * 60 * 1000 }); // 24 horas
       }
     } catch (error) {
       console.error("[Resumen] Error sincronizando cotizacion:", error);
       try {
-        localStorage.setItem("cotizacion", JSON.stringify(data));
+        SecureStorage.setItem("cotizacion", data, { ttl: 24 * 60 * 60 * 1000 }); // 24 horas
       } catch (persistError) {
         console.error("[Resumen] Error persistiendo cotizacion:", persistError);
       }
@@ -184,20 +182,17 @@ export default function Resumen() {
     if (paymentStatus) {
       console.log("🔄 [Resumen] Usuario regresó desde MercadoPago con estado:", paymentStatus);
       
-      // 🔄 FORZAR RECARGA DE DATOS desde localStorage
+      // 🔄 FORZAR RECARGA DE DATOS desde SecureStorage
       const safeRead = (key) => {
         try {
-          const raw = localStorage.getItem(key);
-          return raw ? JSON.parse(raw) : null;
+          return SecureStorage.getItem(key);
         } catch (error) {
           console.error(`[Resumen] Error leyendo ${key}:`, error);
           return null;
         }
       };
-
-      console.log("💾 [Resumen] Recargando datos desde localStorage...");
       
-      // Recargar cotizador y precio
+      console.log("💾 [Resumen] Recargando datos desde SecureStorage...");      // Recargar cotizador y precio
       const cotizadorData = safeRead("formCotizador");
       const cotizacionData = safeRead("cotizacion");
       
@@ -264,22 +259,18 @@ export default function Resumen() {
 
   // ⏳ Detector de pago pendiente (desde Payment Brick)
   useEffect(() => {
-    const pagoPendiente = localStorage.getItem("pagoPendiente");
-    const pagoPendienteMotivo = localStorage.getItem("pagoPendienteMotivo");
-    const pagoPendienteId = localStorage.getItem("pagoPendienteId");
+    const pagoPendiente = SecureStorage.getItem("pagoPendiente");
     
-    if (pagoPendiente === "true") {
-      console.log("⏳ [Resumen] Usuario regresó de pago pendiente:", pagoPendienteMotivo);
+    if (pagoPendiente?.status === true) {
+      console.log("⏳ [Resumen] Usuario regresó de pago pendiente:", pagoPendiente.motivo);
       
       showWarning(
         "Pago Pendiente por Procesar ⏳",
-        `${pagoPendienteMotivo || 'Tu pago está siendo procesado'}. Recibirás un correo electrónico cuando se confirme el pago.${pagoPendienteId ? ` ID de pago: ${pagoPendienteId}` : ''} Puedes intentar con otro método de pago si lo prefieres.`
+        `${pagoPendiente.motivo || 'Tu pago está siendo procesado'}. Recibirás un correo electrónico cuando se confirme el pago.${pagoPendiente.paymentId ? ` ID de pago: ${pagoPendiente.paymentId}` : ''} Puedes intentar con otro método de pago si lo prefieres.`
       );
       
       // Limpiar flags
-      localStorage.removeItem("pagoPendiente");
-      localStorage.removeItem("pagoPendienteMotivo");
-      localStorage.removeItem("pagoPendienteId");
+      SecureStorage.removeItem("pagoPendiente");
     }
   }, [showWarning]);
 
