@@ -127,16 +127,29 @@ export default function Register() {
       const data = await res.json();
       if (!res.ok) {
         setMsg(data.error || "Error en el registro");
+        setLoading(false);
       } else {
-        setMsg("Registro exitoso. Ahora puedes iniciar sesión.");
-        // Después de que el usuario se registre exitosamente
+        console.log("✅ [Registro] Usuario registrado exitosamente:", data);
+        setMsg("¡Registro exitoso! Redirigiendo...");
+        
+        // Guardar datos temporales para página de éxito (sin contraseña)
         localStorage.setItem("nombreRegistro", nombre);
         localStorage.setItem("emailRegistro", email);
-        // ❌ NUNCA guardar contraseñas en localStorage (vulnerabilidad crítica)
-        // localStorage.setItem("passwordRegistro", password);
+        
+        // Limpiar formulario
+        setNombre("");
+        setCelular("");
+        setCiudad("");
+        setEmail("");
+        setPassword("");
+        setAcepta(false);
+        
+        // Redirigir después de confirmar que todo está OK
+        console.log("🔄 [Registro] Redirigiendo a /registro-exitoso");
         setTimeout(() => {
+          setLoading(false);
           router.push("/registro-exitoso");
-        }, 1500);
+        }, 1000);
       }
     } catch {
       setMsg("Error de conexión.");

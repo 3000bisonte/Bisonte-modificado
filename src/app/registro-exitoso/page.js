@@ -1,6 +1,5 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 export default function RegistroExitoso() {
@@ -8,107 +7,57 @@ export default function RegistroExitoso() {
   const [loading, setLoading] = useState(true);
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleComenzar = async () => {
-    if (!email || !password) {
-      console.log("❌ No hay credenciales guardadas");
-      router.push("/");
-      return;
-    }
-
-    setIsLoggingIn(true);
-    setError("");
-    
-    try {
-      console.log("🔄 Intentando login automático con:", email);
-      
-      // ✅ USAR SIGNIN CON CONFIGURACIÓN ESPECÍFICA
-      const res = await signIn("credentials", {
-        redirect: false,
-        email: email.toLowerCase().trim(),
-        password: password,
-        callbackUrl: "/home"
-      });
-      
-      console.log("📡 Resultado login:", res);
-      
-      if (res?.ok && !res?.error) {
-        console.log("✅ Login exitoso");
-        
-        // ✅ LIMPIAR DATOS DEL LOCALSTORAGE
-        localStorage.removeItem("nombreRegistro");
-        localStorage.removeItem("emailRegistro");
-        localStorage.removeItem("passwordRegistro");
-        localStorage.removeItem("bienvenidaMostrada");
-        
-        // ✅ NAVEGAR A HOME CON DELAY PARA ASEGURAR SESIÓN
-        setTimeout(() => {
-          router.push("/home");
-          router.refresh();
-        }, 1000);
-        
-      } else {
-        console.log("❌ Error en login:", res?.error);
-        setError("No se pudo iniciar sesión automáticamente. Serás redirigido al login.");
-        
-        // ✅ REDIRECT A LOGIN DESPUÉS DE 3 SEGUNDOS
-        setTimeout(() => {
-          router.push("/");
-        }, 3000);
-      }
-    } catch (error) {
-      console.error("❌ Error en handleComenzar:", error);
-      setError("Error de conexión. Serás redirigido al login.");
-      
-      setTimeout(() => {
-        router.push("/");
-      }, 3000);
-    }
-    
-    setIsLoggingIn(false);
-  };
+  const [countdown, setCountdown] = useState(5);
 
   const handleIrALogin = () => {
-    // ✅ LIMPIAR DATOS Y IR A LOGIN
+    console.log("🔄 [RegistroExitoso] Navegando a login");
+    // Limpiar datos temporales
     localStorage.removeItem("nombreRegistro");
     localStorage.removeItem("emailRegistro");
-    localStorage.removeItem("passwordRegistro");
     router.push("/");
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Mostrar página de éxito por 1 segundo
+    const loadingTimer = setTimeout(() => {
       setLoading(false);
       
-      // ✅ LEER DATOS DEL REGISTRO
+      // Leer datos del registro
       const nombreGuardado = localStorage.getItem("nombreRegistro") || "";
       const emailGuardado = localStorage.getItem("emailRegistro") || "";
-      // ❌ NO leer contraseña por seguridad
-      // const passwordGuardado = localStorage.getItem("passwordRegistro") || "";
       
-      console.log("📋 Datos del registro:", { 
+      console.log("📋 [RegistroExitoso] Datos del registro:", { 
         nombre: nombreGuardado, 
         email: emailGuardado
       });
       
       setNombre(nombreGuardado);
       setEmail(emailGuardado);
-      // No pre-llenar contraseña por seguridad
-      setPassword("");
       
-      // ✅ SI NO HAY EMAIL, IR A LOGIN
+      // Si no hay email, redirigir inmediatamente
       if (!emailGuardado) {
-        console.log("⚠️ No hay datos de registro, redirigiendo a login");
-        setTimeout(() => {
-          router.push("/");
-        }, 2000);
+        console.log("⚠️ [RegistroExitoso] No hay datos de registro, redirigiendo a login");
+        router.push("/");
       }
     }, 1000);
 
-    return () => clearTimeout(timer);
+    // Countdown automático para redirigir a login
+    const countdownInterval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          console.log("⏱️ [RegistroExitoso] Countdown completado, redirigiendo a login");
+          handleIrALogin();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      clearTimeout(loadingTimer);
+      clearInterval(countdownInterval);
+    };
   }, [router]);
 
   if (loading) {
@@ -150,38 +99,28 @@ export default function RegistroExitoso() {
           </p>
         )}
         
-        <p className="text-gray-200 text-center mb-4">
-          Tu cuenta ha sido creada exitosamente. Ya puedes comenzar a cotizar tus envíos
+        <p className="text-gray-200 text-center mb-2">
+          Tu cuenta ha sido creada exitosamente.
+        </p>
+        
+        <p className="text-gray-400 text-center text-sm mb-6">
+          Ya puedes iniciar sesión con tu correo: <span className="text-[#41e0b3] font-semibold">{email}</span>
         </p>
 
-        {error && (
-          <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-200 px-4 py-2 rounded mb-4 text-sm text-center">
-            {error}
-          </div>
-        )}
+        <div className="bg-[#41e0b3] bg-opacity-10 border border-[#41e0b3] rounded-lg px-4 py-3 mb-6">
+          <p className="text-center text-gray-200 text-sm">
+            Serás redirigido al inicio de sesión en{" "}
+            <span className="font-bold text-[#41e0b3] text-lg">{countdown}</span>{" "}
+            segundo{countdown !== 1 ? "s" : ""}
+          </p>
+        </div>
 
-        <div className="w-full space-y-3">
-          <button
-            onClick={handleComenzar}
-            className="w-full bg-[#41e0b3] text-white font-bold py-3 rounded hover:bg-[#2bbd8c] transition disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isLoggingIn || !email || !password}
-          >
-            {isLoggingIn ? (
-              <span className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Iniciando sesión...
-              </span>
-            ) : (
-              "Comenzar"
-            )}
-          </button>
-          
+        <div className="w-full">
           <button
             onClick={handleIrALogin}
-            className="w-full bg-transparent border border-[#41e0b3] text-[#41e0b3] font-bold py-3 rounded hover:bg-[#41e0b3] hover:text-white transition"
-            disabled={isLoggingIn}
+            className="w-full bg-[#41e0b3] text-white font-bold py-3 rounded hover:bg-[#2bbd8c] transition"
           >
-            Ir a inicio de sesión
+            Ir a inicio de sesión ahora
           </button>
         </div>
       </div>
