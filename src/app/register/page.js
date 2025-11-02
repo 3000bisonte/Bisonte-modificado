@@ -130,7 +130,7 @@ export default function Register() {
         setLoading(false);
       } else {
         console.log("✅ [Registro] Usuario registrado exitosamente:", data);
-        setMsg("¡Registro exitoso! Redirigiendo...");
+        setMsg("¡Registro exitoso!");
         
         // Guardar datos temporales para página de éxito (sin contraseña)
         localStorage.setItem("nombreRegistro", nombre);
@@ -143,13 +143,11 @@ export default function Register() {
         setEmail("");
         setPassword("");
         setAcepta(false);
+        setLoading(false);
         
-        // Redirigir después de confirmar que todo está OK
-        console.log("🔄 [Registro] Redirigiendo a /registro-exitoso");
-        setTimeout(() => {
-          setLoading(false);
-          router.push("/registro-exitoso");
-        }, 1000);
+        // Navegar a página de éxito (sin timeout automático)
+        console.log("🔄 [Registro] Navegando a /registro-exitoso");
+        router.push("/registro-exitoso");
       }
     } catch {
       setMsg("Error de conexión.");
