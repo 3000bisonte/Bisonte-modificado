@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { validatePayment, getStatusMessage, PaymentStatus } from "@/lib/paymentValidator";
 
 export default function MercadoPagoSuccessPage() {
   const router = useRouter();
@@ -12,8 +13,8 @@ export default function MercadoPagoSuccessPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const crearEnvio = async () => {
-      console.log("✅ [MercadoPago Success] Usuario llegó desde pago exitoso");
+    const procesarPago = async () => {
+      console.log("🔐 [PaymentFlow] Iniciando flujo de validación robusto");
       
       // 🛡️ PROTECCIÓN 1: Verificar si el envío ya fue registrado
       const envioYaRegistrado = localStorage.getItem("envioRegistrado");
@@ -29,59 +30,125 @@ export default function MercadoPagoSuccessPage() {
 
       // Capturar parámetros de MercadoPago
       const paymentId = searchParams.get("payment_id");
-      const status = searchParams.get("status");
+      const statusFromUrl = searchParams.get("status");
       const externalReference = searchParams.get("external_reference");
       
-      console.log("💳 Parámetros de pago:", { paymentId, status, externalReference });
+      console.log("💳 Parámetros iniciales:", { paymentId, statusFromUrl, externalReference });
 
-      // ✅ VALIDACIÓN CRÍTICA: Solo crear envío si el pago está APROBADO
-      if (status !== "approved") {
-        console.warn(`⚠️ Pago NO aprobado. Estado: ${status}`);
-        
-        if (status === "pending" || status === "in_process") {
-          console.log("⏳ Pago pendiente de confirmación. No se creará el envío hasta que se apruebe.");
-          setError("Pago pendiente de confirmación. Te notificaremos cuando se complete.");
-          setIsProcessing(false);
-          setTimeout(() => {
-            router.replace("/resumen?status=pending");
-          }, 3000);
-          return;
-        }
-        
-        if (status === "rejected" || status === "cancelled") {
-          console.error(`❌ Pago ${status}. No se creará el envío.`);
-          setError(`El pago fue ${status === "rejected" ? "rechazado" : "cancelado"}. Por favor, intenta nuevamente.`);
-          setIsProcessing(false);
-          setTimeout(() => {
-            router.replace("/resumen?status=" + status);
-          }, 3000);
-          return;
-        }
-        
-        // Otros estados desconocidos
-        console.error(`❌ Estado de pago desconocido: ${status}`);
-        setError("Estado de pago desconocido. Por favor, contacta soporte.");
+      if (!paymentId) {
+        console.error("❌ No se proporcionó paymentId");
+        setError("No se pudo identificar el pago. Por favor, contacta soporte.");
         setIsProcessing(false);
         return;
       }
 
-      console.log("✅ Pago APROBADO - Procediendo a crear envío");
-
-      // ✅ Si viene de PSE (redirect externo), continuar con el proceso
-      // El sessionStorage se puede perder en redirects entre dominios
+      // 🛡️ PROTECCIÓN 2: Verificar si el origen es correcto
       const origenPago = sessionStorage.getItem("origenPago");
-      console.log("🔍 Origen del pago:", origenPago || "No especificado (probablemente PSE)");
+      console.log("🔍 Origen del pago:", origenPago || "No especificado");
       
-      // Si es payment_brick Y no hay paymentId en URL, significa que ya se procesó
-      if (origenPago === "payment_brick" && !paymentId) {
-        console.log("💳 Pago de Payment Brick ya manejado por MercadoPago.js. Redirigiendo...");
-        localStorage.setItem("envioExitoso", "true");
+      if (origenPago === "payment_brick" && statusFromUrl !== "approved") {
+        console.log("💳 Pago de Payment Brick ya manejado por MercadoPago.js.");
         setIsProcessing(false);
-        setTimeout(() => {
-          router.replace("/misenvios");
-        }, 1000);
+        router.replace("/misenvios");
         return;
       }
+
+      // 🛡️ PROTECCIÓN 3: Verificar paymentId duplicado
+      const ordenesExistentes = localStorage.getItem("ordenesCreadas") || "[]";
+      try {
+        const ordenes = JSON.parse(ordenesExistentes);
+        if (ordenes.includes(paymentId)) {
+          console.log("⚠️ Orden con este paymentId ya existe:", paymentId);
+          setIsProcessing(false);
+          router.replace("/misenvios");
+          return;
+        }
+      } catch (e) {
+        console.warn("⚠️ Error parseando ordenesCreadas:", e);
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // PASO 1: VALIDAR EL PAGO CON EL PROVEEDOR
+      // ═══════════════════════════════════════════════════════════════
+      console.log("🔍 [PaymentFlow] PASO 1: Validando pago con MercadoPago...");
+      
+      const validationResult = await validatePayment(paymentId, 3);
+      
+      console.log("📊 [PaymentFlow] Resultado de validación:", validationResult);
+
+      // ═══════════════════════════════════════════════════════════════
+      // PASO 2: ANALIZAR RESULTADO DE VALIDACIÓN
+      // ═══════════════════════════════════════════════════════════════
+      
+      // Si la validación falló (error de red, etc.)
+      if (!validationResult.isValid) {
+        console.error("❌ [PaymentFlow] Validación falló:", validationResult.error);
+        setError(validationResult.error || "No se pudo validar el pago. Por favor, intenta nuevamente.");
+        setIsProcessing(false);
+        
+        if (validationResult.shouldRetry) {
+          setTimeout(() => {
+            router.replace("/resumen?error=validation_failed");
+          }, 3000);
+        }
+        return;
+      }
+
+      // Obtener mensaje amigable para el usuario
+      const statusInfo = getStatusMessage(validationResult.status, validationResult.statusDetail);
+      
+      // ═══════════════════════════════════════════════════════════════
+      // PASO 3: MANEJAR ESTADO SEGÚN VALIDACIÓN COMPLETA
+      // ═══════════════════════════════════════════════════════════════
+      
+      // 🎯 ESTADO: APROBADO → Proceder a crear envío
+      if (validationResult.status === PaymentStatus.APPROVED && validationResult.shouldProceed) {
+        console.log("✅ [PaymentFlow] PAGO VALIDADO Y APROBADO - Procediendo a crear envío");
+        // Continuar con la creación del envío (código existente)
+        await crearEnvio(validationResult.paymentData);
+        return;
+      }
+
+      // ⏳ ESTADOS: PENDING / IN_PROCESS → No proceder aún
+      if ([PaymentStatus.PENDING, PaymentStatus.IN_PROCESS].includes(validationResult.status)) {
+        console.warn(`⏳ [PaymentFlow] Pago pendiente: ${validationResult.status}`);
+        setError(statusInfo.message);
+        setIsProcessing(false);
+        
+        setTimeout(() => {
+          router.replace(`/resumen?status=${validationResult.status}&payment_id=${paymentId}`);
+        }, 3000);
+        return;
+      }
+
+      // ❌ ESTADOS: REJECTED / CANCELLED → No proceder, mostrar error
+      if ([PaymentStatus.REJECTED, PaymentStatus.CANCELLED].includes(validationResult.status)) {
+        console.error(`❌ [PaymentFlow] Pago ${validationResult.status}:`, validationResult.statusDetail);
+        setError(statusInfo.message);
+        setIsProcessing(false);
+        
+        localStorage.setItem("pagoRechazado", "true");
+        localStorage.setItem("pagoRechazadoMotivo", validationResult.statusDetail || "Desconocido");
+        
+        setTimeout(() => {
+          router.replace(`/resumen?status=${validationResult.status}`);
+        }, 3000);
+        return;
+      }
+
+      // ❓ OTROS ESTADOS → Manejar como desconocidos
+      console.error(`❓ [PaymentFlow] Estado no manejado: ${validationResult.status}`);
+      setError("Estado de pago no reconocido. Por favor, contacta soporte.");
+      setIsProcessing(false);
+    };
+
+    // ═══════════════════════════════════════════════════════════════
+    // FUNCIÓN AUXILIAR: CREAR ENVÍO (solo después de validación completa)
+    // ═══════════════════════════════════════════════════════════════
+    const crearEnvio = async (paymentData) => {
+      console.log("📦 [PaymentFlow] PASO 4: Creando envío con pago validado");
+      
+      const paymentId = paymentData.id;
 
       // 🛡️ PROTECCIÓN 3: Verificar paymentId duplicado
       if (paymentId) {
@@ -257,7 +324,7 @@ export default function MercadoPagoSuccessPage() {
 
     // Solo ejecutar si hay sesión
     if (session) {
-      crearEnvio();
+      procesarPago();
     }
   }, [router, searchParams, session]);
 
