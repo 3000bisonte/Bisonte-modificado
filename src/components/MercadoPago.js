@@ -671,8 +671,20 @@ const MercadoPagoComponent = () => {
         paymentId: paymentId ?? `MP-${Date.now()}`,
       };
 
-      console.log("Registrando envío con datos:", envioData);
+      console.log("📦 Datos completos que se enviarán a /api/orders:", envioData);
+      console.log("🔍 Validación de tipos:", {
+        "Peso (tipo)": typeof peso,
+        "Peso (valor)": peso,
+        "ValorDeclarado (tipo)": typeof valorDeclarado,
+        "ValorDeclarado (valor)": valorDeclarado,
+        "Destinatario.Telefono (tipo)": typeof envioData.Destinatario.Telefono,
+        "Destinatario.Telefono (valor)": envioData.Destinatario.Telefono,
+        "Remitente.Telefono (tipo)": typeof envioData.Remitente.Telefono,
+        "Remitente.Telefono (valor)": envioData.Remitente.Telefono,
+      });
 
+      console.log("🚀 Enviando POST a /api/orders...");
+      
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: {
@@ -681,7 +693,15 @@ const MercadoPagoComponent = () => {
         body: JSON.stringify(envioData),
       });
 
+      console.log("📡 Respuesta recibida:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+      });
+
       const responseData = await response.json();
+      
+      console.log("📄 Datos de respuesta:", responseData);
 
       if (response.ok) {
         console.log("✅ Envío registrado exitosamente:", responseData);
@@ -733,15 +753,33 @@ const MercadoPagoComponent = () => {
 
         showSuccess('¡Pago Exitoso! 🎉', '¡Envío realizado exitosamente! Redirigiendo a Mis Envíos...');
 
-        // ✅ Redirigir inmediatamente a Mis Envíos con router.push
+        // ✅ Redirigir a Mis Envíos con router.replace (no permite volver atrás)
         setTimeout(() => {
           console.log("🔄 Redirigiendo a Mis Envíos...");
-          router.push("/misenvios");
+          router.replace("/misenvios"); // ✅ CORRECCIÓN: replace en lugar de push
         }, 2000); // Reducido a 2 segundos para mejor UX
       } else {
-        console.error("Error al registrar el envío:", response.status, responseData);
+        console.error("❌ ERROR al registrar el envío:", {
+          status: response.status,
+          statusText: response.statusText,
+          responseData: responseData,
+        });
+        
+        // Si es error de validación (400), mostrar detalles
+        if (response.status === 400 && responseData?.errors) {
+          console.error("🔴 ERRORES DE VALIDACIÓN:", responseData.errors);
+          console.error("📋 Campos que fallaron:", Object.keys(responseData.errors));
+        }
+        
         const errorMessage = responseData?.message || responseData?.error || 'Hubo un error al registrar tu envío. Por favor contacta soporte.';
-        showError('Error al Registrar', errorMessage);
+        const errorDetails = responseData?.details || '';
+        
+        console.error("💬 Mensaje de error para el usuario:", errorMessage);
+        if (errorDetails) {
+          console.error("📝 Detalles adicionales:", errorDetails);
+        }
+        
+        showError('Error al Registrar', `${errorMessage}${errorDetails ? '\n\n' + errorDetails : ''}`);
       }
     } catch (error) {
       console.error("❌ Error al registrar el envío:", error);
