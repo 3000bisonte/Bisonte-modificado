@@ -34,6 +34,39 @@ export default function MercadoPagoSuccessPage() {
       
       console.log("💳 Parámetros de pago:", { paymentId, status, externalReference });
 
+      // ✅ VALIDACIÓN CRÍTICA: Solo crear envío si el pago está APROBADO
+      if (status !== "approved") {
+        console.warn(`⚠️ Pago NO aprobado. Estado: ${status}`);
+        
+        if (status === "pending" || status === "in_process") {
+          console.log("⏳ Pago pendiente de confirmación. No se creará el envío hasta que se apruebe.");
+          setError("Pago pendiente de confirmación. Te notificaremos cuando se complete.");
+          setIsProcessing(false);
+          setTimeout(() => {
+            router.replace("/resumen?status=pending");
+          }, 3000);
+          return;
+        }
+        
+        if (status === "rejected" || status === "cancelled") {
+          console.error(`❌ Pago ${status}. No se creará el envío.`);
+          setError(`El pago fue ${status === "rejected" ? "rechazado" : "cancelado"}. Por favor, intenta nuevamente.`);
+          setIsProcessing(false);
+          setTimeout(() => {
+            router.replace("/resumen?status=" + status);
+          }, 3000);
+          return;
+        }
+        
+        // Otros estados desconocidos
+        console.error(`❌ Estado de pago desconocido: ${status}`);
+        setError("Estado de pago desconocido. Por favor, contacta soporte.");
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log("✅ Pago APROBADO - Procediendo a crear envío");
+
       // ✅ Si viene de PSE (redirect externo), continuar con el proceso
       // El sessionStorage se puede perder en redirects entre dominios
       const origenPago = sessionStorage.getItem("origenPago");
