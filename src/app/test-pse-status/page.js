@@ -13,6 +13,7 @@ export default function TestPSEStatusPage() {
     { value: "approved", label: "✅ Aprobado (Exitoso)", color: "green" },
     { value: "pending", label: "⏳ Pendiente (En proceso)", color: "yellow" },
     { value: "in_process", label: "⏳ En Proceso (Esperando confirmación)", color: "yellow" },
+    { value: "pending_to_approved", label: "🔄 Pendiente → Aprobado (Polling)", color: "blue" },
     { value: "rejected", label: "❌ Rechazado (Fallido)", color: "red" },
     { value: "cancelled", label: "🚫 Cancelado", color: "gray" },
   ];
@@ -55,6 +56,11 @@ export default function TestPSEStatusPage() {
         title: "⏳ Pago En Proceso",
         desc: "El pago está siendo procesado por el banco",
         expected: "Similar a 'pending'. NO debe crear el envío hasta que se confirme"
+      },
+      pending_to_approved: {
+        title: "🔄 Pendiente → Aprobado (Polling Automático)",
+        desc: "El pago empieza pendiente pero se aprueba después de 15 segundos",
+        expected: "Debe iniciar polling automático, detectar el cambio a 'approved' y crear el envío automáticamente"
       },
       rejected: {
         title: "❌ Pago Rechazado",

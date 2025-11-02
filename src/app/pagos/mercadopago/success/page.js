@@ -109,15 +109,15 @@ export default function MercadoPagoSuccessPage() {
         return;
       }
 
-      // ⏳ ESTADOS: PENDING / IN_PROCESS → No proceder aún
+      // ⏳ ESTADOS: PENDING / IN_PROCESS → Iniciar polling para verificar cambios
       if ([PaymentStatus.PENDING, PaymentStatus.IN_PROCESS].includes(validationResult.status)) {
         console.warn(`⏳ [PaymentFlow] Pago pendiente: ${validationResult.status}`);
-        setError(statusInfo.message);
-        setIsProcessing(false);
+        console.log('🔄 [PaymentFlow] Iniciando sistema de polling para detectar cambios de estado');
         
-        setTimeout(() => {
-          router.replace(`/resumen?status=${validationResult.status}&payment_id=${paymentId}`);
-        }, 3000);
+        setError(`${statusInfo.message}\n\nVerificando estado automáticamente...`);
+        
+        // Iniciar polling: verificar cada 5 segundos hasta 10 intentos (50 segundos total)
+        iniciarPollingPago(paymentId);
         return;
       }
 
@@ -140,6 +140,92 @@ export default function MercadoPagoSuccessPage() {
       console.error(`❓ [PaymentFlow] Estado no manejado: ${validationResult.status}`);
       setError("Estado de pago no reconocido. Por favor, contacta soporte.");
       setIsProcessing(false);
+    };
+
+    // ═══════════════════════════════════════════════════════════════
+    // FUNCIÓN: POLLING AUTOMÁTICO PARA PAGOS PENDIENTES
+    // ═══════════════════════════════════════════════════════════════
+    const iniciarPollingPago = async (paymentId) => {
+      console.log('🔄 [Polling] Iniciando verificación periódica del pago:', paymentId);
+      
+      const maxIntentos = 10; // Máximo 10 verificaciones
+      const intervalo = 5000; // Cada 5 segundos
+      let intentoActual = 0;
+      
+      const verificarEstado = async () => {
+        intentoActual++;
+        console.log(`🔍 [Polling] Intento ${intentoActual}/${maxIntentos} - Verificando estado...`);
+        
+        try {
+          // Validar el pago nuevamente
+          const resultado = await validatePayment(paymentId, 1); // Solo 1 intento por polling
+          
+          console.log(`📊 [Polling] Estado actual:`, resultado.status);
+          
+          // 🎯 CASO 1: El pago fue APROBADO
+          if (resultado.status === PaymentStatus.APPROVED && resultado.shouldProceed) {
+            console.log('✅ [Polling] ¡Pago aprobado! Creando envío...');
+            setError('¡Pago aprobado! Creando tu envío...');
+            await crearEnvio(resultado.paymentData);
+            return; // Detener polling
+          }
+          
+          // 🚫 CASO 2: El pago fue RECHAZADO o CANCELADO
+          if ([PaymentStatus.REJECTED, PaymentStatus.CANCELLED].includes(resultado.status)) {
+            console.error(`❌ [Polling] Pago ${resultado.status}`);
+            const statusInfo = getStatusMessage(resultado.status, resultado.statusDetail);
+            setError(statusInfo.message);
+            setIsProcessing(false);
+            
+            localStorage.setItem("pagoRechazado", "true");
+            localStorage.setItem("pagoRechazadoMotivo", resultado.statusDetail || "Desconocido");
+            
+            setTimeout(() => {
+              router.replace(`/resumen?status=${resultado.status}`);
+            }, 3000);
+            return; // Detener polling
+          }
+          
+          // ⏳ CASO 3: Sigue PENDIENTE o IN_PROCESS
+          if ([PaymentStatus.PENDING, PaymentStatus.IN_PROCESS].includes(resultado.status)) {
+            console.log(`⏳ [Polling] Pago aún ${resultado.status}, esperando...`);
+            
+            // Si no hemos llegado al máximo de intentos, seguir verificando
+            if (intentoActual < maxIntentos) {
+              setError(`Esperando confirmación del pago...\nIntento ${intentoActual}/${maxIntentos}`);
+              setTimeout(verificarEstado, intervalo);
+            } else {
+              // Máximo de intentos alcanzado
+              console.warn('⚠️ [Polling] Tiempo máximo alcanzado sin confirmación');
+              setError('El pago sigue pendiente. Te notificaremos cuando se confirme.');
+              setIsProcessing(false);
+              
+              setTimeout(() => {
+                router.replace(`/resumen?status=pending_timeout&payment_id=${paymentId}`);
+              }, 3000);
+            }
+            return;
+          }
+          
+        } catch (error) {
+          console.error('❌ [Polling] Error verificando estado:', error);
+          
+          // Si hay error y no hemos llegado al máximo, reintentar
+          if (intentoActual < maxIntentos) {
+            console.log(`🔄 [Polling] Reintentando en ${intervalo/1000} segundos...`);
+            setTimeout(verificarEstado, intervalo);
+          } else {
+            setError('No pudimos verificar el estado del pago. Por favor, consulta en Mis Envíos más tarde.');
+            setIsProcessing(false);
+            setTimeout(() => {
+              router.replace('/misenvios');
+            }, 3000);
+          }
+        }
+      };
+      
+      // Iniciar la primera verificación
+      verificarEstado();
     };
 
     // ═══════════════════════════════════════════════════════════════

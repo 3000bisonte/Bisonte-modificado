@@ -62,13 +62,68 @@ export async function validatePayment(paymentId, maxRetries = 3) {
     // Extraer el estado del payment ID: TEST-PSE-{STATUS}-{timestamp}
     const parts = String(paymentId).split('-');
     const testStatus = parts[2]?.toLowerCase() || 'approved';
+    const timestamp = parseInt(parts[parts.length - 1]) || Date.now();
     
     console.log('🎭 [PaymentValidator] Estado simulado:', testStatus);
     
     // Simular delay de red (500ms)
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Mapear estado de prueba a PaymentStatus
+    // ══════════════════════════════════════════════════════════════
+    // SIMULACIÓN ESPECIAL: PENDING_TO_APPROVED
+    // Simula un pago que cambia de pendiente a aprobado después de 15 segundos
+    // ══════════════════════════════════════════════════════════════
+    if (testStatus === 'pending_to_approved') {
+      const tiempoTranscurrido = Date.now() - timestamp;
+      const TIEMPO_APROBACION = 15000; // 15 segundos
+      
+      console.log(`⏱️ [PaymentValidator] Simulación pending→approved: ${Math.floor(tiempoTranscurrido/1000)}s transcurridos`);
+      
+      if (tiempoTranscurrido < TIEMPO_APROBACION) {
+        // Aún está pendiente
+        console.log('⏳ [PaymentValidator] Pago aún pendiente (simulación)');
+        return {
+          isValid: true,
+          status: PaymentStatus.PENDING,
+          statusDetail: 'pending_contingency',
+          paymentData: {
+            id: paymentId,
+            status: PaymentStatus.PENDING,
+            status_detail: 'pending_contingency',
+            transaction_amount: 50000,
+            payment_method_id: 'pse',
+            payment_type_id: 'bank_transfer',
+            date_created: new Date(timestamp).toISOString(),
+          },
+          shouldProceed: false,
+          shouldRetry: false,
+        };
+      } else {
+        // Ya se aprobó
+        console.log('✅ [PaymentValidator] Pago aprobado (simulación)');
+        return {
+          isValid: true,
+          status: PaymentStatus.APPROVED,
+          statusDetail: 'accredited',
+          paymentData: {
+            id: paymentId,
+            status: PaymentStatus.APPROVED,
+            status_detail: 'accredited',
+            transaction_amount: 50000,
+            payment_method_id: 'pse',
+            payment_type_id: 'bank_transfer',
+            date_created: new Date(timestamp).toISOString(),
+            date_approved: new Date().toISOString(),
+          },
+          shouldProceed: true,
+          shouldRetry: false,
+        };
+      }
+    }
+    
+    // ══════════════════════════════════════════════════════════════
+    // SIMULACIÓN ESTÁNDAR: Otros estados
+    // ══════════════════════════════════════════════════════════════
     const statusMap = {
       'approved': PaymentStatus.APPROVED,
       'pending': PaymentStatus.PENDING,
