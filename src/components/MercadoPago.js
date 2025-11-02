@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import Screen from "@/components/BrickStatusScreen";
+import SecureStorage from "@/lib/secureStorage";
 
 import InternalProvider from "../app/ContextProvider";
 import { useNotification } from "../hooks/useNotification";
@@ -64,10 +65,10 @@ const MercadoPagoComponent = () => {
         
         if (tiempoTranscurrido > CINCO_MINUTOS) {
           console.log("🧹 Limpiando flags de pago anterior (>5 min)");
-          localStorage.removeItem("envioRegistrado");
-          localStorage.removeItem("pagoPendiente");
-          localStorage.removeItem("pagoRechazado");
-          localStorage.removeItem("envioExitoso");
+          SecureStorage.removeItem("envioRegistrado");
+          SecureStorage.removeItem("pagoPendiente");
+          SecureStorage.removeItem("pagoRechazado");
+          SecureStorage.removeItem("envioExitoso");
           sessionStorage.removeItem("pagoEnProceso");
           sessionStorage.removeItem("origenPago");
           sessionStorage.removeItem("timestampPago");
@@ -200,10 +201,9 @@ const MercadoPagoComponent = () => {
           let merged = data;
 
           if (sourceKey !== "cotizacion") {
-            const existingRaw = localStorage.getItem("cotizacion");
-            if (existingRaw) {
+            const existing = SecureStorage.getItem("cotizacion");
+            if (existing) {
               try {
-                const existing = JSON.parse(existingRaw);
                 merged = {
                   ...existing,
                   ...data,
@@ -221,7 +221,7 @@ const MercadoPagoComponent = () => {
           ...merged,
           costoTotal: amount,
         };
-        localStorage.setItem("cotizacion", JSON.stringify(normalized));
+        SecureStorage.setItem("cotizacion", normalized);
       } catch (persistError) {
         console.error("[MercadoPago] Error normalizando 'cotizacion':", persistError);
       }
@@ -229,13 +229,12 @@ const MercadoPagoComponent = () => {
 
     const resolveAmount = () => {
       for (const key of candidateKeys) {
-        const raw = localStorage.getItem(key);
-        if (!raw) {
+        const parsed = SecureStorage.getItem(key);
+        if (!parsed) {
           continue;
         }
 
         try {
-          const parsed = JSON.parse(raw);
           const possibleAmounts = [
             parsed?.costoTotal,
             parsed?.total,
@@ -252,7 +251,7 @@ const MercadoPagoComponent = () => {
             }
           }
         } catch (parseError) {
-          console.error(`[MercadoPago] Error al parsear '${key}' desde localStorage:`, parseError);
+          console.error(`[MercadoPago] Error al procesar '${key}' desde SecureStorage:`, parseError);
         }
       }
 
@@ -261,7 +260,7 @@ const MercadoPagoComponent = () => {
 
     try {
       if (typeof window === "undefined") {
-        setInitError("Error: Entorno no compatible (localStorage no disponible).");
+        setInitError("Error: Entorno no compatible (SecureStorage no disponible).");
         return;
       }
 
@@ -468,10 +467,13 @@ const MercadoPagoComponent = () => {
           } else if (paymentStatus === "in_process" || paymentStatus === "pending") {
             console.log("⏳ Pago PENDIENTE - Estado:", statusDetail);
             
-            // ✅ Guardar información del pago pendiente
-            localStorage.setItem("pagoPendiente", "true");
-            localStorage.setItem("pagoPendienteMotivo", statusDetail || 'Tu pago está siendo procesado');
-            localStorage.setItem("pagoPendienteId", paymentId || '');
+            // ✅ Guardar información del pago pendiente (cifrado)
+            SecureStorage.setItem("pagoPendiente", {
+              status: true,
+              motivo: statusDetail || 'Tu pago está siendo procesado',
+              paymentId: paymentId || '',
+              timestamp: Date.now()
+            }, { ttl: 24 * 60 * 60 * 1000 }); // 24 horas
             
             // ✅ Mostrar mensaje informativo
             showWarning(
@@ -489,9 +491,12 @@ const MercadoPagoComponent = () => {
           } else {
             console.error("❌ Pago rechazado - Estado:", paymentStatus, statusDetail);
             
-            // Guardar información del pago rechazado para mostrar en resumen
-            localStorage.setItem("pagoRechazado", "true");
-            localStorage.setItem("pagoRechazadoMotivo", statusDetail || 'Pago rechazado');
+            // Guardar información del pago rechazado para mostrar en resumen (cifrado)
+            SecureStorage.setItem("pagoRechazado", {
+              status: true,
+              motivo: statusDetail || 'Pago rechazado',
+              timestamp: Date.now()
+            }, { ttl: 24 * 60 * 60 * 1000 }); // 24 horas
             
             showError(
               'Pago Rechazado',
@@ -520,8 +525,11 @@ const MercadoPagoComponent = () => {
           // Para otros errores de red, mostrar mensaje y redirigir al resumen
           console.error("❌ Error de conexión no esperado:", error);
           
-          localStorage.setItem("pagoRechazado", "true");
-          localStorage.setItem("pagoRechazadoMotivo", "Error de conexión al procesar el pago");
+          SecureStorage.setItem("pagoRechazado", {
+            status: true,
+            motivo: "Error de conexión al procesar el pago",
+            timestamp: Date.now()
+          }, { ttl: 24 * 60 * 60 * 1000 }); // 24 horas
           
           showError(
             'Error de Conexión',
@@ -544,8 +552,8 @@ const MercadoPagoComponent = () => {
   // Función que maneja el envío aprobado
   const manejarEnvioAprobado = useCallback(async () => {
     // 🛡️ PROTECCIÓN 1: Verificar si el envío ya fue registrado
-    const envioYaRegistrado = localStorage.getItem("envioRegistrado");
-    if (envioYaRegistrado === "true") {
+    const envioYaRegistrado = SecureStorage.getItem("envioRegistrado");
+    if (envioYaRegistrado === true) {
       console.log("⚠️ Envío ya registrado previamente. Evitando duplicación.");
       return;
     }
@@ -559,40 +567,37 @@ const MercadoPagoComponent = () => {
 
     // 🛡️ PROTECCIÓN 3: Verificar que paymentId no esté duplicado
     if (paymentId) {
-      const ordenesExistentes = localStorage.getItem("ordenesCreadas") || "[]";
+      const ordenesExistentes = SecureStorage.getItem("ordenesCreadas") || [];
       try {
-        const ordenes = JSON.parse(ordenesExistentes);
-        if (ordenes.includes(paymentId)) {
+        if (ordenesExistentes.includes(paymentId)) {
           console.log("⚠️ Orden con este paymentId ya existe:", paymentId);
           return;
         }
       } catch (e) {
-        console.warn("⚠️ Error parseando ordenesCreadas, continuando:", e);
+        console.warn("⚠️ Error procesando ordenesCreadas, continuando:", e);
       }
     }
 
     const numeroGuia = generarNumeroGuia();
     
     try {
-      // ✅ CORREGIDO: Usar las claves correctas de localStorage
-      const destinatarioString = localStorage.getItem("formDestinatario");
-      const remitenteString = localStorage.getItem("formRemitente");
+      // ✅ CORREGIDO: Usar SecureStorage para datos sensibles
+      const destinatario = SecureStorage.getItem("formDestinatario");
+      const remitente = SecureStorage.getItem("formRemitente");
 
-      if (!destinatarioString || !remitenteString) {
-        console.error("❌ Datos faltantes en localStorage:", {
-          destinatario: destinatarioString ? "✓" : "✗",
-          remitente: remitenteString ? "✓" : "✗",
-          todasLasClaves: Object.keys(localStorage)
+      if (!destinatario || !remitente) {
+        console.error("❌ Datos faltantes en SecureStorage:", {
+          destinatario: destinatario ? "✓" : "✗",
+          remitente: remitente ? "✓" : "✗"
         });
         throw new Error("Faltan datos de destinatario o remitente para registrar el envío.");
       }
 
-      const datosLocalStorage = JSON.parse(destinatarioString);
-      const datosLocalStorageformDataRemitente = JSON.parse(remitenteString);
-      const cotizacionString = localStorage.getItem("cotizacion");
-      const cotizacionLocal = cotizacionString ? JSON.parse(cotizacionString) : {};
+      const datosLocalStorage = destinatario;
+      const datosLocalStorageformDataRemitente = remitente;
+      const cotizacionLocal = SecureStorage.getItem("cotizacion") || {};
       
-      console.log("📦 Datos recuperados de localStorage:", {
+      console.log("📦 Datos recuperados de SecureStorage:", {
         destinatario: datosLocalStorage?.nombre,
         remitente: datosLocalStorageformDataRemitente?.nombre,
         cotizacion: cotizacionLocal?.costoTotal
@@ -713,36 +718,37 @@ const MercadoPagoComponent = () => {
           PaymentId: responseData.PaymentId,
         });
 
-        // 🛡️ MARCAR ENVÍO COMO REGISTRADO para evitar duplicados
-        localStorage.setItem("envioRegistrado", "true");
+        // 🛡️ MARCAR ENVÍO COMO REGISTRADO para evitar duplicados (cifrado)
+        SecureStorage.setItem("envioRegistrado", true, { ttl: 24 * 60 * 60 * 1000 }); // 24 horas
 
         // 🛡️ REGISTRAR paymentId para evitar duplicados
         if (paymentId) {
-          const ordenesExistentes = localStorage.getItem("ordenesCreadas") || "[]";
+          const ordenesExistentes = SecureStorage.getItem("ordenesCreadas") || [];
           try {
-            const ordenes = JSON.parse(ordenesExistentes);
-            ordenes.push(paymentId);
-            localStorage.setItem("ordenesCreadas", JSON.stringify(ordenes));
+            ordenesExistentes.push(paymentId);
+            SecureStorage.setItem("ordenesCreadas", ordenesExistentes, { ttl: 7 * 24 * 60 * 60 * 1000 }); // 7 días
             console.log("✅ PaymentId registrado:", paymentId);
           } catch (e) {
             console.warn("⚠️ Error guardando paymentId:", e);
           }
         }
 
-        // Guardar información del envío
-        localStorage.setItem("envioDatos", JSON.stringify({
+        // Guardar información del envío (cifrado)
+        SecureStorage.setItem("envioDatos", {
           ...responseData,
           numeroGuia,
           tipo: "mercadopago",
           metodoPago: "MERCADO_PAGO",
           paymentId: paymentId,
-        }));
-        localStorage.setItem("envioExitoso", "true");
-        localStorage.setItem("ultimoEnvioId", responseData.id?.toString() || "");
+          timestamp: Date.now()
+        }, { ttl: 7 * 24 * 60 * 60 * 1000 }); // 7 días
+        
+        SecureStorage.setItem("envioExitoso", true, { ttl: 24 * 60 * 60 * 1000 }); // 24 horas
+        SecureStorage.setItem("ultimoEnvioId", responseData.id?.toString() || "", { ttl: 7 * 24 * 60 * 60 * 1000 }); // 7 días
 
         // Limpiar datos del formulario
-        localStorage.removeItem("formCotizador");
-        localStorage.removeItem("cotizacion");
+        SecureStorage.removeItem("formCotizador");
+        SecureStorage.removeItem("cotizacion");
         localStorage.removeItem("formRemitente");
         localStorage.removeItem("formDestinatario");
 
