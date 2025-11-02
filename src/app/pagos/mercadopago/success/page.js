@@ -27,9 +27,20 @@ export default function MercadoPagoSuccessPage() {
         return;
       }
 
-      // 🛡️ PROTECCIÓN 2: Verificar origen del pago
+      // Capturar parámetros de MercadoPago
+      const paymentId = searchParams.get("payment_id");
+      const status = searchParams.get("status");
+      const externalReference = searchParams.get("external_reference");
+      
+      console.log("💳 Parámetros de pago:", { paymentId, status, externalReference });
+
+      // ✅ Si viene de PSE (redirect externo), continuar con el proceso
+      // El sessionStorage se puede perder en redirects entre dominios
       const origenPago = sessionStorage.getItem("origenPago");
-      if (origenPago === "payment_brick") {
+      console.log("🔍 Origen del pago:", origenPago || "No especificado (probablemente PSE)");
+      
+      // Si es payment_brick Y no hay paymentId en URL, significa que ya se procesó
+      if (origenPago === "payment_brick" && !paymentId) {
         console.log("💳 Pago de Payment Brick ya manejado por MercadoPago.js. Redirigiendo...");
         localStorage.setItem("envioExitoso", "true");
         setIsProcessing(false);
@@ -38,13 +49,6 @@ export default function MercadoPagoSuccessPage() {
         }, 1000);
         return;
       }
-
-      // Capturar parámetros de MercadoPago
-      const paymentId = searchParams.get("payment_id");
-      const status = searchParams.get("status");
-      const externalReference = searchParams.get("external_reference");
-      
-      console.log("💳 Parámetros de pago:", { paymentId, status, externalReference });
 
       // 🛡️ PROTECCIÓN 3: Verificar paymentId duplicado
       if (paymentId) {

@@ -205,8 +205,9 @@ export async function POST(request: NextRequest) {
                               (psePayload.financial_institution as string),
       };
       
+      // ✅ CORRECCIÓN: Redirigir a /pagos/mercadopago/success para que cree el envío
       paymentPayload.callback_url = (psePayload.callback_url as string) || 
-                                    `${process.env.NEXTAUTH_URL}/mercadopago/statusbrick`;
+                                    `${process.env.NEXTAUTH_URL}/pagos/mercadopago/success`;
       
       // Agregar entity_type si está disponible (individual o association)
       if (psePayload.payer && typeof psePayload.payer === 'object') {
