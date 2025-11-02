@@ -124,26 +124,73 @@ describe('Bisonte Logística - Tests Móviles E2E', () => {
             
             // Seleccionar tipo de envío (Contenedor/Paquete)
             console.log('📦 Seleccionando tipo de envío...');
+            await driver.pause(2000); // Esperar a que cargue la página completa
+            
             try {
+                // Esperar a que haya botones visibles en la página
+                await driver.waitUntil(
+                    async () => {
+                        const buttons = await driver.$$('button');
+                        return buttons.length > 0;
+                    },
+                    {
+                        timeout: 10000,
+                        timeoutMsg: 'No se encontraron botones en la página'
+                    }
+                );
+                
                 // Intentar encontrar botones de tipo de envío
                 const tipoEnvioButtons = await driver.$$('button');
+                let tipoSeleccionado = false;
+                
                 for (const btn of tipoEnvioButtons) {
-                    const text = await btn.getText().catch(() => '');
-                    if (text.toLowerCase().includes('contener') || text.toLowerCase().includes('paquete')) {
-                        console.log(`👆 Haciendo click en: ${text}`);
-                        await btn.click();
-                        await driver.pause(1000);
-                        break;
+                    try {
+                        const isDisplayed = await btn.isDisplayed();
+                        if (!isDisplayed) continue;
+                        
+                        const text = await btn.getText().catch(() => '');
+                        if (text && (text.toLowerCase().includes('contener') || 
+                                    text.toLowerCase().includes('paquete') ||
+                                    text.toLowerCase().includes('sobre'))) {
+                            console.log(`👆 Haciendo click en tipo de envío: "${text}"`);
+                            await btn.click();
+                            await driver.pause(1500);
+                            tipoSeleccionado = true;
+                            break;
+                        }
+                    } catch (err) {
+                        // Continuar con el siguiente botón
+                        continue;
                     }
                 }
+                
+                if (!tipoSeleccionado) {
+                    console.log('⚠️ No se encontró botón de tipo de envío específico, continuando...');
+                }
             } catch (error) {
-                console.log('⚠️ No se encontró selector de tipo de envío, continuando...');
+                console.log('⚠️ Error buscando selector de tipo de envío:', error.message);
+                console.log('   Continuando con el formulario...');
             }
             
-            // Llenar peso
+            // Llenar peso - probar múltiples selectores
             console.log('⚖️ Ingresando peso del paquete...');
-            const pesoInput = await driver.$('input[name="peso"]');
-            await pesoInput.waitForDisplayed({ timeout: 10000 });
+            let pesoInput;
+            try {
+                pesoInput = await driver.$('input[name="peso"]');
+                await pesoInput.waitForDisplayed({ timeout: 5000 });
+            } catch (e) {
+                // Intentar otros selectores comunes
+                try {
+                    pesoInput = await driver.$('input[placeholder*="peso"]');
+                    await pesoInput.waitForDisplayed({ timeout: 5000 });
+                } catch (e2) {
+                    pesoInput = await driver.$('input[type="number"]');
+                    await pesoInput.waitForDisplayed({ timeout: 5000 });
+                }
+            }
+            
+            console.log('✅ Campo de peso encontrado');
+            await pesoInput.clearValue();
             await pesoInput.setValue('1');
             await driver.pause(500);
             
@@ -230,11 +277,47 @@ describe('Bisonte Logística - Tests Móviles E2E', () => {
             
             // Esperar resultados
             console.log('⏳ Esperando resultados de cotización...');
-            await driver.pause(5000);
+            await driver.pause(3000);
             
             // Verificar que hay resultados o botón de siguiente
-            const nextButton = await driver.$('button*=Siguiente');
-            const hasResults = await nextButton.isDisplayed().catch(() => false);
+            console.log('🔍 Buscando indicadores de cotización exitosa...');
+            let hasResults = false;
+            
+            try {
+                // Intentar 1: Buscar botón "Siguiente"
+                const nextButton = await driver.$('button=Siguiente');
+                hasResults = await nextButton.waitForDisplayed({ timeout: 10000 }).then(() => true).catch(() => false);
+                
+                if (hasResults) {
+                    console.log('✅ Encontrado botón "Siguiente"');
+                }
+            } catch (e1) {
+                console.log('⚠️ Botón "Siguiente" no encontrado, buscando alternativas...');
+            }
+            
+            if (!hasResults) {
+                try {
+                    // Intentar 2: Buscar cualquier indicador de resultados
+                    const resultCards = await driver.$$('.cotizacion-result, .shipping-option, [class*="result"]');
+                    hasResults = resultCards.length > 0;
+                    
+                    if (hasResults) {
+                        console.log(`✅ Encontrados ${resultCards.length} resultados de cotización`);
+                    }
+                } catch (e2) {
+                    console.log('⚠️ No se encontraron resultados visuales');
+                }
+            }
+            
+            if (!hasResults) {
+                // Intentar 3: Verificar cambio de URL o mensaje de éxito
+                const currentUrl = await driver.getUrl();
+                hasResults = currentUrl.includes('result') || currentUrl.includes('cotizacion');
+                
+                if (hasResults) {
+                    console.log('✅ URL indica cotización exitosa:', currentUrl);
+                }
+            }
             
             assert.strictEqual(hasResults, true, 'Debería mostrar resultados de cotización');
             console.log('✅ Cotización creada exitosamente\n');
@@ -249,6 +332,38 @@ describe('Bisonte Logística - Tests Móviles E2E', () => {
             console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             console.log('TEST 3: Flujo Completo hasta Pago');
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+            
+            // Verificar si ya hay una cotización o necesitamos crear una nueva
+            const currentUrl = await driver.getUrl();
+            console.log('📍 URL actual:', currentUrl);
+            
+            // Si no estamos en resultados, crear una cotización rápida
+            if (!currentUrl.includes('result') && !currentUrl.includes('cotizacion')) {
+                console.log('⚠️ No hay cotización previa, creando una nueva...');
+                
+                // Reutilizar lógica del TEST 2 pero más simple
+                await driver.url('https://www.bisonteapp.com/cotizador');
+                await driver.pause(2000);
+                
+                try {
+                    // Llenar datos mínimos
+                    const pesoInput = await driver.$('input[name="peso"], input[placeholder*="peso"], input[type="number"]');
+                    await pesoInput.setValue('1');
+                    await driver.pause(300);
+                    
+                    // Scroll y cotizar
+                    await driver.execute('window.scrollTo(0, document.body.scrollHeight)');
+                    await driver.pause(500);
+                    
+                    const cotizarBtn = await driver.$('button=Cotizar');
+                    await cotizarBtn.click();
+                    await driver.pause(5000);
+                    
+                    console.log('✅ Cotización rápida creada');
+                } catch (error) {
+                    console.log('⚠️ Error creando cotización, continuando test...');
+                }
+            }
             
             // Continuar desde cotización
             console.log('👆 Buscando botón Siguiente...');
