@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { PrismaClient } from '@prisma/client';
 
 import { checkRateLimit, validatePasswordStrength, getRateLimitIdentity, resetRateLimit } from "../../../lib/security";
 import { handleEmailAuth } from "../../../lib/userManager";
+
+const prisma = new PrismaClient();
 
 /**
  * Get register endpoint info
@@ -26,9 +29,55 @@ export async function POST(request) {
 
     const normalizedEmail = email?.toLowerCase().trim();
 
+    // Validación de campos requeridos
     if (!normalizedEmail || !password || !nombre) {
       return NextResponse.json(
         { error: "Email, contraseña y nombre son requeridos" },
+        { status: 400 }
+      );
+    }
+
+    // Validación de formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return NextResponse.json(
+        { error: "Formato de email inválido" },
+        { status: 400 }
+      );
+    }
+
+    // Validación de formato de nombre (solo letras, espacios, tildes y ñ)
+    const nombreRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+    if (!nombreRegex.test(nombre.trim())) {
+      return NextResponse.json(
+        { error: "El nombre solo puede contener letras" },
+        { status: 400 }
+      );
+    }
+
+    // Validación de longitud de nombre
+    if (nombre.trim().length > 100) {
+      return NextResponse.json(
+        { error: "El nombre no puede exceder 100 caracteres" },
+        { status: 400 }
+      );
+    }
+
+    // Validación de formato de celular (si está presente)
+    if (celular) {
+      const celularRegex = /^\+?\d{7,15}$/;
+      if (!celularRegex.test(celular.trim())) {
+        return NextResponse.json(
+          { error: "Formato de celular inválido. Debe contener entre 7 y 15 dígitos" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validación de longitud de ciudad (si está presente)
+    if (ciudad && ciudad.trim().length > 100) {
+      return NextResponse.json(
+        { error: "El nombre de la ciudad no puede exceder 100 caracteres" },
         { status: 400 }
       );
     }
@@ -83,6 +132,18 @@ export async function POST(request) {
       return NextResponse.json(
         { error: "La contraseña no cumple los requisitos", details: passwordValidation.errors },
         { status: 400 }
+      );
+    }
+
+    // Check for existing user with password (registration should not allow duplicates)
+    const existingUser = await prisma.usuarios.findUnique({
+      where: { email: normalizedEmail }
+    });
+
+    if (existingUser && existingUser.password) {
+      return NextResponse.json(
+        { error: "El usuario ya existe" },
+        { status: 409 }
       );
     }
 

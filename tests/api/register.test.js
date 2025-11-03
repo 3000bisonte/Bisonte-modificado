@@ -81,15 +81,20 @@ describe('API - /api/register', () => {
     });
 
     test('Debe rechazar email duplicado', async () => {
-      const duplicateEmail = 'duplicate-test@bisonte-test.com';
+      // Usar email único para cada ejecución del test
+      const uniqueId = Date.now();
+      const duplicateEmail = `duplicate-${uniqueId}@bisonte-test.com`;
       const user1 = { ...testUser, email: duplicateEmail };
       
       // Primer registro
-      await fetch(`${apiUrl}/api/register`, {
+      const firstResponse = await fetch(`${apiUrl}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(user1)
       });
+      
+      // Asegurar que el primer registro fue exitoso
+      expect(firstResponse.status).toBe(201);
 
       // Segundo registro (debe fallar)
       const response = await fetch(`${apiUrl}/api/register`, {
@@ -98,7 +103,11 @@ describe('API - /api/register', () => {
         body: JSON.stringify(user1)
       });
 
-      expect([400, 409]).toContain(response.status);
+      // Debe retornar 409 (Conflict) para email duplicado
+      expect(response.status).toBe(409);
+      
+      const data = await response.json();
+      expect(data.error).toContain('existe');
     });
 
     test('Debe rechazar celular inválido', async () => {
@@ -115,13 +124,15 @@ describe('API - /api/register', () => {
 
   describe('🔒 Seguridad', () => {
     test('Debe tener rate limiting', async () => {
+      // Usar emails únicos con timestamp para evitar duplicados
+      const timestamp = Date.now();
       const requests = Array.from({ length: 10 }, (_, i) => 
         fetch(`${apiUrl}/api/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...testUser,
-            email: `rate-limit-${i}@test.com`
+            email: `rate-limit-${timestamp}-${i}@test.com`
           })
         })
       );
@@ -130,8 +141,8 @@ describe('API - /api/register', () => {
       const statuses = responses.map(r => r.status);
       
       // Al menos una debe ser 429 (Too Many Requests) si hay rate limiting
-      // O todas exitosas si no hay rate limiting implementado
-      expect(statuses.some(s => s === 429) || statuses.every(s => [200, 201, 400].includes(s))).toBe(true);
+      // O todas con status válido (201=creado, 400=validación, 409=duplicado)
+      expect(statuses.some(s => s === 429) || statuses.every(s => [200, 201, 400, 409].includes(s))).toBe(true);
     });
 
     test('No debe exponer información sensible en errores', async () => {
