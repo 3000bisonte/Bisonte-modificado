@@ -53,12 +53,29 @@ const validatePaymentData = (data: unknown): PaymentFormData => {
 
   const payment = data as Record<string, unknown>;
 
+  // Validación de monto
   if (!payment.transaction_amount || typeof payment.transaction_amount !== "number") {
-    throw new Error("Monto de transacción inválido");
+    throw new Error("Monto de transacción inválido o faltante");
+  }
+  
+  // Validar que el monto sea positivo
+  if (payment.transaction_amount <= 0) {
+    throw new Error("El monto de la transacción debe ser mayor a cero");
+  }
+  
+  // Validar límites razonables de monto
+  if (payment.transaction_amount > 50000000) {
+    throw new Error("El monto de la transacción excede el límite permitido");
   }
 
+  // Validación de método de pago
   if (!payment.payment_method_id || typeof payment.payment_method_id !== "string") {
-    throw new Error("Método de pago inválido");
+    throw new Error("Método de pago inválido o faltante");
+  }
+  
+  // Validar que el payment_method_id no esté vacío
+  if (payment.payment_method_id.trim().length === 0) {
+    throw new Error("El método de pago no puede estar vacío");
   }
 
   // ⚠️ PSE y métodos en efectivo NO envían token, solo tarjetas lo requieren
@@ -117,8 +134,22 @@ export async function POST(request: NextRequest) {
     
     console.log("🌐 IP del cliente:", clientIP);
 
-    // Validar datos
-    const paymentData = validatePaymentData(body);
+    // Validar datos - capturar errores de validación para retornar 400
+    let paymentData: PaymentFormData;
+    try {
+      paymentData = validatePaymentData(body);
+    } catch (validationError) {
+      const errorMessage = validationError instanceof Error ? validationError.message : String(validationError);
+      console.error("❌ Error de validación:", errorMessage);
+      return NextResponse.json(
+        {
+          success: false,
+          error: errorMessage,
+          details: "Los datos de pago no cumplen con los requisitos",
+        },
+        { status: 400 }
+      );
+    }
 
     const { accessToken, environment, baseUrl } = resolveMercadoPagoConfig();
 

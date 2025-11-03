@@ -35,8 +35,8 @@ describe('API - MercadoPago', () => {
         body: JSON.stringify(invalidData)
       });
 
-      // Endpoint actualmente devuelve 500, debería ser 400 (requiere validación)
-      expect([400, 500]).toContain(response.status);
+      // Con las validaciones agregadas, ahora debe devolver 400
+      expect(response.status).toBe(400);
     });
 
     test('Debe rechazar método de pago inválido', async () => {
@@ -47,8 +47,8 @@ describe('API - MercadoPago', () => {
         body: JSON.stringify(invalidData)
       });
 
-      // Endpoint actualmente devuelve 500, debería ser 400 (requiere validación)
-      expect([400, 500]).toContain(response.status);
+      // Con las validaciones agregadas, ahora debe devolver 400
+      expect(response.status).toBe(400);
     });
   });
 
@@ -122,8 +122,8 @@ describe('API - MercadoPago', () => {
         body: JSON.stringify({})
       });
 
-      // Endpoint actualmente devuelve 500, debería ser 400 (requiere validación)
-      expect([400, 500]).toContain(response.status);
+      // Con las validaciones agregadas, ahora debe devolver 400
+      expect(response.status).toBe(400);
     });
 
     test('No debe exponer tokens en respuestas', async () => {
@@ -185,8 +185,8 @@ describe('API - MercadoPago', () => {
           })
         });
 
-        // Endpoint actualmente devuelve 500, debería ser 400 (requiere validación)
-        expect([400, 500]).toContain(response.status);
+        // Con las validaciones agregadas, ahora debe devolver 400
+        expect(response.status).toBe(400);
       }
     });
   });

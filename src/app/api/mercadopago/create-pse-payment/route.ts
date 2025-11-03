@@ -25,11 +25,45 @@ export async function POST(request: NextRequest) {
       description = 'Pago Bisonte Logística'
     } = body;
 
-    // Validaciones
+    // Validaciones mejoradas
     if (!amount || !email || !document_type || !document_number) {
       return NextResponse.json({
         success: false,
         error: 'Datos requeridos: amount, email, document_type, document_number'
+      }, { status: 400 });
+    }
+
+    // Validar que el monto sea positivo
+    const parsedAmount = Number(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'El monto debe ser un número positivo'
+      }, { status: 400 });
+    }
+
+    // Validar límites de monto
+    if (parsedAmount > 50000000) {
+      return NextResponse.json({
+        success: false,
+        error: 'El monto excede el límite permitido'
+      }, { status: 400 });
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Formato de email inválido'
+      }, { status: 400 });
+    }
+
+    // Validar que document_number no esté vacío
+    if (typeof document_number !== 'string' || document_number.trim().length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Número de documento inválido'
       }, { status: 400 });
     }
 
