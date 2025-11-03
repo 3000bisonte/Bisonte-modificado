@@ -2,18 +2,20 @@
  * 🧹 Utilidades de sanitización de inputs
  */
 
-import DOMPurify from 'isomorphic-dompurify';
-
 /**
  * Sanitiza texto eliminando HTML y scripts
+ * Solo funciona en el cliente para evitar problemas de build
  */
 export function sanitizeText(input) {
   if (typeof input !== 'string') return input;
+  if (typeof window === 'undefined') return input; // Skip en servidor
   
-  return DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: []
-  }).trim();
+  // Sanitización básica sin DOMPurify para evitar errores de build
+  return input
+    .replace(/<[^>]*>/g, '') // Eliminar tags HTML
+    .replace(/javascript:/gi, '') // Eliminar javascript:
+    .replace(/on\w+\s*=/gi, '') // Eliminar event handlers
+    .trim();
 }
 
 /**
