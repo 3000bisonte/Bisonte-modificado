@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-11-04T00:06:09.097Z",
+  "summary": {
+    "totalTests": 74,
+    "passed": 74,
+    "failed": 0,
+    "skipped": 0,
+    "duration": "30.56"
+  },
+  "suites": [
+    {
+      "name": "📝 Tests de API - Registro",
+      "success": true,
+      "critical": true,
+      "duration": "14.36"
+    },
+    {
+      "name": "🔐 Tests de API - Autenticación",
+      "success": true,
+      "critical": true,
+      "duration": "6.35"
+    },
+    {
+      "name": "💳 Tests de API - MercadoPago",
+      "success": true,
+      "critical": true,
+      "duration": "2.21"
+    },
+    {
+      "name": "📦 Tests de API - Envíos",
+      "success": true,
+      "critical": false,
+      "duration": "1.20"
+    },
+    {
+      "name": "🔒 Tests de Servicios de Seguridad",
+      "success": true,
+      "critical": true,
+      "duration": "1.40"
+    },
+    {
+      "name": "🎯 Tests E2E - Flujo Completo",
+      "success": true,
+      "critical": true,
+      "duration": "5.04"
+    }
+  ]
+}
