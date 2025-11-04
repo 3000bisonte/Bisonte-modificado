@@ -8,6 +8,11 @@ export const TemporaryStorage = {
    * Guarda un valor con tiempo de expiración
    */
   set: (key, value, ttlMinutes = 5) => {
+    // No guardar valores undefined
+    if (value === undefined) {
+      return false;
+    }
+    
     const item = {
       value: value,
       timestamp: Date.now(),
@@ -92,6 +97,14 @@ export const TemporaryStorage = {
     if (cleaned > 0) {
       console.log(`🧹 [TempStorage] Limpiados ${cleaned} items expirados`);
     }
+  },
+  
+  /**
+   * Limpia todo el storage temporal
+   */
+  clear: () => {
+    sessionStorage.clear();
+    console.log(`🗑️ [TempStorage] Storage limpiado completamente`);
   },
   
   /**

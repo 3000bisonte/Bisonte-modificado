@@ -142,17 +142,23 @@ export function validatePassword(password) {
     warnings.push(`Contraseña débil. Intenta usar más variedad de caracteres (fuerza: ${entropy.toFixed(1)} bits)`);
   }
   
-  // Determinar fortaleza
-  let strength = 'weak';
+  // Determinar fortaleza (como número para compatibilidad con tests)
+  let strength = 0; // weak
+  let strengthLabel = 'weak';
+  
   if (errors.length === 0) {
     if (entropy >= 80) {
-      strength = 'very-strong';
+      strength = 4;
+      strengthLabel = 'very-strong';
     } else if (entropy >= 60) {
-      strength = 'strong';
+      strength = 3;
+      strengthLabel = 'strong';
     } else if (entropy >= 45) {
-      strength = 'good';
+      strength = 2;
+      strengthLabel = 'good';
     } else if (entropy >= 35) {
-      strength = 'fair';
+      strength = 1;
+      strengthLabel = 'fair';
     }
   }
   
@@ -160,8 +166,9 @@ export function validatePassword(password) {
     isValid: errors.length === 0,
     errors,
     warnings,
-    strength,
-    entropy: entropy.toFixed(1),
+    strength, // número 0-4
+    strengthLabel, // string para UI
+    entropy: parseFloat(entropy.toFixed(1)),
     patterns
   };
 }
@@ -204,12 +211,31 @@ export function generateSecurePassword(length = 16) {
 }
 
 /**
+ * Obtiene solo la fortaleza de una contraseña (sin validar requisitos)
+ * @param {string} password - Contraseña a evaluar
+ * @returns {number} Fortaleza 0-4
+ */
+export function getPasswordStrength(password) {
+  const result = validatePassword(password);
+  return result.strength;
+}
+
+/**
  * Obtiene mensaje de sugerencia basado en la fortaleza
- * @param {string} strength - Nivel de fortaleza
+ * @param {number|string} strength - Nivel de fortaleza (0-4 o label)
  * @returns {string} Mensaje de sugerencia
  */
 export function getStrengthMessage(strength) {
-  const messages = {
+  // Soporte para ambos formatos: número y string
+  const messagesNumeric = {
+    0: 'Muy débil - No recomendada',
+    1: 'Aceptable - Considera hacerla más fuerte',
+    2: 'Buena - Protección adecuada',
+    3: 'Fuerte - Excelente protección',
+    4: 'Muy fuerte - Máxima seguridad'
+  };
+  
+  const messagesString = {
     'invalid': 'Contraseña inválida',
     'weak': 'Muy débil - No recomendada',
     'fair': 'Aceptable - Considera hacerla más fuerte',
@@ -218,16 +244,29 @@ export function getStrengthMessage(strength) {
     'very-strong': 'Muy fuerte - Máxima seguridad'
   };
   
-  return messages[strength] || 'Desconocida';
+  if (typeof strength === 'number') {
+    return messagesNumeric[strength] || 'Desconocida';
+  }
+  
+  return messagesString[strength] || 'Desconocida';
 }
 
 /**
  * Obtiene color para indicador visual
- * @param {string} strength - Nivel de fortaleza
+ * @param {number|string} strength - Nivel de fortaleza (0-4 o label)
  * @returns {string} Clase de color Tailwind
  */
 export function getStrengthColor(strength) {
-  const colors = {
+  // Soporte para ambos formatos: número y string
+  const colorsNumeric = {
+    0: 'bg-gray-300',
+    1: 'bg-red-500',
+    2: 'bg-yellow-500',
+    3: 'bg-blue-500',
+    4: 'bg-green-500'
+  };
+  
+  const colorsString = {
     'invalid': 'bg-gray-300',
     'weak': 'bg-red-500',
     'fair': 'bg-yellow-500',
@@ -236,5 +275,9 @@ export function getStrengthColor(strength) {
     'very-strong': 'bg-green-600'
   };
   
-  return colors[strength] || 'bg-gray-300';
+  if (typeof strength === 'number') {
+    return colorsNumeric[strength] || 'bg-gray-300';
+  }
+  
+  return colorsString[strength] || 'bg-gray-300';
 }

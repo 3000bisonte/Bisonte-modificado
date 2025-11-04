@@ -34,7 +34,13 @@ export function sanitizeEmail(email) {
  * Sanitiza número de teléfono
  */
 export function sanitizePhone(phone) {
-  if (typeof phone !== 'string') return '';
+  if (typeof phone !== 'string') {
+    // Convertir a string si es número
+    if (typeof phone === 'number') {
+      return String(phone);
+    }
+    return '';
+  }
   
   return phone
     .trim()
@@ -47,7 +53,10 @@ export function sanitizePhone(phone) {
 export function sanitizeName(name) {
   if (typeof name !== 'string') return '';
   
-  return name
+  // Primero eliminar cualquier tag HTML completamente
+  const withoutTags = name.replace(/<[^>]*>/g, '');
+  
+  return withoutTags
     .trim()
     .replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')
     .replace(/\s+/g, ' ');
@@ -82,6 +91,12 @@ export function sanitizeObject(obj) {
     if (obj.hasOwnProperty(key)) {
       if (typeof obj[key] === 'object') {
         sanitized[key] = sanitizeObject(obj[key]);
+      } else if (key === 'nombre' || key === 'ciudad') {
+        sanitized[key] = sanitizeName(obj[key]);
+      } else if (key === 'email') {
+        sanitized[key] = sanitizeEmail(obj[key]);
+      } else if (key === 'celular' || key === 'telefono') {
+        sanitized[key] = sanitizePhone(obj[key]);
       } else {
         sanitized[key] = sanitizeText(obj[key]);
       }
