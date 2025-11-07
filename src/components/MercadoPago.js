@@ -178,7 +178,7 @@ const MercadoPagoComponent = () => {
       }
 
       setIsLoadingAmount(true);
-      setInitError(null);
+      // ✅ NO limpiar initError aquí - Solo si hay éxito
       setInitializationConfig(null);
 
       const candidateKeys = [
@@ -306,10 +306,32 @@ const MercadoPagoComponent = () => {
             stack: prefError.stack
           });
           
-          // ✅ NO mostrar error automáticamente - Solo loguear
-          // El usuario verá un botón de "Reintentar" si es necesario
-          console.warn("⚠️ No se mostró error automáticamente al usuario");
-          setInitError(null); // Mantener sin error para no bloquear la UI
+          // ✅ REINTENTO AUTOMÁTICO: Si falla, esperar 3 segundos y reintentar una vez
+          console.log("🔄 Reintentando crear preferencia en 3 segundos...");
+          
+          setTimeout(async () => {
+            try {
+              console.log("🔄 Segundo intento de crear preferencia...");
+              const preferenceId = await createPaymentPreference(amount, userEmail);
+              
+              if (preferenceId) {
+                console.log("✅ Preferencia creada en segundo intento:", preferenceId);
+                setInitializationConfig({ 
+                  preferenceId,
+                  amount: amount,
+                });
+                preferenceCreated.current = true;
+                setInitError(null); // ✅ Limpiar cualquier error previo
+              } else {
+                throw new Error("No se recibió preferenceId en segundo intento");
+              }
+            } catch (retryError) {
+              console.error("❌ Segundo intento falló:", retryError);
+              // ✅ NO mostrar error automáticamente - Solo loguear
+              // El usuario verá un mensaje amigable para reintentar manualmente
+              console.warn("⚠️ Usuario puede reintentar manualmente con el botón");
+            }
+          }, 3000);
         }
       } else {
         console.error("⚠️ No se encontraron datos válidos de cotización para el pago.");
@@ -990,18 +1012,24 @@ const MercadoPagoComponent = () => {
           ) : !initializationConfig ? (
             <div className="bg-white rounded-2xl shadow-lg p-8">
               <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Preparando tu pago</h3>
-                <p className="text-gray-600 mb-4">Estamos configurando todo para procesar tu pago de forma segura.</p>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Conectando con el sistema de pagos</h3>
+                <p className="text-gray-600 mb-4">
+                  Estamos estableciendo una conexión segura con MercadoPago.<br/>
+                  <span className="text-sm text-gray-500">Este proceso puede tardar unos segundos...</span>
+                </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => window.location.reload()}
-                    className="bg-[#41e0b3] hover:bg-[#2bbd8c] text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200"
+                    className="bg-[#41e0b3] hover:bg-[#2bbd8c] text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2"
                   >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
                     Reintentar
                   </button>
                   <button
