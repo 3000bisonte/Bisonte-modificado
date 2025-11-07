@@ -36,8 +36,9 @@ const ciudades = {
   "25740": "Soacha", "25743": "Sibaté",
 };
 
-const REWARDED_CHAIN_MIN = 2;
-const REWARDED_CHAIN_MAX = 3;
+// 🎯 MODIFICADO: Solo mostrar 1 anuncio por clic (antes era 2-3)
+const REWARDED_CHAIN_MIN = 1;
+const REWARDED_CHAIN_MAX = 1;
 
 // --- Main Component ---
 export default function Resumen() {
