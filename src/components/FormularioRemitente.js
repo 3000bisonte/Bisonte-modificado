@@ -86,30 +86,39 @@ const FormularioRemitente = ({ id: _id }) => {
         
         const response = await fetch("/api/perfil");
         if (!response.ok) {
-          throw new Error("Failed to fetch profiles");
+          throw new Error("Failed to fetch profile");
         }
         
-        const perfiles = await response.json();
-        // Asegurar que perfiles es un array
-        const perfilesArray = Array.isArray(perfiles) ? perfiles : [];
-        const userProfile = perfilesArray.find(p => p.correo === session.user.email);
+        const data = await response.json();
+        
+        // Extraer el perfil del usuario de la respuesta
+        let userProfile = null;
+        if (data.success && data.perfiles && Array.isArray(data.perfiles) && data.perfiles.length > 0) {
+          userProfile = data.perfiles[0]; // El endpoint retorna el perfil del usuario autenticado
+        }
         
         if (userProfile) {
-          console.log("👤 Perfil encontrado:", userProfile);
+          console.log("👤 Perfil encontrado:", {
+            nombre: userProfile.nombre,
+            tipoDocumento: userProfile.tipoDocumento,
+            direccionRecogida: userProfile.direccionRecogida
+          });
           
           // Solo llenar campos vacíos para no sobreescribir datos ya ingresados
           setFormData((prev) => ({
             nombre: prev.nombre || userProfile.nombre || "",
-            tipoDocumento: prev.tipoDocumento || "",
-            numeroDocumento: prev.numeroDocumento || "",
+            tipoDocumento: prev.tipoDocumento || userProfile.tipoDocumento || "",
+            numeroDocumento: prev.numeroDocumento || userProfile.numeroDocumento || "",
             celular: prev.celular || userProfile.celular || "",
-            correo: prev.correo || userProfile.correo || session.user.email,
-            direccionRecogida: prev.direccionRecogida || "",
-            detalleDireccion: prev.detalleDireccion || "",
-            recomendaciones: prev.recomendaciones || "",
+            correo: prev.correo || userProfile.email || session.user.email,
+            direccionRecogida: prev.direccionRecogida || userProfile.direccionRecogida || "",
+            detalleDireccion: prev.detalleDireccion || userProfile.detalleDireccion || "",
+            recomendaciones: prev.recomendaciones || userProfile.recomendaciones || "",
           }));
+          
+          console.log("✅ Formulario de remitente auto-completado con datos del perfil");
         } else {
-          console.log("⚠️ No se encontró perfil, usando datos de sesión");
+          console.log("⚠️ No se encontró perfil completo, usando datos de sesión");
           // Si no hay perfil, al menos llenar el correo de la sesión
           setFormData((prev) => ({
             ...prev,
