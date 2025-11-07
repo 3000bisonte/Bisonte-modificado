@@ -26,8 +26,9 @@ if (initMPago) {
     locale: "es-CO",
   });
 } else {
-  console.error(
-    "[MercadoPago] Falta la clave pública NEXT_PUBLIC_INIT_MERCADOPAGO. El brick no podrá inicializarse."
+  // ✅ Cambiar a warn para no alarmar al usuario
+  console.warn(
+    "[MercadoPago] ⚠️ Falta la clave pública NEXT_PUBLIC_INIT_MERCADOPAGO. El brick no podrá inicializarse."
   );
 }
 
@@ -305,15 +306,15 @@ const MercadoPagoComponent = () => {
             stack: prefError.stack
           });
           
-          setInitError(
-            `No se pudo inicializar el pago: ${errorMessage}. Por favor verifica tu conexión a internet e intenta nuevamente.`
-          );
+          // ✅ NO mostrar error automáticamente - Solo loguear
+          // El usuario verá un botón de "Reintentar" si es necesario
+          console.warn("⚠️ No se mostró error automáticamente al usuario");
+          setInitError(null); // Mantener sin error para no bloquear la UI
         }
       } else {
-        console.error("No se encontraron datos válidos de cotización para el pago.");
-        setInitError(
-          "No se encontraron los datos de la cotización para el pago."
-        );
+        console.error("⚠️ No se encontraron datos válidos de cotización para el pago.");
+        // ✅ NO mostrar error automáticamente - El usuario puede volver y cotizar de nuevo
+        setInitError(null); // No bloquear la UI
       }
     } finally {
       setIsLoadingAmount(false); // Indicar que terminamos de intentar cargar
@@ -989,19 +990,27 @@ const MercadoPagoComponent = () => {
           ) : !initializationConfig ? (
             <div className="bg-white rounded-2xl shadow-lg p-8">
               <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Error inesperado</h3>
-                <p className="text-gray-600 mb-4">No se pudo preparar el pago. Por favor intenta nuevamente.</p>
-                <button
-                  onClick={() => window.history.back()}
-                  className="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200"
-                >
-                  Volver atrás
-                </button>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Preparando tu pago</h3>
+                <p className="text-gray-600 mb-4">Estamos configurando todo para procesar tu pago de forma segura.</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="bg-[#41e0b3] hover:bg-[#2bbd8c] text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200"
+                  >
+                    Reintentar
+                  </button>
+                  <button
+                    onClick={() => router.push("/resumen")}
+                    className="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200"
+                  >
+                    Volver al Resumen
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
