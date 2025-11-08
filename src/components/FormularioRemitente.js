@@ -254,9 +254,14 @@ const FormularioRemitente = ({ id: _id }) => {
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Información del Remitente</h1>
           <p className="text-gray-600">Completa los datos de quien envía el paquete</p>
           {session?.user?.email && (
-            <p className="text-sm text-teal-600 mt-2">
-              📧 Usuario: {session.user.email}
-            </p>
+            <div className="mt-2 space-y-1">
+              <p className="text-sm text-teal-600">
+                📧 Usuario: {session.user.email}
+              </p>
+              <p className="text-xs text-gray-500 italic">
+                💡 Los datos se cargan automáticamente desde tu perfil, pero puedes modificarlos si lo necesitas
+              </p>
+            </div>
           )}
         </div>
 
