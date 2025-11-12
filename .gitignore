@@ -62,8 +62,22 @@ public/build/
 # Android release keystores and signing config
 android/app/*.jks
 android/app/*.keystore
+android/*.jks
+android/*.keystore
 android/gradle.properties
 gradle.properties
+*.aab
+*.apk
+bisonte-logistica-*.aab
+bisonte-logistica-*.apk
+
+# Environment files with sensitive data
+.env.production
+.env.mobile
+.env.build
+.env.bisonte-template
+.env.example.nextauth
+.env.test.example
 
 # Google services (contiene info sensible de Firebase)
 # Comentar si necesitas commitear para CI/CD
