@@ -17,6 +17,7 @@ export default function AdminUsuarios() {
       "3000bisonte@gmail.com",
       "bisonteangela@gmail.com",
       "bisonteoskar@gmail.com",
+      "test@bisonteapp.com",
     ];
 
     if (status === "loading") {
