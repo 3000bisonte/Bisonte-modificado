@@ -10,7 +10,7 @@ const GOOGLE_TEST = {
 };
 
 // 🧪 MODO DE PRUEBA: Cambiar a true para usar Test IDs (anuncios garantizados)
-const FORCE_TEST_IDS = true; // ✅ TRUE = Test IDs (anuncios funcionan siempre) | FALSE = Production IDs
+const FORCE_TEST_IDS = false; // ✅ TRUE = Test IDs (anuncios funcionan siempre) | FALSE = Production IDs
 
 function chooseId(kind, real, test) {
   // 🧪 Forzar Test IDs si está habilitado

@@ -74,10 +74,6 @@ function formatHtmlEmail({ name, code, resetUrl, expiresMinutes }) {
           <div style="margin:24px 0; text-align:center">
             <span style="display:inline-block; font-size:32px; letter-spacing:12px; font-weight:700; background:#111827; color:#ffffff; padding:16px 32px; border-radius:12px">${code}</span>
           </div>
-          <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6">También puedes continuar desde este enlace:</p>
-          <p style="text-align:center; margin:24px 0">
-            <a href="${resetUrl}" style="display:inline-block; background:#2563eb; color:#ffffff; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:600">Restablecer contraseña</a>
-          </p>
           <p style="margin:0 0 16px 0; font-size:14px; color:#6b7280">El código vence en ${expiresMinutes ?? 30} minutos. Si no solicitaste este cambio, ignora este correo.</p>
           <p style="margin:24px 0 0 0; font-size:13px; color:#9ca3af">Equipo de soporte de Bisonte Logística</p>
         </td>
