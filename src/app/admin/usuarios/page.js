@@ -142,8 +142,12 @@ export default function AdminUsuarios() {
                   <p className="text-sm font-medium text-slate-600 mb-1">Nuevos Hoy</p>
                   <p className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                     {usuarios.filter(u => {
+                      const fecha = u.creadoEn || u.createdAt;
+                      if (!fecha) return false;
+                      const date = new Date(fecha);
+                      if (isNaN(date.getTime())) return false;
                       const today = new Date().toDateString();
-                      return new Date(u.creadoEn || u.createdAt).toDateString() === today;
+                      return date.toDateString() === today;
                     }).length}
                   </p>
                   <p className="text-xs text-slate-500 mt-2 font-medium">Registros del día</p>
@@ -296,11 +300,17 @@ export default function AdminUsuarios() {
                       </td>
                       <td className="px-6 py-5">
                         <p className="text-sm text-slate-600">
-                          {new Date(usuario.creadoEn || usuario.createdAt).toLocaleDateString('es-CO', { 
-                            year: 'numeric', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })}
+                          {(() => {
+                            const fecha = usuario.creadoEn || usuario.createdAt;
+                            if (!fecha) return 'Sin fecha';
+                            const date = new Date(fecha);
+                            if (isNaN(date.getTime())) return 'Fecha inválida';
+                            return date.toLocaleDateString('es-CO', { 
+                              year: 'numeric', 
+                              month: 'short', 
+                              day: 'numeric' 
+                            });
+                          })()}
                         </p>
                       </td>
                       <td className="px-6 py-5">
