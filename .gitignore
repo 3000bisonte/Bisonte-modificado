@@ -59,7 +59,14 @@ java/**/app/build/
 .idea/
 public/build/
 
-# Android release keystores
+# Android release keystores and signing config
 android/app/*.jks
+android/app/*.keystore
+android/gradle.properties
+gradle.properties
+
+# Google services (contiene info sensible de Firebase)
+# Comentar si necesitas commitear para CI/CD
+# android/app/google-services.json
 
 .vercel

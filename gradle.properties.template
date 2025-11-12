@@ -1,0 +1,85 @@
+# ============================================
+# CONFIGURACIÓN DE FIRMA PARA PLAY STORE
+# Bisonte Logística - Android Release Config
+# ============================================
+
+# ⚠️ IMPORTANTE: NO SUBIR ESTE ARCHIVO A GIT
+# Agregar "gradle.properties" a .gitignore
+
+# ----------------------------------------------
+# 📝 INSTRUCCIONES DE USO:
+# ----------------------------------------------
+# 1. Copia este archivo a: android/gradle.properties
+# 2. Reemplaza los valores de ejemplo con tus credenciales reales
+# 3. Guarda las contraseñas en un lugar seguro (gestor de contraseñas)
+# 4. NUNCA compartas este archivo públicamente
+
+# ----------------------------------------------
+# 🔐 CREDENCIALES DEL KEYSTORE
+# ----------------------------------------------
+
+# Nombre del archivo keystore (debe estar en android/app/)
+MYAPP_UPLOAD_STORE_FILE=bisonte-release-key.keystore
+
+# Password del keystore (reemplazar con tu contraseña real)
+MYAPP_UPLOAD_STORE_PASSWORD=TU_PASSWORD_KEYSTORE_AQUI
+
+# Alias de la key dentro del keystore
+MYAPP_UPLOAD_KEY_ALIAS=bisonte-key
+
+# Password de la key (puede ser igual al del keystore)
+MYAPP_UPLOAD_KEY_PASSWORD=TU_PASSWORD_KEY_AQUI
+
+# ----------------------------------------------
+# 📋 EJEMPLO DE VALORES:
+# ----------------------------------------------
+# MYAPP_UPLOAD_STORE_FILE=bisonte-release-key.keystore
+# MYAPP_UPLOAD_STORE_PASSWORD=MiPasswordSuperSeguro123!
+# MYAPP_UPLOAD_KEY_ALIAS=bisonte-key
+# MYAPP_UPLOAD_KEY_PASSWORD=MiPasswordSuperSeguro123!
+
+# ----------------------------------------------
+# ℹ️ NOTAS:
+# ----------------------------------------------
+# • Si el archivo keystore está en otra ubicación, usar ruta absoluta
+# • Las contraseñas pueden contener caracteres especiales
+# • NO usar comillas en los valores
+# • El alias debe coincidir con el usado al crear el keystore
+
+# ----------------------------------------------
+# 🚨 RECORDATORIOS DE SEGURIDAD:
+# ----------------------------------------------
+# ✅ Haz backup del archivo .keystore en múltiples ubicaciones seguras
+# ✅ Guarda las contraseñas en un gestor (LastPass, 1Password, Bitwarden)
+# ✅ NO compartas el keystore ni las contraseñas con nadie
+# ✅ Si pierdes el keystore, NO podrás actualizar la app en Play Store
+# ✅ Considera usar Google Play App Signing para mayor seguridad
+
+# ----------------------------------------------
+# 🔗 RECURSOS:
+# ----------------------------------------------
+# Documentación oficial de firma:
+# https://developer.android.com/studio/publish/app-signing
+
+# Google Play App Signing:
+# https://support.google.com/googleplay/android-developer/answer/9842756
+
+# ----------------------------------------------
+# Configuración adicional de Gradle (opcional)
+# ----------------------------------------------
+
+# Habilitar daemon de Gradle para builds más rápidos
+org.gradle.daemon=true
+
+# Configurar memoria JVM para builds grandes
+org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m
+
+# Habilitar cache de configuración
+org.gradle.caching=true
+
+# Builds paralelos (si tienes múltiples módulos)
+org.gradle.parallel=true
+
+# AndroidX migration flags (ya deberían estar habilitados)
+android.useAndroidX=true
+android.enableJetifier=true
