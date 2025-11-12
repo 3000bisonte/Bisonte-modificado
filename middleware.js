@@ -140,6 +140,7 @@ export default withAuth(
       "3000bisonte@gmail.com",
       "bisonteangela@gmail.com", 
       "bisonteoskar@gmail.com",
+      "test@bisonteapp.com",
     ];
     const userEmail = req.nextauth.token?.email;
 
