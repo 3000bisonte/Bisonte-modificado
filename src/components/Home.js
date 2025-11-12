@@ -261,6 +261,7 @@ const Home = () => {
     "3000bisonte@gmail.com",
     "bisonteangela@gmail.com",
     "bisonteoskar@gmail.com",
+    "test@bisonteapp.com",
   ];
   const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
 
