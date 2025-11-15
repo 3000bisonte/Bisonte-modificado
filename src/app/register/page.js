@@ -207,6 +207,18 @@ export default function Register() {
         autoComplete="off"
         noValidate
       >
+        {/* Botón de regreso al login */}
+        <button
+          type="button"
+          onClick={() => router.push("/login")}
+          className="flex items-center gap-2 text-[#41e0b3] hover:text-white transition-colors self-start mb-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          <span className="text-sm">Volver al inicio de sesión</span>
+        </button>
+
         <div className="mb-2">
           <h2 className="text-white text-lg font-bold mb-1 leading-tight">
             ¡hola!
@@ -372,6 +384,18 @@ export default function Register() {
         {msg && (
           <p className="mt-2 text-center text-sm text-[#41e0b3]">{msg}</p>
         )}
+        
+        {/* Link adicional para volver al login */}
+        <p className="text-center text-gray-400 text-sm mt-2">
+          ¿Ya tienes cuenta?{" "}
+          <button
+            type="button"
+            onClick={() => router.push("/login")}
+            className="text-[#41e0b3] hover:text-white font-semibold underline transition-colors"
+          >
+            Inicia sesión aquí
+          </button>
+        </p>
       </form>
     </div>
   );
