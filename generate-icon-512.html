@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bisonte Logo 512x512</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        #canvas {
+            border: 2px solid #333;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        button {
+            background: #00bcd4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #0097a7;
+        }
+        
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Generador de Logo Bisonte 512x512px</h1>
+    
+    <div class="info">
+        <strong>📌 Instrucciones:</strong>
+        <ol>
+            <li>Haz clic en el botón "Descargar Logo 512x512px"</li>
+            <li>El archivo se guardará como "bisonte-icon-512x512.png"</li>
+            <li>Súbelo directamente a Google Play Console</li>
+        </ol>
+    </div>
+    
+    <canvas id="canvas" width="512" height="512"></canvas>
+    
+    <div class="controls">
+        <button onclick="downloadLogo()">⬇️ Descargar Logo 512x512px</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const size = 512;
+
+        function drawLogo() {
+            // Fondo negro
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, size, size);
+
+            // Configuración del círculo azul
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size * 0.4; // 40% del tamaño
+
+            // Dibujar arco azul (círculo incompleto)
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, -0.3 * Math.PI, 0.8 * Math.PI, false);
+            ctx.strokeStyle = '#00bcd4';
+            ctx.lineWidth = size * 0.08; // 8% del tamaño
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Dibujar el bisonte (silueta simplificada)
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = size * 0.012; // ~6px en 512
+
+            // Cuerpo del bisonte
+            ctx.beginPath();
+            
+            // Espalda y joroba
+            ctx.moveTo(centerX - radius * 0.5, centerY - radius * 0.3);
+            ctx.quadraticCurveTo(
+                centerX - radius * 0.3, centerY - radius * 0.6,
+                centerX, centerY - radius * 0.5
+            );
+            ctx.quadraticCurveTo(
+                centerX + radius * 0.2, centerY - radius * 0.55,
+                centerX + radius * 0.35, centerY - radius * 0.4
+            );
+            
+            // Lomo y trasero
+            ctx.quadraticCurveTo(
+                centerX + radius * 0.45, centerY - radius * 0.2,
+                centerX + radius * 0.4, centerY + radius * 0.1
+            );
+            
+            // Pata trasera
+            ctx.lineTo(centerX + radius * 0.35, centerY + radius * 0.5);
+            ctx.lineTo(centerX + radius * 0.25, centerY + radius * 0.5);
+            ctx.lineTo(centerX + radius * 0.2, centerY + radius * 0.1);
+            
+            // Vientre
+            ctx.lineTo(centerX - radius * 0.1, centerY + radius * 0.1);
+            
+            // Pata delantera
+            ctx.lineTo(centerX - radius * 0.15, centerY + radius * 0.5);
+            ctx.lineTo(centerX - radius * 0.25, centerY + radius * 0.5);
+            ctx.lineTo(centerX - radius * 0.2, centerY + radius * 0.1);
+            
+            // Pecho y cuello
+            ctx.quadraticCurveTo(
+                centerX - radius * 0.35, centerY + radius * 0.05,
+                centerX - radius * 0.5, centerY - radius * 0.1
+            );
+            
+            // Cabeza
+            ctx.quadraticCurveTo(
+                centerX - radius * 0.6, centerY - radius * 0.15,
+                centerX - radius * 0.55, centerY - radius * 0.3
+            );
+            
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Cuernos
+            ctx.beginPath();
+            // Cuerno izquierdo
+            ctx.moveTo(centerX - radius * 0.52, centerY - radius * 0.32);
+            ctx.quadraticCurveTo(
+                centerX - radius * 0.58, centerY - radius * 0.45,
+                centerX - radius * 0.48, centerY - radius * 0.52
+            );
+            // Cuerno derecho
+            ctx.moveTo(centerX - radius * 0.42, centerY - radius * 0.35);
+            ctx.quadraticCurveTo(
+                centerX - radius * 0.38, centerY - radius * 0.48,
+                centerX - radius * 0.28, centerY - radius * 0.52
+            );
+            ctx.stroke();
+
+            // Texto "BISONTE"
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * 0.12}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.letterSpacing = '0.05em';
+            ctx.fillText('BISONTE', centerX, centerY + radius * 1.2);
+        }
+
+        function downloadLogo() {
+            const link = document.createElement('a');
+            link.download = 'bisonte-icon-512x512.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            
+            alert('✅ Logo descargado correctamente!\n\nArchivo: bisonte-icon-512x512.png\nTamaño: 512x512 píxeles\n\nAhora puedes subirlo a Google Play Console.');
+        }
+
+        // Dibujar el logo al cargar la página
+        drawLogo();
+    </script>
+</body>
+</html>

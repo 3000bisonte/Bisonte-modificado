@@ -79,9 +79,17 @@
         <!-- AdMob / Google Mobile Ads App ID -->
         <!-- Sustituir el valor placeholder en strings.xml por tu verdadero AdMob App ID (formato ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY) -->
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="@string/admob_app_id" />
+        
+        <!-- Declaración de uso de Advertising ID (requerido para Google Play) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.AD_MANAGER_APP"
+            android:value="true" />
     </application>
 
     <!-- Permissions -->
+    
+    <!-- Declaración de que la app usa Advertising ID para anuncios -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

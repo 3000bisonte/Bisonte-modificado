@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bisonte - Gráfico Destacado 1024x500</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        #canvas {
+            border: 2px solid #333;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            background: #00bcd4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #0097a7;
+        }
+        
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2196f3;
+            max-width: 800px;
+        }
+
+        h1 {
+            color: #333;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 Generador de Gráfico Destacado</h1>
+    <p style="color: #666; font-size: 18px;">Banner 1024x500px para Google Play Store</p>
+    
+    <div class="info">
+        <strong>📌 Instrucciones:</strong>
+        <ol>
+            <li>Elige el diseño que más te guste (hay 3 opciones)</li>
+            <li>Haz clic en "Descargar Banner"</li>
+            <li>El archivo se guardará como "bisonte-feature-graphic-1024x500.png"</li>
+            <li>Súbelo a Google Play Console en la sección "Gráfico destacado"</li>
+        </ol>
+    </div>
+    
+    <canvas id="canvas" width="1024" height="500"></canvas>
+    
+    <div class="controls">
+        <button onclick="drawDesign1()">Diseño 1: Moderno</button>
+        <button onclick="drawDesign2()">Diseño 2: Profesional</button>
+        <button onclick="drawDesign3()">Diseño 3: Dinámico</button>
+        <button onclick="downloadBanner()" style="background: #4CAF50;">⬇️ Descargar Banner</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const width = 1024;
+        const height = 500;
+
+        // DISEÑO 1: MODERNO CON GRADIENTE
+        function drawDesign1() {
+            // Gradiente de fondo
+            const gradient = ctx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, '#0a0e27');
+            gradient.addColorStop(0.5, '#1a237e');
+            gradient.addColorStop(1, '#00bcd4');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            // Círculos decorativos
+            ctx.globalAlpha = 0.1;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(100, 100, 150, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(900, 400, 200, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // Logo (círculo azul con bisonte)
+            drawLogo(180, 250, 0.7);
+
+            // Texto principal
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 72px Arial';
+            ctx.fillText('BISONTE', 380, 200);
+            
+            ctx.font = '48px Arial';
+            ctx.fillText('Logística', 380, 260);
+
+            // Línea decorativa
+            ctx.strokeStyle = '#00bcd4';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(380, 280);
+            ctx.lineTo(680, 280);
+            ctx.stroke();
+
+            // Subtítulo con ícono
+            ctx.font = 'bold 38px Arial';
+            ctx.fillStyle = '#00e5ff';
+            ctx.fillText('🎁 ¡Envíos GRATIS', 380, 340);
+            
+            ctx.font = '32px Arial';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('viendo anuncios!', 380, 385);
+
+            // Badge decorativo
+            drawBadge(850, 250, '$2,013', 'por anuncio');
+        }
+
+        // DISEÑO 2: PROFESIONAL
+        function drawDesign2() {
+            // Fondo sólido oscuro
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, width, height);
+
+            // Barra superior azul
+            ctx.fillStyle = '#00bcd4';
+            ctx.fillRect(0, 0, width, 120);
+
+            // Logo
+            drawLogo(140, 250, 0.6);
+
+            // Texto en barra superior
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 56px Arial';
+            ctx.fillText('BISONTE LOGÍSTICA', 320, 75);
+
+            // Contenido principal
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 52px Arial';
+            ctx.fillText('Gestiona tus envíos', 320, 220);
+            
+            ctx.font = '42px Arial';
+            ctx.fillText('de forma inteligente', 320, 275);
+
+            // Feature destacado
+            ctx.fillStyle = '#00bcd4';
+            ctx.fillRect(320, 310, 650, 120);
+            
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 36px Arial';
+            ctx.fillText('✨ Descuento de $2,013 por cada anuncio', 340, 360);
+            
+            ctx.font = '28px Arial';
+            ctx.fillText('Acumula descuentos hasta tener envío gratis', 340, 400);
+        }
+
+        // DISEÑO 3: DINÁMICO
+        function drawDesign3() {
+            // Fondo degradado diagonal
+            const gradient = ctx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, '#00bcd4');
+            gradient.addColorStop(0.5, '#0097a7');
+            gradient.addColorStop(1, '#006064');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            // Formas geométricas decorativas
+            ctx.globalAlpha = 0.2;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(700, -50, 400, 200);
+            ctx.fillRect(-50, 350, 300, 200);
+            ctx.globalAlpha = 1;
+
+            // Logo
+            drawLogo(150, 250, 0.7);
+
+            // Contenedor de texto con fondo
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(350, 80, 620, 340);
+
+            // Texto principal
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 68px Arial';
+            ctx.fillText('BISONTE', 380, 170);
+
+            ctx.fillStyle = '#00e5ff';
+            ctx.font = '48px Arial';
+            ctx.fillText('Logística Inteligente', 380, 230);
+
+            // Features
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '32px Arial';
+            ctx.fillText('📦 Cotización instantánea', 380, 290);
+            ctx.fillText('💰 Descuentos por anuncios', 380, 335);
+            ctx.fillText('🚀 Envío gratis acumulando', 380, 380);
+        }
+
+        // Función para dibujar el logo del bisonte
+        function drawLogo(x, y, scale) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+
+            const radius = 80;
+            
+            // Círculo azul
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, -0.3 * Math.PI, 0.8 * Math.PI, false);
+            ctx.strokeStyle = '#00bcd4';
+            ctx.lineWidth = 12;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Bisonte simplificado
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+
+            // Cuerpo
+            ctx.beginPath();
+            ctx.moveTo(-40, -20);
+            ctx.quadraticCurveTo(-25, -45, 0, -38);
+            ctx.quadraticCurveTo(20, -42, 30, -28);
+            ctx.quadraticCurveTo(35, -15, 32, 5);
+            ctx.lineTo(28, 35);
+            ctx.lineTo(20, 35);
+            ctx.lineTo(16, 5);
+            ctx.lineTo(-8, 5);
+            ctx.lineTo(-12, 35);
+            ctx.lineTo(-20, 35);
+            ctx.lineTo(-16, 5);
+            ctx.quadraticCurveTo(-28, 3, -40, -8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Cuernos
+            ctx.beginPath();
+            ctx.moveTo(-42, -22);
+            ctx.quadraticCurveTo(-46, -32, -38, -38);
+            ctx.moveTo(-34, -24);
+            ctx.quadraticCurveTo(-30, -34, -22, -38);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // Función para dibujar badge decorativo
+        function drawBadge(x, y, text1, text2) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Fondo del badge
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, 0, 70, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Borde
+            ctx.strokeStyle = '#00bcd4';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Texto
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 28px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(text1, 0, -5);
+            
+            ctx.font = '18px Arial';
+            ctx.fillText(text2, 0, 18);
+
+            ctx.restore();
+            ctx.textAlign = 'left'; // Restaurar alineación
+        }
+
+        function downloadBanner() {
+            const link = document.createElement('a');
+            link.download = 'bisonte-feature-graphic-1024x500.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            
+            alert('✅ Gráfico destacado descargado!\n\nArchivo: bisonte-feature-graphic-1024x500.png\nTamaño: 1024x500 píxeles\n\nSúbelo a Google Play Console en "Gráfico destacado"');
+        }
+
+        // Dibujar diseño por defecto
+        drawDesign1();
+    </script>
+</body>
+</html>
