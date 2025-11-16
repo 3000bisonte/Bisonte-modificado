@@ -22,6 +22,30 @@
           }
         },
         {
+          "client_id": "814463004364-724kiuagg231jb9mnph6nfgek3n369iv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bisonteapp",
+            "certificate_hash": "2565ad74e51a05072ea35379dc08297e7f84e082"
+          }
+        },
+        {
+          "client_id": "814463004364-fcuud3emoeog492d7hp5litk6qt1vsa9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bisonteapp",
+            "certificate_hash": "19d68442f439e15b46ca32a481de183bd0424b37"
+          }
+        },
+        {
+          "client_id": "814463004364-mu87jrgs5tbvq73rj6k0aukblfjio8lt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bisonteapp",
+            "certificate_hash": "f61be8a02f28f0239dab5ffd32f15524f653457d"
+          }
+        },
+        {
           "client_id": "814463004364-kla2sr8s45pgu3gckkkamqlrequ5566e.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -37,10 +61,6 @@
             {
               "client_id": "814463004364-kla2sr8s45pgu3gckkkamqlrequ5566e.apps.googleusercontent.com",
               "client_type": 3
-            },
-            {
-              "client_id": "814463004364-1pj3amqos1f59ju94uca5t6r9s18ek2m.apps.googleusercontent.com",
-              "client_type": 1
             }
           ]
         }
