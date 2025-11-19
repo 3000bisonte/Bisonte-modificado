@@ -13,7 +13,12 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full bg-[#18191A] border-t border-gray-700 z-50">
+    <nav
+      className="fixed bottom-0 left-0 w-full bg-[#18191A]/95 border-t border-gray-700 z-50 backdrop-blur"
+      style={{
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+      }}
+    >
       <div className="flex justify-around items-center py-2 px-2 gap-x-1 flex-wrap max-w-screen">
         {navItems.map((item) => (
           <Link
