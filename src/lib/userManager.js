@@ -29,11 +29,18 @@ export async function upsertUser(userData, authMethod = 'email') {
     });
 
     if (existingUser) {
-      console.log(`[UserManager] Usuario existente encontrado - ID: ${existingUser.id}`);
+      console.log(`🔵 [UserManager] Usuario EXISTENTE encontrado - ID: ${existingUser.id}, Email: ${existingUser.email}`);
+      console.log(`🔵 [UserManager] Datos actuales:`, {
+        nombre: existingUser.nombre,
+        celular: existingUser.celular,
+        ciudad: existingUser.ciudad,
+        emailVerified: existingUser.emailVerified,
+        tienePassword: !!existingUser.password
+      });
       
       // Si el usuario existe y está tratando de registrarse por password pero ya tiene Google
       if (authMethod === 'email' && !existingUser.password && password) {
-        console.log(`[UserManager] Vinculando password a cuenta Google existente`);
+        console.log(`🔵 [UserManager] Vinculando password a cuenta Google existente`);
         
         const hashedPassword = await hashPassword(password);
         const updatedUser = await prisma.usuarios.update({
@@ -58,7 +65,7 @@ export async function upsertUser(userData, authMethod = 'email') {
       
       // Si el usuario existe y está usando Google pero ya tiene password
       if (authMethod === 'google' && existingUser.password) {
-        console.log(`[UserManager] Actualizando datos de Google en cuenta con password`);
+        console.log(`🔵 [UserManager] Actualizando datos de Google en cuenta con password`);
         
         const updatedUser = await prisma.usuarios.update({
           where: { email: normalizedEmail },
@@ -70,6 +77,8 @@ export async function upsertUser(userData, authMethod = 'email') {
           }
         });
         
+        console.log(`✅ [UserManager] Usuario actualizado (Google + password) - ID: ${updatedUser.id}`);
+        
         return {
           user: updatedUser,
           action: 'updated_google_data',
@@ -78,6 +87,8 @@ export async function upsertUser(userData, authMethod = 'email') {
       }
       
       // Actualización estándar de datos existentes
+      console.log(`🔵 [UserManager] Actualizando usuario existente con authMethod: ${authMethod}`);
+      
       const updateData = {
         lastLoginAt: new Date(),
         updatedAt: new Date()
@@ -93,10 +104,14 @@ export async function upsertUser(userData, authMethod = 'email') {
         updateData.emailVerified = true;
       }
       
+      console.log(`🔄 [UserManager] Datos a actualizar:`, updateData);
+      
       const updatedUser = await prisma.usuarios.update({
         where: { email: normalizedEmail },
         data: updateData
       });
+      
+      console.log(`✅ [UserManager] Usuario actualizado - ID: ${updatedUser.id}`);
       
       return {
         user: updatedUser,
@@ -106,7 +121,7 @@ export async function upsertUser(userData, authMethod = 'email') {
     }
     
     // Crear nuevo usuario
-    console.log(`[UserManager] Creando nuevo usuario: ${normalizedEmail}`);
+    console.log(`🟢🟢🟢 [UserManager] CREANDO NUEVO USUARIO: ${normalizedEmail}`);
     
     const createData = {
       email: normalizedEmail,
@@ -122,16 +137,25 @@ export async function upsertUser(userData, authMethod = 'email') {
       failedLogins: 0
     };
     
+    console.log('🟢 [UserManager] Datos a crear:', {
+      email: createData.email,
+      nombre: createData.nombre,
+      emailVerified: createData.emailVerified,
+      authMethod
+    });
+    
     // Agregar password solo si se proporciona
     if (password) {
       createData.password = await hashPassword(password);
+      console.log('🟢 [UserManager] Password hasheado agregado');
     }
     
+    console.log('🔄 [UserManager] Ejecutando prisma.usuarios.create...');
     const newUser = await prisma.usuarios.create({
       data: createData
     });
     
-    console.log(`[UserManager] Usuario creado exitosamente - ID: ${newUser.id}`);
+    console.log(`✅✅✅ [UserManager] Usuario creado exitosamente en DB - ID: ${newUser.id}, Email: ${newUser.email}`);
     
     return {
       user: newUser,
@@ -156,13 +180,22 @@ export async function upsertUser(userData, authMethod = 'email') {
  * Se usa desde el callback de NextAuth
  */
 export async function handleGoogleAuth(googlePayload) {
+  console.log('🔵 [handleGoogleAuth] Iniciado con payload:', {
+    email: googlePayload.email,
+    name: googlePayload.name,
+    email_verified: googlePayload.email_verified
+  });
+
   const { email, name, picture, email_verified } = googlePayload;
   
   if (!email_verified) {
+    console.error('❌ [handleGoogleAuth] Email no verificado por Google');
     throw new Error('Email no verificado por Google');
   }
   
   try {
+    console.log('🔄 [handleGoogleAuth] Llamando a upsertUser...');
+    
     const result = await upsertUser({
       email,
       nombre: name,
@@ -173,9 +206,9 @@ export async function handleGoogleAuth(googlePayload) {
       }
     }, 'google');
     
-    console.log(`[GoogleAuth] ${result.action} para ${email}`);
+    console.log(`✅ [handleGoogleAuth] ${result.action} para ${email} - ID: ${result.user.id}`);
     
-    return {
+    const returnData = {
       id: String(result.user.id),
       email: result.user.email,
       name: result.user.nombre || result.user.email,
@@ -185,8 +218,12 @@ export async function handleGoogleAuth(googlePayload) {
       method: 'google'
     };
     
+    console.log('✅ [handleGoogleAuth] Retornando datos:', returnData);
+    return returnData;
+    
   } catch (error) {
-    console.error('[GoogleAuth] Error:', error);
+    console.error('❌❌❌ [handleGoogleAuth] Error crítico:', error);
+    console.error('❌ Stack:', error.stack);
     throw error;
   }
 }

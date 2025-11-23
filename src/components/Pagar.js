@@ -8,6 +8,18 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNotification } from "../hooks/useNotification";
 
 import NotificationModal from "./NotificationModal";
+
+// Helper inline para normalizar respuestas del API de perfil
+const findPerfilByEmail = (response, email) => {
+  let perfiles = [];
+  if (Array.isArray(response)) perfiles = response;
+  else if (Array.isArray(response?.perfiles)) perfiles = response.perfiles;
+  else if (response?.perfil) perfiles = [response.perfil];
+  if (!email) return perfiles[0] || null;
+  const emailLower = email.toLowerCase().trim();
+  return perfiles.find(p => (p.email || p.correo || '').toLowerCase().trim() === emailLower) || null;
+};
+
 const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPagarAhora: _onPagarAhora, onClick: _onClick }) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_showModal, _setShowModal] = useState(false);
@@ -215,8 +227,7 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
         });
         if (!response.ok) {throw new Error("Error al obtener el perfil");}
         const data = await response.json();
-        const dataArray = Array.isArray(data) ? data : [];
-        const perfil = dataArray.find((perf) => perf.correo === session.user.email);
+        const perfil = findPerfilByEmail(data, session.user.email);
         if (perfil) {
           setPerfilId(perfil.id); // Guarda el id en el estado
           perfilLoaded.current = true; // Marca como cargado

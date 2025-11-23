@@ -3,6 +3,16 @@ import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-tabl
 import { useSession } from "next-auth/react";
 import React, { useState, useEffect } from "react";
 
+// Helper inline para normalizar respuestas del API de perfil
+const normalizePerfilesResponse = (response) => {
+  if (!response) return [];
+  let perfiles = [];
+  if (Array.isArray(response)) perfiles = response;
+  else if (Array.isArray(response?.perfiles)) perfiles = response.perfiles;
+  else if (response?.perfil) perfiles = [response.perfil];
+  return perfiles.filter(p => p !== null);
+};
+
 // import PerfilCard from "@/components/PerfilCard";
 
 
@@ -18,8 +28,7 @@ async function fetchPerfil() {
     throw new Error("Error fetching perfil data");
   }
   const data = await response.json();
-  //console.log("Datos de perfil:", data);
-  return data;
+  return normalizePerfilesResponse(data);
 }
 
 function TanstackReactTable({ data, columns }) {
@@ -127,13 +136,8 @@ function Sidebar({ isOpen: _isOpen, onClose: _onClose }) {
   useEffect(() => {
     const loadPerfil = async () => {
       try {
-        const data = await fetchPerfil();
-        // Verificar si los datos devueltos son un arreglo
-        if (Array.isArray(data)) {
-          setMiperfil(data); // Guardar los datos si es un arreglo
-        } else {
-          setMiperfil([]); // En caso de que no sea un arreglo, lo inicializamos vacío
-        }
+        const perfiles = await fetchPerfil();
+        setMiperfil(perfiles);
         setLoading(false); // Detener el estado de carga
       } catch (error) {
         setError(error.message); // Manejar el error si ocurre

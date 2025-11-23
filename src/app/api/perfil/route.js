@@ -15,7 +15,14 @@ export async function GET() {
       }, { status: 401 });
     }
 
-    console.log("📥 GET /api/perfil - Usuario:", session.user.email);
+    console.log("📥 GET /api/perfil - Buscando usuario:", session.user.email);
+    console.log("📥 Sesión completa:", {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      role: session.user.role,
+      emailVerified: session.user.emailVerified
+    });
     
     // Buscar el usuario en la base de datos
     const usuario = await prisma.usuarios.findUnique({
@@ -38,26 +45,67 @@ export async function GET() {
       }
     });
 
+    console.log("📥 Usuario encontrado en DB:", usuario ? {
+      id: usuario.id,
+      email: usuario.email,
+      nombre: usuario.nombre,
+      perfilCompleto: usuario.perfilCompleto,
+      tienePerfilVacio: !usuario.nombre && !usuario.celular && !usuario.ciudad
+    } : "❌ NO ENCONTRADO");
+
     if (!usuario) {
+      // ⚠️ CASO ANORMAL: El usuario tiene sesión pero no existe en DB
+      // Esto NO debería suceder si handleGoogleAuth funcionó correctamente
+      console.error("⚠️⚠️⚠️ PROBLEMA: Usuario no encontrado en DB para email:", session.user.email);
+      console.error("⚠️ Esto indica que handleGoogleAuth falló o no se ejecutó");
+      console.error("⚠️ session.user.id desde JWT:", session.user.id);
+      
+      const perfilVacio = {
+        id: null,
+        nombre: session.user.name || "",
+        celular: null,
+        ciudad: null,
+        email: session.user.email,
+        tipoDocumento: null,
+        numeroDocumento: null,
+        direccionRecogida: null,
+        detalleDireccion: null,
+        recomendaciones: null,
+        nickname: session.user.name || null,
+        perfilCompleto: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
       return NextResponse.json({
-        success: false,
-        error: "Usuario no encontrado"
-      }, { status: 404 });
+        success: true,
+        perfiles: [perfilVacio],
+        message: "Perfil vacío - completa tus datos",
+        isNewUser: true
+      });
     }
 
-    // Retornar como array para compatibilidad con código existente
+    // Usuario encontrado en DB - retornar su perfil (aunque esté vacío)
     const perfiles = [usuario];
+    
+    const esPerfilVacio = !usuario.nombre && !usuario.celular && !usuario.ciudad && 
+                          !usuario.tipoDocumento && !usuario.numeroDocumento;
 
     console.log("✅ Perfil obtenido desde DB:", { 
       id: usuario.id, 
-      nombre: usuario.nombre,
-      perfilCompleto: usuario.perfilCompleto 
+      email: usuario.email,
+      nombre: usuario.nombre || "(vacío)",
+      perfilCompleto: usuario.perfilCompleto,
+      esPerfilVacio
     });
     
     return NextResponse.json({
       success: true,
       perfiles,
-      message: `Perfil obtenido correctamente`
+      message: esPerfilVacio 
+        ? "Usuario registrado - completa tu perfil" 
+        : "Perfil obtenido correctamente",
+      isNewUser: esPerfilVacio
     });
   } catch (error) {
     console.error("❌ Error obteniendo perfil:", error);
@@ -94,44 +142,95 @@ export async function POST(request) {
       body[campo] || body[campo.replace('direccionRecogida', 'direccion')]
     );
 
-    // Actualizar el perfil en la base de datos
-    const perfilActualizado = await prisma.usuarios.update({
-      where: { email: session.user.email },
-      data: {
-        nombre: body.nombre || body.nombrePerfil || undefined,
-        celular: body.celular || undefined,
-        ciudad: body.ciudad || undefined,
-        tipoDocumento: body.tipoDocumento || undefined,
-        numeroDocumento: body.numeroDocumento || undefined,
-        direccionRecogida: body.direccion || body.direccionRecogida || undefined,
-        detalleDireccion: body.apartamento || body.detalleDireccion || undefined,
-        recomendaciones: body.recomendaciones || undefined,
-        nickname: body.nickname || undefined,
-        perfilCompleto: camposCompletos,
-        updatedAt: new Date()
-      },
-      select: {
-        id: true,
-        nombre: true,
-        celular: true,
-        ciudad: true,
-        email: true,
-        tipoDocumento: true,
-        numeroDocumento: true,
-        direccionRecogida: true,
-        detalleDireccion: true,
-        recomendaciones: true,
-        nickname: true,
-        perfilCompleto: true,
-        updatedAt: true
-      }
+    // Verificar si el usuario existe antes de actualizar
+    const usuarioExistente = await prisma.usuarios.findUnique({
+      where: { email: session.user.email }
     });
 
-    console.log("✅ Perfil actualizado en DB:", { 
-      id: perfilActualizado.id, 
-      nombre: perfilActualizado.nombre,
-      perfilCompleto: perfilActualizado.perfilCompleto 
-    });
+    let perfilActualizado;
+
+    if (!usuarioExistente) {
+      // ✅ NUEVO: Si el usuario no existe (caso excepcional), crearlo
+      console.log("⚠️ Usuario no encontrado en DB, creando nuevo registro para:", session.user.email);
+      
+      perfilActualizado = await prisma.usuarios.create({
+        data: {
+          email: session.user.email,
+          nombre: body.nombre || body.nombrePerfil || session.user.name || "",
+          celular: body.celular || null,
+          ciudad: body.ciudad || null,
+          tipoDocumento: body.tipoDocumento || null,
+          numeroDocumento: body.numeroDocumento || null,
+          direccionRecogida: body.direccion || body.direccionRecogida || null,
+          detalleDireccion: body.apartamento || body.detalleDireccion || null,
+          recomendaciones: body.recomendaciones || null,
+          nickname: body.nickname || session.user.name || null,
+          perfilCompleto: camposCompletos,
+          emailVerified: true, // Usuario ya autenticado
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        select: {
+          id: true,
+          nombre: true,
+          celular: true,
+          ciudad: true,
+          email: true,
+          tipoDocumento: true,
+          numeroDocumento: true,
+          direccionRecogida: true,
+          detalleDireccion: true,
+          recomendaciones: true,
+          nickname: true,
+          perfilCompleto: true,
+          updatedAt: true
+        }
+      });
+      
+      console.log("✅ Nuevo perfil creado en DB:", { 
+        id: perfilActualizado.id, 
+        nombre: perfilActualizado.nombre 
+      });
+    } else {
+      // Actualizar el perfil existente en la base de datos
+      perfilActualizado = await prisma.usuarios.update({
+        where: { email: session.user.email },
+        data: {
+          nombre: body.nombre || body.nombrePerfil || undefined,
+          celular: body.celular || undefined,
+          ciudad: body.ciudad || undefined,
+          tipoDocumento: body.tipoDocumento || undefined,
+          numeroDocumento: body.numeroDocumento || undefined,
+          direccionRecogida: body.direccion || body.direccionRecogida || undefined,
+          detalleDireccion: body.apartamento || body.detalleDireccion || undefined,
+          recomendaciones: body.recomendaciones || undefined,
+          nickname: body.nickname || undefined,
+          perfilCompleto: camposCompletos,
+          updatedAt: new Date()
+        },
+        select: {
+          id: true,
+          nombre: true,
+          celular: true,
+          ciudad: true,
+          email: true,
+          tipoDocumento: true,
+          numeroDocumento: true,
+          direccionRecogida: true,
+          detalleDireccion: true,
+          recomendaciones: true,
+          nickname: true,
+          perfilCompleto: true,
+          updatedAt: true
+        }
+      });
+
+      console.log("✅ Perfil actualizado en DB:", { 
+        id: perfilActualizado.id, 
+        nombre: perfilActualizado.nombre,
+        perfilCompleto: perfilActualizado.perfilCompleto 
+      });
+    }
 
     return NextResponse.json({
       success: true,

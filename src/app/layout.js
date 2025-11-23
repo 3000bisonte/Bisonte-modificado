@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 
 import { Providers } from './Providers';
 import ConnectionWrapper from '@/components/ConnectionWrapper';
+import DebugConsole from '@/components/DebugConsole';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,6 +22,8 @@ export default function RootLayout({ children }) {
             <div className="min-h-screen bg-gray-50">
               {children}
             </div>
+            {/* Consola de debug flotante - solo visible en desarrollo/testing */}
+            <DebugConsole />
           </ConnectionWrapper>
         </Providers>
       </body>

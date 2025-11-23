@@ -4,6 +4,17 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
+// Helper inline para normalizar respuestas del API de perfil
+const findPerfilByEmail = (response, email) => {
+  let perfiles = [];
+  if (Array.isArray(response)) perfiles = response;
+  else if (Array.isArray(response?.perfiles)) perfiles = response.perfiles;
+  else if (response?.perfil) perfiles = [response.perfil];
+  if (!email) return perfiles[0] || null;
+  const emailLower = email.toLowerCase().trim();
+  return perfiles.find(p => (p.email || p.correo || '').toLowerCase().trim() === emailLower) || null;
+};
+
 import { useLoadingMonitor } from "../hooks/useLoadingMonitor";
 
 import BottomNav from "./BottomNav";
@@ -91,11 +102,7 @@ const FormularioRemitente = ({ id: _id }) => {
         
         const data = await response.json();
         
-        // Extraer el perfil del usuario de la respuesta
-        let userProfile = null;
-        if (data.success && data.perfiles && Array.isArray(data.perfiles) && data.perfiles.length > 0) {
-          userProfile = data.perfiles[0]; // El endpoint retorna el perfil del usuario autenticado
-        }
+        const userProfile = findPerfilByEmail(data, session.user.email);
         
         if (userProfile) {
           console.log("👤 Perfil encontrado:", {

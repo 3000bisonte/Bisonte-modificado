@@ -7,6 +7,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import Screen from "@/components/BrickStatusScreen";
 
+// Helper inline para normalizar respuestas del API de perfil
+const findPerfilByEmail = (response, email) => {
+  let perfiles = [];
+  if (Array.isArray(response)) perfiles = response;
+  else if (Array.isArray(response?.perfiles)) perfiles = response.perfiles;
+  else if (response?.perfil) perfiles = [response.perfil];
+  if (!email) return perfiles[0] || null;
+  const emailLower = email.toLowerCase().trim();
+  return perfiles.find(p => (p.email || p.correo || '').toLowerCase().trim() === emailLower) || null;
+};
+
 import InternalProvider from "../app/ContextProvider";
 import { useNotification } from "../hooks/useNotification";
 
@@ -357,12 +368,16 @@ const MercadoPagoComponent = () => {
         if (!response.ok) {throw new Error("Error al obtener el perfil");}
 
         const data = await response.json();
-        const dataArray = Array.isArray(data) ? data : [];
-        const perfil = dataArray.find((perf) => perf.correo === userEmail);
+        const perfil = findPerfilByEmail(data, userEmail);
 
         if (perfil) {
           perfilIdRef.current = perfil.id; // Guarda el id en el ref
           perfilLoaded.current = true; // Marca que ya se cargó el perfil
+        } else {
+          console.warn(
+            "Perfil no encontrado para el email en MercadoPago:",
+            userEmail
+          );
         }
       } catch (error) {
         console.error("Error al cargar el perfil:", error);

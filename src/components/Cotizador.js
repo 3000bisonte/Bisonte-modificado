@@ -3,6 +3,16 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
+// Helper inline para normalizar respuestas del API de perfil
+const normalizePerfilesResponse = (response) => {
+  if (!response) return [];
+  let perfiles = [];
+  if (Array.isArray(response)) perfiles = response;
+  else if (Array.isArray(response?.perfiles)) perfiles = response.perfiles;
+  else if (response?.perfil) perfiles = [response.perfil];
+  return perfiles.filter(p => p !== null);
+};
+
 import { getTestModeCost, getTestModeBanner } from "../config/testMode";
 import { useLoadingMonitor } from "../hooks/useLoadingMonitor";
 import { useNotification } from "../hooks/useNotification";
@@ -25,15 +35,7 @@ async function fetchPerfil() {
     try {
         const data = await response.json();
         console.log("Datos de perfil-desde-cotizador:", data);
-        
-        // El API retorna { success: true, perfiles: [...] }
-        // Extraer el array de perfiles del objeto de respuesta
-        if (data.perfiles && Array.isArray(data.perfiles)) {
-            return data.perfiles;
-        }
-        
-        // Compatibilidad con respuestas anteriores
-        return Array.isArray(data) ? data : [];
+        return normalizePerfilesResponse(data);
     } catch (error) {
         console.error("Error parsing perfil JSON:", error);
         return [];

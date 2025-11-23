@@ -4,6 +4,24 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 
+// Helper inline para normalizar respuestas del API de perfil
+const findPerfilByEmail = (response, email) => {
+  let perfiles = [];
+  if (Array.isArray(response)) {
+    perfiles = response;
+  } else if (Array.isArray(response?.perfiles)) {
+    perfiles = response.perfiles;
+  } else if (response?.perfil) {
+    perfiles = [response.perfil];
+  }
+  
+  if (!email) return perfiles[0] || null;
+  
+  const emailLower = email.toLowerCase().trim();
+  return perfiles.find(p => 
+    (p.email || p.correo || '').toLowerCase().trim() === emailLower
+  ) || null;
+};
 
 export default function PerfilCard() {
   const { data: session, status } = useSession();
@@ -41,40 +59,85 @@ export default function PerfilCard() {
   const cargarPerfil = async () => {
     try {
       setLoading(true);
-      console.log("🔄 Cargando perfil del usuario...");
+      console.log("🔄 [PerfilCard] Iniciando carga de perfil para:", session.user.email);
       
       const response = await fetch("/api/perfil", {
         method: "GET",
         headers: { "Content-Type": "application/json" }
       });
 
+      console.log("🔄 [PerfilCard] Response status:", response.status, response.ok);
+
       if (!response.ok) {
-        throw new Error("Error al cargar el perfil");
+        const errorText = await response.text();
+        console.error("❌ [PerfilCard] Error HTTP:", response.status, errorText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log("✅ Perfil cargado:", data);
+      console.log("✅ [PerfilCard] Data recibida:", {
+        success: data.success,
+        message: data.message,
+        isNewUser: data.isNewUser,
+        perfilesCount: data.perfiles?.length || 0
+      });
 
-      if (data.success && data.perfiles && data.perfiles.length > 0) {
-        const perfil = data.perfiles[0];
-        setForm({
+      const perfil = findPerfilByEmail(data, session.user.email);
+      console.log("🔍 [PerfilCard] Perfil encontrado:", perfil ? {
+        id: perfil.id,
+        email: perfil.email,
+        nombre: perfil.nombre || "(vacío)",
+        tieneNombre: !!perfil.nombre,
+        tieneCelular: !!perfil.celular
+      } : "NO ENCONTRADO");
+
+      // ✅ SIEMPRE usar el email de la sesión (fuente de verdad)
+      const emailConfiable = session.user.email;
+      
+      if (perfil) {
+        const formulario = {
           nombre: perfil.nombre || "",
           tipoDocumento: perfil.tipoDocumento || "",
           numeroDocumento: perfil.numeroDocumento || "",
           celular: perfil.celular || "",
-          email: perfil.email || session.user.email,
+          email: emailConfiable, // ✅ Email de sesión siempre
           direccion: perfil.direccionRecogida || "",
           apartamento: perfil.detalleDireccion || "",
           ciudad: perfil.ciudad || "",
+        };
+        
+        setForm(formulario);
+        
+        console.log("✅ [PerfilCard] Formulario inicializado:", {
+          email: formulario.email,
+          nombre: formulario.nombre || "(vacío)",
+          celular: formulario.celular || "(vacío)",
+          esNuevoUsuario: data.isNewUser
         });
       } else {
-        // Si no hay perfil, al menos poner el email
-        setForm(prev => ({ ...prev, email: session.user.email }));
+        // Caso excepcional: no debería suceder si la API funciona bien
+        console.warn("⚠️ [PerfilCard] findPerfilByEmail no encontró perfil, usando valores por defecto");
+        setForm({
+          nombre: "",
+          tipoDocumento: "",
+          numeroDocumento: "",
+          celular: "",
+          email: emailConfiable,
+          direccion: "",
+          apartamento: "",
+          ciudad: "",
+        });
       }
+      
+      setMsg(""); // Limpiar mensajes de error previos
+      
     } catch (error) {
-      console.error("❌ Error cargando perfil:", error);
-      setMsg("Error al cargar el perfil");
-      setTimeout(() => setMsg(""), 3000);
+      console.error("❌ [PerfilCard] Error en cargarPerfil:", {
+        message: error.message,
+        stack: error.stack?.split('\n')[0]
+      });
+      setMsg("Error al cargar el perfil. Por favor recarga la página.");
+      setTimeout(() => setMsg(""), 5000);
     } finally {
       setLoading(false);
     }

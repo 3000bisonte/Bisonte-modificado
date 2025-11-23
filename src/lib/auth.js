@@ -369,19 +369,35 @@ export const authOptions = {
 
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log('🔐 [NextAuth signIn callback] Iniciado', {
+        provider: account?.provider,
+        userEmail: user?.email,
+        profileEmail: profile?.email
+      });
+
       if (account?.provider === 'google') {
         try {
           const resolvedEmail = (user?.email ?? profile?.email ?? '').trim().toLowerCase();
           if (!resolvedEmail) {
+            console.error('❌ [NextAuth signIn] Google OAuth no proporcionó email');
             throw new Error('Google OAuth no proporcionó email');
           }
 
+          console.log('🔄 [NextAuth signIn] Llamando a handleGoogleAuth para:', resolvedEmail);
+          
           const { handleGoogleAuth } = await import('./userManager.js');
           const syncResult = await handleGoogleAuth({
             email: resolvedEmail,
             name: user?.name ?? profile?.name,
             picture: (user && (user.image || user.picture)) || profile?.picture,
             email_verified: user?.emailVerified ?? profile?.email_verified ?? true,
+          });
+
+          console.log('✅ [NextAuth signIn] handleGoogleAuth exitoso:', {
+            id: syncResult.id,
+            email: syncResult.email,
+            name: syncResult.name,
+            role: syncResult.role
           });
 
           // Mutate user object so downstream callbacks receive DB data
@@ -391,12 +407,16 @@ export const authOptions = {
           user.role = syncResult.role;
           user.emailVerified = syncResult.emailVerified;
           user.passwordVersion = syncResult.passwordVersion ?? 0;
+          
+          console.log('✅ [NextAuth signIn] user object mutado correctamente');
         } catch (error) {
-          console.error('[NextAuth signIn] Error syncing Google user', error);
+          console.error('❌❌❌ [NextAuth signIn] Error crítico syncing Google user:', error);
+          console.error('❌ Stack:', error.stack);
           return false;
         }
       }
 
+      console.log('✅ [NextAuth signIn callback] Completado exitosamente');
       return true;
     },
     async jwt({ token, user, trigger, session, account }) {
@@ -407,6 +427,13 @@ export const authOptions = {
         token.role = user.role;
         token.passwordVersion = typeof user.passwordVersion === 'number' ? user.passwordVersion : 0;
         token.emailVerified = user.emailVerified;
+        // Ensure base identity fields are persisted for future sessions
+        if (user.email) {
+          token.email = user.email.toLowerCase();
+        }
+        if (user.name) {
+          token.name = user.name;
+        }
       }
 
       // If OAuth account is present (e.g., Google), capture limited metadata for diagnostics
@@ -440,8 +467,8 @@ export const authOptions = {
 
       // Update session trigger
       if (trigger === "update" && session) {
-        token.name = session.name;
-        token.email = session.email;
+        token.name = session.name ?? token.name;
+        token.email = session.email ?? token.email;
       }
 
       return token;
@@ -449,9 +476,16 @@ export const authOptions = {
 
     async session({ session, token }) {
       if (token) {
+        session.user = session.user || {};
         session.user.id = token.userId;
         session.user.role = token.role;
         session.user.emailVerified = token.emailVerified;
+        if (token.email) {
+          session.user.email = token.email;
+        }
+        if (token.name && !session.user.name) {
+          session.user.name = token.name;
+        }
         // Expose only safe OAuth metadata for diagnostics (no actual tokens)
         if (token.oauth) {
           session.oauth = {
