@@ -917,6 +917,13 @@ export default function Resumen() {
     const remitenteData = safeRead("formRemitente");
     const destinatarioData = safeRead("formDestinatario");
 
+    console.log("📊 [Resumen] Datos leídos de localStorage:", {
+      formCotizadorCosto: cotizadorData?.costoTotal,
+      cotizacionCosto: cotizacionData?.costoTotal,
+      formCotizadorCompleto: cotizadorData,
+      cotizacionCompleta: cotizacionData
+    });
+
     let mergedCotizador = null;
     if (cotizadorData && cotizacionData) {
       const costoCandidates = [cotizadorData.costoTotal, cotizacionData.costoTotal]
@@ -924,6 +931,11 @@ export default function Resumen() {
 
       const selectedCosto =
         costoCandidates.length > 0 ? Math.min(...costoCandidates) : undefined;
+
+      console.log("💵 [Resumen] Candidatos de costo:", {
+        candidatos: costoCandidates,
+        seleccionado: selectedCosto
+      });
 
       mergedCotizador = {
         ...cotizadorData,
@@ -939,6 +951,8 @@ export default function Resumen() {
       if (typeof mergedCotizador.costoTotal === "number") {
         setCostoTotal(mergedCotizador.costoTotal);
         console.log("✅ [Resumen] Precio actualizado a:", mergedCotizador.costoTotal);
+      } else {
+        console.warn("⚠️ [Resumen] No se pudo actualizar el precio - costoTotal no es un número válido");
       }
       syncCotizacionStores(mergedCotizador);
     }

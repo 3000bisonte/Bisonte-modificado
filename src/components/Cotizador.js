@@ -267,6 +267,11 @@ export default function Cotizador() {
                     if (parsedData.otraDescripcion) {
                         setOtraDescripcion(parsedData.otraDescripcion);
                     }
+                    // 💰 Cargar el costo total guardado
+                    if (parsedData.costoTotal !== undefined && parsedData.costoTotal !== null) {
+                        setCostoTotal(parsedData.costoTotal);
+                        console.log("💰 [Cotizador] Costo total cargado desde localStorage:", parsedData.costoTotal);
+                    }
                 }
             } catch (error) {
                 console.error("Error al cargar datos del localStorage:", error);
