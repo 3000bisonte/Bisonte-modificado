@@ -917,34 +917,81 @@ export default function Resumen() {
     const remitenteData = safeRead("formRemitente");
     const destinatarioData = safeRead("formDestinatario");
 
+    const parseDate = (value) => {
+      if (!value) {return 0;}
+      const ms = Date.parse(value);
+      return Number.isNaN(ms) ? 0 : ms;
+    };
+
+    const toNumber = (value) => {
+      if (typeof value === "number" && Number.isFinite(value)) {return value;}
+      if (typeof value === "string" && value.trim() !== "") {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      }
+      return undefined;
+    };
+
+    const selectPreferredData = () => {
+      if (cotizadorData && cotizacionData) {
+        const fechaCotizador = parseDate(cotizadorData.fechaCotizacion);
+        const fechaCotizacion = parseDate(cotizacionData.fechaCotizacion);
+        if (fechaCotizador === 0 && fechaCotizacion === 0) {
+          // Sin marca de tiempo, preferir el más reciente por modificación (formCotizador suele ser el último guardado)
+          return {
+            primary: cotizadorData,
+            secondary: cotizacionData,
+            source: "formCotizador-sin-fecha"
+          };
+        }
+        if (fechaCotizador >= fechaCotizacion) {
+          return {
+            primary: cotizadorData,
+            secondary: cotizacionData,
+            source: "formCotizador"
+          };
+        }
+        return {
+          primary: cotizacionData,
+          secondary: cotizadorData,
+          source: "cotizacion"
+        };
+      }
+
+      if (cotizadorData) {
+        return { primary: cotizadorData, secondary: null, source: "formCotizador-unico" };
+      }
+      if (cotizacionData) {
+        return { primary: cotizacionData, secondary: null, source: "cotizacion-unico" };
+      }
+      return { primary: null, secondary: null, source: "sin-datos" };
+    };
+
+    const { primary, secondary, source } = selectPreferredData();
+
+    const mergedCotizador = primary
+      ? {
+        ...(secondary || {}),
+        ...primary,
+        // Asegurar que costoTotal sea consistente: usar primary, y si no, fallback a secondary
+        ...(toNumber(primary.costoTotal) !== undefined
+          ? { costoTotal: toNumber(primary.costoTotal) }
+          : toNumber(secondary?.costoTotal) !== undefined
+            ? { costoTotal: toNumber(secondary?.costoTotal) }
+            : {}),
+      }
+      : null;
+
     console.log("📊 [Resumen] Datos leídos de localStorage:", {
-      formCotizadorCosto: cotizadorData?.costoTotal,
-      cotizacionCosto: cotizacionData?.costoTotal,
-      formCotizadorCompleto: cotizadorData,
-      cotizacionCompleta: cotizacionData
+      fuenteSeleccionada: source,
+      fechaPrimary: primary?.fechaCotizacion,
+      fechaSecondary: secondary?.fechaCotizacion,
+      costoPrimary: primary?.costoTotal,
+      costoSecondary: secondary?.costoTotal,
+      mergedCosto: mergedCotizador?.costoTotal,
+      primary,
+      secondary,
     });
-
-    let mergedCotizador = null;
-    if (cotizadorData && cotizacionData) {
-      const costoCandidates = [cotizadorData.costoTotal, cotizacionData.costoTotal]
-        .filter((value) => typeof value === "number");
-
-      const selectedCosto =
-        costoCandidates.length > 0 ? Math.min(...costoCandidates) : undefined;
-
-      console.log("💵 [Resumen] Candidatos de costo:", {
-        candidatos: costoCandidates,
-        seleccionado: selectedCosto
-      });
-
-      mergedCotizador = {
-        ...cotizadorData,
-        ...cotizacionData,
-        ...(typeof selectedCosto === "number" ? { costoTotal: selectedCosto } : {}),
-      };
-    } else {
-      mergedCotizador = cotizadorData || cotizacionData;
-    }
 
     if (mergedCotizador) {
       setCotizador(mergedCotizador);
