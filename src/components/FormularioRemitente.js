@@ -52,6 +52,12 @@ const FormularioRemitente = ({ id: _id }) => {
         localStorage.setItem("formRemitente", JSON.stringify(data));
         // También guardar en formDataRemitente para compatibilidad
         localStorage.setItem("formDataRemitente", JSON.stringify(data));
+        
+        // 🔔 Disparar evento para que Resumen se actualice automáticamente
+        window.dispatchEvent(new CustomEvent('resumen-reload', { 
+          detail: { source: 'remitente', data } 
+        }));
+        console.log("🔔 Evento de actualización disparado desde FormularioRemitente");
       } catch (error) {
         console.error("Error saving to localStorage:", error);
       }

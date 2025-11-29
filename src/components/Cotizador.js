@@ -432,6 +432,13 @@ export default function Cotizador() {
 
         try {
             localStorage.setItem("formCotizador", JSON.stringify(cotizacionData));
+            
+            // 🔔 Disparar evento para que Resumen se actualice automáticamente
+            window.dispatchEvent(new CustomEvent('resumen-reload', { 
+                detail: { source: 'cotizador', data: cotizacionData } 
+            }));
+            console.log("🔔 Evento de actualización disparado desde Cotizador");
+            
             const userProfile = miperfil.find(
                 (perf) => (perf.email || perf.correo) === session.user.email
             );

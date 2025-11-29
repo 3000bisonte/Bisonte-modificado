@@ -58,6 +58,12 @@ export default function FormularioDestinatario({ id }) {
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("formDestinatario", JSON.stringify(data));
+        
+        // 🔔 Disparar evento para que Resumen se actualice automáticamente
+        window.dispatchEvent(new CustomEvent('resumen-reload', { 
+          detail: { source: 'destinatario', data } 
+        }));
+        console.log("🔔 Evento de actualización disparado desde FormularioDestinatario");
       } catch (error) {
         console.error("Error al guardar en localStorage:", error);
       }

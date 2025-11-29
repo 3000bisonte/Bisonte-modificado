@@ -898,8 +898,8 @@ export default function Resumen() {
 
   // --- Effects ---
 
-  // Cargar datos iniciales de localStorage
-  useEffect(() => {
+  // 🔄 Función para recargar datos desde localStorage
+  const reloadDataFromStorage = useCallback(() => {
     const safeRead = (key) => {
       try {
         const raw = localStorage.getItem(key);
@@ -909,6 +909,8 @@ export default function Resumen() {
         return null;
       }
     };
+
+    console.log("🔄 [Resumen] Recargando datos desde localStorage...");
 
     const cotizadorData = safeRead("formCotizador");
     const cotizacionData = safeRead("cotizacion");
@@ -936,13 +938,52 @@ export default function Resumen() {
       setCotizador(mergedCotizador);
       if (typeof mergedCotizador.costoTotal === "number") {
         setCostoTotal(mergedCotizador.costoTotal);
+        console.log("✅ [Resumen] Precio actualizado a:", mergedCotizador.costoTotal);
       }
       syncCotizacionStores(mergedCotizador);
     }
 
     setRemitente(remitenteData);
     setDestinatario(destinatarioData);
+    
+    console.log("✅ [Resumen] Datos recargados correctamente");
   }, [syncCotizacionStores]);
+
+  // Cargar datos iniciales de localStorage
+  useEffect(() => {
+    reloadDataFromStorage();
+  }, [reloadDataFromStorage]);
+
+  // 🔄 Detectar cuando el usuario regresa al resumen (después de editar)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("👁️ [Resumen] Ventana visible nuevamente - Recargando datos");
+        reloadDataFromStorage();
+      }
+    };
+
+    const handleFocus = () => {
+      console.log("👁️ [Resumen] Ventana enfocada - Recargando datos");
+      reloadDataFromStorage();
+    };
+
+    // Escuchar evento personalizado de actualización
+    const handleStorageUpdate = (event) => {
+      console.log("🔔 [Resumen] Evento de actualización recibido:", event.detail);
+      reloadDataFromStorage();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('resumen-reload', handleStorageUpdate);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('resumen-reload', handleStorageUpdate);
+    };
+  }, [reloadDataFromStorage]);
 
   const processRewardPayload = useCallback((payload) => {
     let data = payload;
@@ -1513,25 +1554,9 @@ export default function Resumen() {
     <div className="min-h-screen bg-gradient-to-br from-[#e3dfde] via-[#f8fafc] to-[#41e0b3]/10 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12 relative">
+        <div className="text-center mb-12">
           <h1 className="text-3xl font-extrabold text-[#18191A] mb-2 drop-shadow">Resumen del envío</h1>
           <p className="text-[#41e0b3] font-medium">Revisa los detalles antes de proceder al pago</p>
-          
-          {/* Botón de actualización manual */}
-          <button
-            onClick={() => {
-              console.log("🔄 Actualizando datos manualmente...");
-              window.dispatchEvent(new Event('storage'));
-              showInfo('Datos actualizados', 'Se han recargado todos los datos desde el formulario.');
-            }}
-            className="absolute top-0 right-0 flex items-center gap-2 px-4 py-2 bg-white border-2 border-[#41e0b3] text-[#18191A] rounded-xl hover:bg-[#41e0b3] hover:text-white transition-all duration-200 shadow-sm hover:shadow-lg"
-            title="Actualizar datos del formulario"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span className="hidden sm:inline font-semibold">Actualizar</span>
-          </button>
         </div>
 
         {rewardBanner && (
