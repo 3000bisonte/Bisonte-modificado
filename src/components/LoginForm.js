@@ -204,16 +204,16 @@ const LoginForm = ({ callbackUrl }) => {
   const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen w-screen max-w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center px-4 relative overflow-x-hidden overflow-y-auto">
       {/* Background Pattern - Simplified */}
-      <div className="absolute inset-0 opacity-10 overflow-hidden">
+      <div className="absolute inset-0 opacity-10 overflow-hidden pointer-events-none">
         <div className="absolute inset-0" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='20' cy='20' r='1'/%3E%3C/g%3E%3C/svg%3E")`,
           backgroundRepeat: 'repeat'
         }}></div>
       </div>
       
-      <div className="relative w-full max-w-md z-10">
+      <div className="relative w-full max-w-md mx-auto z-10">
         {/* Main Card */}
         <div className="bg-white/5 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/10 px-6 py-10 sm:px-10 sm:py-12">
           {/* Logo Section */}
