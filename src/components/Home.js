@@ -380,8 +380,8 @@ const Home = () => {
         <div className="absolute w-[400px] h-[400px] bg-[#18191A]/10 rounded-full blur-2xl bottom-[-100px] right-[-100px] animate-pulse" />
       </div>
 
-      {/* Header con contraste y sombra - agregado safe-area-inset */}
-      <header className="w-full max-w-md flex items-center justify-between px-6 py-4 pt-safe bg-[#18191A] shadow-xl rounded-b-3xl border-b-4 border-[#41e0b3] fixed top-0 left-1/2 -translate-x-1/2 z-30 animate-fade-in-down">
+      {/* Header con contraste y sombra - con safe-area-inset superior */}
+      <header className="w-full max-w-md flex items-center justify-between px-6 py-4 bg-[#18191A] shadow-xl rounded-b-3xl border-b-4 border-[#41e0b3] fixed top-0 left-1/2 -translate-x-1/2 z-30 animate-fade-in-down" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))' }}>
         <div className="flex items-center gap-3">
           <Link href="/home">
             <Image
@@ -448,8 +448,8 @@ const Home = () => {
         </div>
       </header>
 
-      {/* Espacio para header */}
-      <div className="h-24 w-full" />
+      {/* Espacio para header - calculado con safe-area */}
+      <div className="w-full" style={{ height: 'calc(6rem + env(safe-area-inset-top, 0px))' }} />
 
       {/* Contenido principal */}
       <main className="w-full max-w-md flex-1 flex flex-col gap-8 pb-32 px-4 relative z-10">
