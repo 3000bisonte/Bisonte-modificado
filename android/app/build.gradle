@@ -8,8 +8,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Incrementa versionCode para evitar conflictos de instalación / caché en el dispositivo
-    versionCode 16
-    versionName "1.0.16"
+    versionCode 17
+    versionName "1.0.17"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
         // Placeholder para OAuth redirect scheme
