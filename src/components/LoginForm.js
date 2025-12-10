@@ -215,9 +215,9 @@ const LoginForm = ({ callbackUrl }) => {
       
       <div className="relative w-full max-w-md mx-auto z-10">
         {/* Main Card */}
-        <div className="bg-white/5 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/10 px-6 py-10 sm:px-10 sm:py-12">
+        <div className="bg-white/5 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/10 px-6 py-6 sm:px-10 sm:py-8">
           {/* Logo Section */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-5">
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-gradient-to-r from-teal-400 to-cyan-500 rounded-full blur opacity-40"></div>
               <Image
@@ -229,14 +229,14 @@ const LoginForm = ({ callbackUrl }) => {
                 priority
               />
             </div>
-            <h1 className="text-white text-2xl sm:text-3xl font-bold mt-4 tracking-wider">
+            <h1 className="text-white text-2xl sm:text-3xl font-bold mt-3 tracking-wider">
               BISONTE
             </h1>
             <div className="w-16 h-0.5 bg-gradient-to-r from-teal-400 to-cyan-500 mx-auto mt-2"></div>
           </div>
 
           {/* Welcome Title */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-5">
             <h2 className="text-white text-xl sm:text-2xl font-semibold mb-2">
               Bienvenido de nuevo
             </h2>
@@ -255,7 +255,7 @@ const LoginForm = ({ callbackUrl }) => {
             onSubmit={(event) => {
               void handleSubmit(event);
             }}
-            className="space-y-6"
+            className="space-y-4"
           >
             {/* Email Field */}
             <div className="space-y-2">
@@ -414,7 +414,7 @@ const LoginForm = ({ callbackUrl }) => {
           </form>
 
           {/* Register Link */}
-          <div className="mt-8 text-center">
+          <div className="mt-5 text-center">
             <span className="text-gray-400 text-sm">¿No tienes cuenta? </span>
             <Link
               href="/register"
@@ -426,7 +426,7 @@ const LoginForm = ({ callbackUrl }) => {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-6">
+        <div className="text-center mt-4">
           <p className="text-gray-500 text-xs">
             © 2024 Bisonte Logística. Todos los derechos reservados.
           </p>
