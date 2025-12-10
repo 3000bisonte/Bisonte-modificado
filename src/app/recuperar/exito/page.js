@@ -11,7 +11,7 @@ export default function ExitoRecuperacion() {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          router.push("/");
+          router.push("/loginForm");
           return 0;
         }
         return prev - 1;
@@ -22,7 +22,7 @@ export default function ExitoRecuperacion() {
   }, [router]);
 
   const handleGoToLogin = () => {
-    router.push("/");
+    router.push("/loginForm");
   };
 
   return (

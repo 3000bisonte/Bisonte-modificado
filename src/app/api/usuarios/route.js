@@ -16,6 +16,7 @@ export async function GET() {
         nombre: true,
         celular: true,
         ciudad: true,
+        createdAt: true,
         //tipo_documento: true,
         //numero_documento: true,
         email: true,
