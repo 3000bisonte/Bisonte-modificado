@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import React, { useEffect, useRef, useState } from "react";
+import { App as CapacitorApp } from "@capacitor/app";
 
 import CapacitorGoogleAuth from "@/lib/capacitor-google-auth";
 
@@ -174,6 +175,39 @@ const Home = () => {
     }
   }, [showProfileMenu]);
 
+  // 🔒 Prevenir cierre accidental de la app con gesto "atrás" en Android
+  useEffect(() => {
+    let backButtonListener;
+
+    const setupBackButtonHandler = async () => {
+      try {
+        // Solo en entorno Capacitor
+        if (typeof window !== 'undefined' && window.Capacitor) {
+          backButtonListener = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+            if (canGoBack) {
+              // Si hay historial, permitir navegación hacia atrás
+              window.history.back();
+            } else {
+              // Si estamos en la página principal (Home), minimizar en lugar de cerrar
+              CapacitorApp.minimizeApp();
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('No se pudo configurar el manejador de botón atrás:', error);
+      }
+    };
+
+    setupBackButtonHandler();
+
+    // Limpiar listener al desmontar
+    return () => {
+      if (backButtonListener) {
+        backButtonListener.remove();
+      }
+    };
+  }, []);
+
   const handleLogout = async () => {
     setShowProfileMenu(false);
     clearHomeSticky();
@@ -339,15 +373,15 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#e3dfde] via-[#f8fafc] to-[#41e0b3]/10 flex flex-col items-center w-full relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[#e3dfde] via-[#f8fafc] to-[#41e0b3]/10 flex flex-col items-center w-full relative overflow-hidden pt-safe">
       {/* Fondo animado sutil */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute w-[600px] h-[600px] bg-[#41e0b3]/20 rounded-full blur-3xl top-[-200px] left-[-200px] animate-pulse" />
         <div className="absolute w-[400px] h-[400px] bg-[#18191A]/10 rounded-full blur-2xl bottom-[-100px] right-[-100px] animate-pulse" />
       </div>
 
-      {/* Header con contraste y sombra */}
-      <header className="w-full max-w-md flex items-center justify-between px-6 py-4 bg-[#18191A] shadow-xl rounded-b-3xl border-b-4 border-[#41e0b3] fixed top-0 left-1/2 -translate-x-1/2 z-30 animate-fade-in-down">
+      {/* Header con contraste y sombra - agregado safe-area-inset */}
+      <header className="w-full max-w-md flex items-center justify-between px-6 py-4 pt-safe bg-[#18191A] shadow-xl rounded-b-3xl border-b-4 border-[#41e0b3] fixed top-0 left-1/2 -translate-x-1/2 z-30 animate-fade-in-down">
         <div className="flex items-center gap-3">
           <Link href="/home">
             <Image

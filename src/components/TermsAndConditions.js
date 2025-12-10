@@ -1,9 +1,23 @@
 import React from "react";
+import { useRouter } from "next/navigation";
 
 const TermsAndConditions = () => {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-100 flex flex-col items-center py-8 px-2">
       <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 overflow-y-auto">
+        {/* Botón de volver */}
+        <button
+          onClick={() => router.back()}
+          className="mb-4 flex items-center gap-2 text-teal-600 hover:text-teal-700 font-semibold transition-colors"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver
+        </button>
+        
         <h1 className="text-2xl font-bold text-teal-600 mb-4 text-center">
           Términos y Condiciones
         </h1>
