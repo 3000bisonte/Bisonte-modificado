@@ -31,6 +31,27 @@ const LoginForm = ({ callbackUrl }) => {
   const [fieldErrors, setFieldErrors] = useState({});
   const router = useRouter();
   const { data: session } = useSession();
+
+  // ✅ Ajustar estilos globales para evitar scroll y fondo claro en login
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const originalPadding = document.body.style.paddingBottom;
+    const originalBackground = document.body.style.backgroundColor;
+    const originalOverflowY = document.body.style.overflowY;
+
+    document.body.style.paddingBottom = "0px";
+    document.body.style.backgroundColor = "#0f172a";
+    document.body.style.overflowY = "hidden";
+
+    return () => {
+      document.body.style.paddingBottom = originalPadding;
+      document.body.style.backgroundColor = originalBackground;
+      document.body.style.overflowY = originalOverflowY;
+    };
+  }, []);
   // Comprobar inactividad para redirigir según el tiempo transcurrido desde la última actividad
   useEffect(() => {
     if (typeof window === "undefined") {
