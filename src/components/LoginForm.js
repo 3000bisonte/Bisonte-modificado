@@ -204,7 +204,7 @@ const LoginForm = ({ callbackUrl }) => {
   const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
 
   return (
-    <div className="h-screen w-screen max-w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-dvh w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center justify-center px-4 relative overflow-hidden">
       {/* Background Pattern - Simplified */}
       <div className="absolute inset-0 opacity-10 overflow-hidden pointer-events-none">
         <div className="absolute inset-0" style={{
