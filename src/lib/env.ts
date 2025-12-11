@@ -31,6 +31,7 @@ export const env = cleanEnv(process.env, {
   RESEND_API_KEY: str({ default: '', desc: 'Resend API key for sending emails' }),
   EMAIL_FROM: email({ default: 'logistica@notificaciones.bisonteapp.com', desc: 'Default From email address' }),
   ADMIN_NOTIFICATION_EMAIL: email({ default: '3000bisonte@gmail.com', desc: 'Admin email for shipment notifications' }),
+  ADMIN_EMAILS: commaSeparated({ default: '', desc: 'Comma-separated list of admin emails to notify' }),
   SMTP_HOST: str({ default: '', desc: 'SMTP server hostname for email fallback' }),
   SMTP_PORT: num({ default: 587, desc: 'SMTP server port (587 TLS, 465 SSL)' }),
   SMTP_USER: str({ default: '', desc: 'SMTP username for email fallback' }),

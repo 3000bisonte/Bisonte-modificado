@@ -629,12 +629,25 @@ export async function sendAdminShipmentNotificationEmail({
     reason: null,
     transport: null,
     transportsTried: [],
+    recipients: [],
   }
 
   const resend = getResendClient()
   const smtpTransport = getSmtpTransport()
 
   const normalizedTo = to || ADMIN_EMAIL
+  const configuredAdminEmails = Array.isArray(env.ADMIN_EMAILS) ? env.ADMIN_EMAILS : []
+  const adminRecipients = Array.from(
+    new Set(
+      [normalizedTo, ADMIN_EMAIL, ...configuredAdminEmails]
+        .map((email) => (typeof email === 'string' ? email.trim() : ''))
+        .filter((email) => email.length > 0)
+    )
+  )
+  if (adminRecipients.length === 0) {
+    adminRecipients.push(ADMIN_EMAIL)
+  }
+  result.recipients = adminRecipients
   const currencyFormatter = new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',
@@ -784,7 +797,7 @@ Metadata: ${JSON.stringify(metadata || {})}
       send: async () => {
         const { data, error } = await resend.emails.send({
           from: normalizeFromAddress(),
-          to: normalizedTo,
+          to: adminRecipients,
           replyTo: customerEmail || ADMIN_EMAIL,
           subject,
           html: htmlContent,
@@ -809,7 +822,7 @@ Metadata: ${JSON.stringify(metadata || {})}
       send: async () => {
         const info = await smtpTransport.sendMail({
           from: normalizeFromAddress(),
-          to: normalizedTo,
+          to: adminRecipients,
           replyTo: customerEmail || ADMIN_EMAIL,
           subject,
           html: htmlContent,

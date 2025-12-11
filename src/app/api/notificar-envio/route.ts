@@ -107,6 +107,8 @@ export async function POST(req: NextRequest) {
       reason: adminEmailResult.reason,
       error: adminEmailResult.error,
       emailId: adminEmailResult.id,
+      recipients: adminEmailResult.recipients,
+      transportsTried: adminEmailResult.transportsTried,
       envioId,
       timestamp: new Date().toISOString(),
     });

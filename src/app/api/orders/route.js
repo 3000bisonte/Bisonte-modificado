@@ -300,12 +300,14 @@ export async function POST(request) {
         console.log('✅ Email de notificación a administración enviado:', {
           emailId: adminEmailResult.id,
           transport: adminEmailResult.transport,
+          recipients: adminEmailResult.recipients,
         });
       } else {
         console.warn('⚠️ No se pudo notificar a administración:', {
           reason: adminEmailResult.reason,
           error: adminEmailResult.error,
           transportsTried: adminEmailResult.transportsTried,
+          recipients: adminEmailResult.recipients,
         });
       }
     } catch (adminEmailError) {
