@@ -164,83 +164,82 @@ export async function POST(request) {
       return created;
     });
 
-    // ✅ Enviar email de confirmación al cliente
-    try {
-      // Parse JSON fields to get names
-      const parseJsonField = (field) => {
-        if (!field) return 'N/A';
-        if (typeof field === 'string') {
-          try {
-            const parsed = JSON.parse(field);
-            if (typeof parsed === 'object' && parsed !== null) {
-              return parsed.nombre || parsed.name || parsed.Nombre || String(field);
-            }
-            return parsed;
-          } catch {
-            return field;
+    const parseJsonField = (field) => {
+      if (!field) return 'N/A';
+      if (typeof field === 'string') {
+        try {
+          const parsed = JSON.parse(field);
+          if (typeof parsed === 'object' && parsed !== null) {
+            return parsed.nombre || parsed.name || parsed.Nombre || String(field);
           }
-        }
-        if (typeof field === 'object' && field !== null) {
-          return field.nombre || field.name || field.Nombre || String(field);
-        }
-        return String(field);
-      };
-
-      const parsePersonaObject = (field) => {
-        if (!field) return null;
-        if (typeof field === 'object' && field !== null) {
+          return parsed;
+        } catch {
           return field;
         }
-        if (typeof field === 'string') {
-          try {
-            const parsed = JSON.parse(field);
-            return typeof parsed === 'object' && parsed !== null ? parsed : null;
-          } catch {
-            return null;
-          }
+      }
+      if (typeof field === 'object' && field !== null) {
+        return field.nombre || field.name || field.Nombre || String(field);
+      }
+      return String(field);
+    };
+
+    const parsePersonaObject = (field) => {
+      if (!field) return null;
+      if (typeof field === 'object' && field !== null) {
+        return field;
+      }
+      if (typeof field === 'string') {
+        try {
+          const parsed = JSON.parse(field);
+          return typeof parsed === 'object' && parsed !== null ? parsed : null;
+        } catch {
+          return null;
         }
-        return null;
-      };
+      }
+      return null;
+    };
 
-      const normalizeNumber = (value) => {
-        if (typeof value === 'number' && Number.isFinite(value)) {
-          return value;
-        }
-        if (typeof value === 'string' && value.trim().length > 0) {
-          const parsed = Number(value.replace(/[^0-9.-]/g, ''));
-          return Number.isFinite(parsed) ? parsed : null;
-        }
-        return null;
-      };
+    const normalizeNumber = (value) => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      if (typeof value === 'string' && value.trim().length > 0) {
+        const parsed = Number(value.replace(/[^0-9.-]/g, ''));
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      return null;
+    };
 
-      const customerName = usuario?.nombre || 'Cliente';
-      const recipientName = parseJsonField(newOrder.Destinatario);
-      const destinatarioObj = parsePersonaObject(validatedData?.Destinatario) || parsePersonaObject(newOrder.Destinatario);
-      const remitenteObj = parsePersonaObject(validatedData?.Remitente) || parsePersonaObject(newOrder.Remitente);
+    const customerName = usuario?.nombre || 'Cliente';
+    const recipientName = parseJsonField(newOrder.Destinatario);
+    const destinatarioObj = parsePersonaObject(validatedData?.Destinatario) || parsePersonaObject(newOrder.Destinatario);
+    const remitenteObj = parsePersonaObject(validatedData?.Remitente) || parsePersonaObject(newOrder.Remitente);
 
-      const recipientPhone = destinatarioObj?.Telefono || destinatarioObj?.telefono || destinatarioObj?.phone || null;
-      const senderName = remitenteObj?.Nombre || remitenteObj?.nombre || remitenteObj?.name || customerName;
-      const senderPhone = remitenteObj?.Telefono || remitenteObj?.telefono || remitenteObj?.phone || null;
+    const recipientPhone = destinatarioObj?.Telefono || destinatarioObj?.telefono || destinatarioObj?.phone || null;
+    const senderName = remitenteObj?.Nombre || remitenteObj?.nombre || remitenteObj?.name || customerName;
+    const senderPhone = remitenteObj?.Telefono || remitenteObj?.telefono || remitenteObj?.phone || null;
 
-      const totalCostForEmail = normalizeNumber(body?.costoTotal)
-        ?? normalizeNumber(body?.CostoTotal)
-        ?? normalizeNumber(body?.total)
-        ?? normalizeNumber(body?.valorTotal)
-        ?? normalizeNumber(validatedData?.ValorDeclarado);
+    const totalCostForEmail = normalizeNumber(body?.costoTotal)
+      ?? normalizeNumber(body?.CostoTotal)
+      ?? normalizeNumber(body?.total)
+      ?? normalizeNumber(body?.valorTotal)
+      ?? normalizeNumber(validatedData?.ValorDeclarado);
 
-      const declaredValueForEmail = normalizeNumber(validatedData?.ValorDeclarado)
-        ?? normalizeNumber(body?.ValorDeclarado);
+    const declaredValueForEmail = normalizeNumber(validatedData?.ValorDeclarado)
+      ?? normalizeNumber(body?.ValorDeclarado);
 
-      const weightForEmail = normalizeNumber(validatedData?.Peso)
-        ?? normalizeNumber(body?.Peso)
-        ?? normalizeNumber(body?.peso);
+    const weightForEmail = normalizeNumber(validatedData?.Peso)
+      ?? normalizeNumber(body?.Peso)
+      ?? normalizeNumber(body?.peso);
 
-      const notesForEmail = body?.Notas
-        ?? body?.nota
-        ?? body?.observaciones
-        ?? body?.comments
-        ?? null;
-      
+    const notesForEmail = body?.Notas
+      ?? body?.nota
+      ?? body?.observaciones
+      ?? body?.comments
+      ?? null;
+
+    // ✅ Enviar email de confirmación al cliente
+    try {
       const emailResult = await sendOrderConfirmationEmail({
         to: userEmail,
         customerName,
