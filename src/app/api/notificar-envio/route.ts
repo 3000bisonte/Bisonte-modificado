@@ -78,22 +78,162 @@ export async function POST(req: NextRequest) {
       return undefined;
     };
 
+    const normalizeString = (value: unknown) => {
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+      }
+      if (value === null || value === undefined) {
+        return undefined;
+      }
+      const strValue = String(value);
+      return strValue.trim().length > 0 ? strValue.trim() : undefined;
+    };
+
+    const pickFirst = (...candidates: Array<unknown>) => {
+      for (const candidate of candidates) {
+        const normalized = normalizeString(candidate);
+        if (normalized !== undefined) {
+          return normalized;
+        }
+      }
+      return undefined;
+    };
+
+    const costNormalized = normalizeNumber(
+      cotizador?.costoTotal
+        ?? (data as Record<string, unknown>)?.costoTotal
+        ?? (data as Record<string, unknown>)?.valor_total
+    );
+
+    const declaredNormalized = normalizeNumber(
+      cotizador?.valorDeclarado
+        ?? (data as Record<string, unknown>)?.ValorDeclarado
+        ?? (data as Record<string, unknown>)?.valor_declarado
+    );
+
+    const weightNormalized = normalizeNumber(
+      cotizador?.pesoTotal
+        ?? cotizador?.peso
+        ?? (data as Record<string, unknown>)?.Peso
+    );
+
+    const senderDetails = {
+      nombre: pickFirst(remitente?.nombre, remitente?.Nombre),
+      telefono: pickFirst(remitente?.telefono, remitente?.Telefono),
+      direccion: pickFirst(
+        (remitente as Record<string, unknown> | undefined)?.direccionRecogida,
+        (remitente as Record<string, unknown> | undefined)?.DireccionRecogida,
+        (remitente as Record<string, unknown> | undefined)?.direccion,
+        (remitente as Record<string, unknown> | undefined)?.Direccion,
+        cotizador?.origen,
+        (data as Record<string, unknown>)?.Origen,
+      ),
+    };
+
+    const recipientDetails = {
+      nombre: pickFirst(destinatario?.nombre, destinatario?.Nombre),
+      telefono: pickFirst(destinatario?.telefono, destinatario?.Telefono),
+      direccion: pickFirst(
+        (destinatario as Record<string, unknown> | undefined)?.direccionEntrega,
+        (destinatario as Record<string, unknown> | undefined)?.DireccionEntrega,
+        (destinatario as Record<string, unknown> | undefined)?.direccion,
+        (destinatario as Record<string, unknown> | undefined)?.Direccion,
+        cotizador?.destino,
+        (data as Record<string, unknown>)?.Destino,
+      ),
+      email: pickFirst(destinatario?.correo, destinatario?.Correo),
+    };
+
+    const packageDetails = {
+      numeroGuia: pickFirst((data as Record<string, unknown>)?.NumeroGuia),
+      estado: pickFirst((data as Record<string, unknown>)?.Estado, (data as Record<string, unknown>)?.estado),
+      origen: pickFirst(cotizador?.origen, (data as Record<string, unknown>)?.Origen),
+      destino: pickFirst(cotizador?.destino, (data as Record<string, unknown>)?.Destino),
+      peso: weightNormalized,
+      dimensiones: pickFirst((data as Record<string, unknown>)?.Dimensiones, (data as Record<string, unknown>)?.dimensiones),
+      valorDeclarado: declaredNormalized,
+      notas: mensaje || cotizador?.notas || cotizador?.observaciones,
+    };
+
+    const rawMetodoPago = (data as Record<string, unknown>)?.metodoPago;
+    const rawMetodo = (data as Record<string, unknown>)?.metodo;
+    const rawPagado = (data as Record<string, unknown>)?.pagado;
+    const rawPaymentId = (data as Record<string, unknown>)?.paymentId;
+
+    const paymentDetails = {
+      metodo: pickFirst(
+        rawMetodoPago,
+        rawMetodo,
+        (cotizador as Record<string, unknown> | undefined)?.metodo
+      ),
+      pagado: typeof rawPagado === 'boolean' ? rawPagado : undefined,
+      montoTotal: costNormalized,
+      costoCotizado: costNormalized,
+      paymentId: normalizeString(rawPaymentId),
+    };
+
+    const knownKeys = new Set([
+      'remitente',
+      'destinatario',
+      'cotizador',
+      'fecha',
+      'envioId',
+      'mensaje',
+      'NumeroGuia',
+      'Origen',
+      'Destino',
+      'costoTotal',
+      'valor_total',
+      'valorDeclarado',
+      'ValorDeclarado',
+      'valor_declarado',
+      'Peso',
+      'metodoPago',
+      'metodo',
+      'pagado',
+      'paymentId',
+      'Dimensiones',
+      'dimensiones',
+      'Estado',
+      'estado',
+    ]);
+
+    const extras = Object.fromEntries(
+      Object.entries(data as Record<string, unknown>).filter(([key]) => !knownKeys.has(key))
+    );
+
+    const formPayload = {
+      remitente,
+      destinatario,
+      cotizador,
+      fecha,
+      envioId,
+      mensaje,
+      extras: Object.keys(extras).length ? extras : undefined,
+    };
+
     const adminEmailResult = await sendAdminShipmentNotificationEmail({
-      customerName: remitente?.nombre || remitente?.Nombre || 'Cliente',
-      customerEmail: remitente?.email || remitente?.Email || remitente?.correo || remitente?.Correo || undefined,
-      trackingNumber: (data as Record<string, unknown>)?.NumeroGuia as string | undefined,
-      origin: cotizador?.origen || (data as Record<string, unknown>)?.Origen as string | undefined,
-      destination: cotizador?.destino || (data as Record<string, unknown>)?.Destino as string | undefined,
-      recipientName: destinatario?.nombre || destinatario?.Nombre || 'Destinatario',
-      recipientPhone: destinatario?.telefono || destinatario?.Telefono || undefined,
-      senderName: remitente?.nombre || remitente?.Nombre || 'Cliente',
-      senderPhone: remitente?.telefono || remitente?.Telefono || undefined,
-      totalCost: normalizeNumber(cotizador?.costoTotal ?? (data as Record<string, unknown>)?.costoTotal),
-      declaredValue: normalizeNumber(cotizador?.valorDeclarado ?? (data as Record<string, unknown>)?.ValorDeclarado),
-      weight: normalizeNumber(cotizador?.pesoTotal ?? cotizador?.peso ?? (data as Record<string, unknown>)?.Peso),
+      customerName: pickFirst(remitente?.nombre, remitente?.Nombre) || 'Cliente',
+      customerEmail: pickFirst(remitente?.email, remitente?.Email, remitente?.correo, remitente?.Correo),
+      trackingNumber: pickFirst((data as Record<string, unknown>)?.NumeroGuia),
+      origin: packageDetails.origen,
+      destination: packageDetails.destino,
+      recipientName: pickFirst(destinatario?.nombre, destinatario?.Nombre) || 'Destinatario',
+      recipientPhone: recipientDetails.telefono,
+      senderName: pickFirst(remitente?.nombre, remitente?.Nombre) || 'Cliente',
+      senderPhone: senderDetails.telefono,
+      totalCost: costNormalized,
+      declaredValue: declaredNormalized,
+      weight: weightNormalized,
       orderDate: fecha || new Date().toISOString(),
-      paymentId: (data as Record<string, unknown>)?.paymentId as string | undefined,
-      notes: mensaje || cotizador?.notas || cotizador?.observaciones || undefined,
+      paymentId: paymentDetails.paymentId,
+      notes: packageDetails.notas,
+      senderDetails,
+      recipientDetails,
+      packageDetails,
+      paymentDetails,
+      formPayload,
       metadata: {
         envioId,
         source: "notificar-envio",
