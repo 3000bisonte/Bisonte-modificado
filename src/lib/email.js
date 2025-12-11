@@ -618,6 +618,11 @@ export async function sendAdminShipmentNotificationEmail({
   orderDate,
   paymentId,
   notes,
+  senderDetails,
+  recipientDetails,
+  packageDetails,
+  paymentDetails,
+  formPayload,
   metadata = {},
 }) {
   const result = {
@@ -635,6 +640,34 @@ export async function sendAdminShipmentNotificationEmail({
   const resend = getResendClient()
   const smtpTransport = getSmtpTransport()
 
+  const escapeHtml = (value) => {
+    if (value === null || value === undefined) {
+      return ''
+    }
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  }
+
+  const formatOptionalString = (value, fallback = 'Sin datos') => {
+    if (value === null || value === undefined) {
+      return fallback
+    }
+    const stringValue = typeof value === 'string' ? value.trim() : String(value)
+    return stringValue.length > 0 ? stringValue : fallback
+  }
+
+  const formatBoolean = (value) => {
+    if (value === true) {return 'Sí'}
+    if (value === false) {return 'No'}
+    return 'Sin datos'
+  }
+
+  const textValue = (value) => formatOptionalString(value)
+
   const normalizedTo = to || ADMIN_EMAIL
   const configuredAdminEmails = Array.isArray(env.ADMIN_EMAILS) ? env.ADMIN_EMAILS : []
   const adminRecipients = Array.from(
@@ -648,6 +681,7 @@ export async function sendAdminShipmentNotificationEmail({
     adminRecipients.push(ADMIN_EMAIL)
   }
   result.recipients = adminRecipients
+
   const currencyFormatter = new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',
@@ -679,6 +713,113 @@ export async function sendAdminShipmentNotificationEmail({
     ? `Nuevo envío solicitado - Guía #${trackingNumber}`
     : 'Nuevo envío solicitado'
 
+  const weightText = packageDetails?.peso !== undefined && packageDetails?.peso !== null
+    ? `${packageDetails.peso} kg`
+    : formatNumber(weight, ' kg')
+
+  const declaredValueText = packageDetails?.valorDeclarado !== undefined && packageDetails?.valorDeclarado !== null
+    ? formatCurrency(packageDetails.valorDeclarado)
+    : formatCurrency(declaredValue)
+
+  const montoTotalText = paymentDetails?.montoTotal !== undefined && paymentDetails?.montoTotal !== null
+    ? formatCurrency(paymentDetails.montoTotal)
+    : 'Sin datos'
+
+  const costoCotizadoText = paymentDetails?.costoCotizado !== undefined && paymentDetails?.costoCotizado !== null
+    ? formatCurrency(paymentDetails.costoCotizado)
+    : formatCurrency(totalCost)
+
+  const paymentStatusText = paymentDetails?.pagado !== null && paymentDetails?.pagado !== undefined
+    ? formatBoolean(paymentDetails.pagado)
+    : 'Sin datos'
+
+  const renderDetailsSection = (title, rows) => {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return ''
+    }
+
+    const hasUsefulData = rows.some((row) => {
+      if (!row) {return false}
+      const rawValue = row.value
+      if (rawValue === null || rawValue === undefined) {return false}
+      if (typeof rawValue === 'string') {return rawValue.trim().length > 0}
+      return true
+    })
+
+    if (!hasUsefulData) {
+      return ''
+    }
+
+    const rowsHtml = rows.map((row) => {
+      if (!row) {return ''}
+      const label = escapeHtml(row.label ?? '')
+      const valueText = formatOptionalString(row.value)
+      const value = escapeHtml(valueText)
+      return `<tr>
+          <td style="padding:6px 0; color:#64748b; width:45%; vertical-align:top;">${label}</td>
+          <td style="padding:6px 0; color:#0f172a; font-weight:500;">${value}</td>
+        </tr>`
+    }).join('')
+
+    return `<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px; margin-bottom:18px;">
+        <h3 style="margin:0 0 12px 0; font-size:15px; color:#0f172a; text-transform:uppercase; letter-spacing:0.5px;">${escapeHtml(title)}</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">${rowsHtml}</table>
+      </div>`
+  }
+
+  const senderSectionHtml = renderDetailsSection('Remitente', [
+    { label: 'Nombre', value: senderDetails?.nombre ?? senderName },
+    { label: 'Teléfono', value: senderDetails?.telefono ?? senderPhone },
+    { label: 'Dirección', value: senderDetails?.direccion ?? origin },
+  ])
+
+  const recipientSectionHtml = renderDetailsSection('Destinatario', [
+    { label: 'Nombre', value: recipientDetails?.nombre ?? recipientName },
+    { label: 'Teléfono', value: recipientDetails?.telefono ?? recipientPhone },
+    { label: 'Dirección', value: recipientDetails?.direccion ?? destination },
+    { label: 'Correo', value: recipientDetails?.email ?? customerEmail },
+  ])
+
+  const packageSectionHtml = renderDetailsSection('Datos del envío', [
+    { label: 'Número de guía', value: packageDetails?.numeroGuia ?? trackingNumber },
+    { label: 'Estado', value: packageDetails?.estado },
+    { label: 'Origen', value: packageDetails?.origen ?? origin },
+    { label: 'Destino', value: packageDetails?.destino ?? destination },
+    { label: 'Peso', value: weightText },
+    { label: 'Dimensiones', value: packageDetails?.dimensiones },
+    { label: 'Valor declarado', value: declaredValueText },
+    { label: 'Notas', value: packageDetails?.notas ?? notes },
+  ])
+
+  const paymentSectionHtml = renderDetailsSection('Pago y cotización', [
+    { label: 'Método de pago', value: paymentDetails?.metodo },
+    { label: 'Pagado', value: paymentStatusText },
+    { label: 'Monto total cobrado', value: montoTotalText },
+    { label: 'Costo cotizado', value: costoCotizadoText },
+    { label: 'ID de pago', value: paymentDetails?.paymentId ?? paymentId },
+  ])
+
+  const formPayloadHtml = formPayload
+    ? `<div style="background:#0f172a; border-radius:12px; padding:18px; margin-bottom:18px; color:#e2e8f0;">
+        <p style="margin:0 0 8px 0; font-size:13px; text-transform:uppercase; color:#38bdf8; letter-spacing:0.5px;">Formulario completo (JSON)</p>
+        <pre style="margin:0; white-space:pre-wrap; word-break:break-word; font-size:12px; line-height:1.6; background:#1f2937; padding:12px; border-radius:8px; color:#e2e8f0;">${escapeHtml(JSON.stringify(formPayload, null, 2))}</pre>
+      </div>`
+    : ''
+
+  const notesHtml = notes
+    ? `<div style="padding:18px; background:#fff7ed; border:1px solid #fbd38d; border-radius:10px; margin-bottom:24px;">
+          <p style="margin:0 0 4px 0; font-size:13px; text-transform:uppercase; color:#c05621; letter-spacing:0.4px;">Notas del cliente</p>
+          <p style="margin:0; font-size:14px; color:#7b341e; line-height:1.6;">${escapeHtml(formatOptionalString(notes, 'Sin notas'))}</p>
+        </div>`
+    : ''
+
+  const metadataHtml = Object.keys(metadata || {}).length
+    ? `<div style="padding:16px; background:#1e293b; border-radius:10px; margin-bottom:24px; color:#e2e8f0;">
+        <p style="margin:0 0 8px 0; font-size:13px; text-transform:uppercase; letter-spacing:0.4px; color:#38bdf8;">Metadata</p>
+        <pre style="margin:0; font-size:13px; line-height:1.6; white-space:pre-wrap;">${escapeHtml(JSON.stringify(metadata, null, 2))}</pre>
+      </div>`
+    : ''
+
   const htmlContent = `<!doctype html>
 <html lang="es">
   <head>
@@ -703,60 +844,58 @@ export async function sendAdminShipmentNotificationEmail({
             <table style="width:100%; border-collapse:collapse; font-size:14px; color:#1f2937;">
               <tr>
                 <td style="padding:6px 0; width:45%; color:#64748b;">Cliente:</td>
-                <td style="padding:6px 0; font-weight:600;">${customerName || 'Sin datos'}</td>
+                <td style="padding:6px 0; font-weight:600;">${escapeHtml(formatOptionalString(customerName))}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Correo cliente:</td>
-                <td style="padding:6px 0;">${customerEmail || 'Sin datos'}</td>
+                <td style="padding:6px 0;">${escapeHtml(formatOptionalString(customerEmail))}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Remitente:</td>
-                <td style="padding:6px 0;">${senderName || customerName || 'Sin datos'} (${senderPhone || 'Sin teléfono'})</td>
+                <td style="padding:6px 0;">${escapeHtml(formatOptionalString(senderName || customerName))} (${escapeHtml(formatOptionalString(senderPhone, 'Sin teléfono'))})</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Destinatario:</td>
-                <td style="padding:6px 0;">${recipientName || 'Sin datos'} (${recipientPhone || 'Sin teléfono'})</td>
+                <td style="padding:6px 0;">${escapeHtml(formatOptionalString(recipientName))} (${escapeHtml(formatOptionalString(recipientPhone, 'Sin teléfono'))})</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Origen → Destino:</td>
-                <td style="padding:6px 0;">${origin || 'Sin datos'} → ${destination || 'Sin datos'}</td>
+                <td style="padding:6px 0;">${escapeHtml(formatOptionalString(origin))} → ${escapeHtml(formatOptionalString(destination))}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Fecha solicitud:</td>
-                <td style="padding:6px 0;">${formattedDate}</td>
+                <td style="padding:6px 0;">${escapeHtml(formattedDate)}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Costo total:</td>
-                <td style="padding:6px 0;">${formatCurrency(totalCost)}</td>
+                <td style="padding:6px 0;">${escapeHtml(formatCurrency(totalCost))}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Valor declarado:</td>
-                <td style="padding:6px 0;">${formatCurrency(declaredValue)}</td>
+                <td style="padding:6px 0;">${escapeHtml(formatCurrency(declaredValue))}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Peso (kg):</td>
-                <td style="padding:6px 0;">${formatNumber(weight, ' kg')}</td>
+                <td style="padding:6px 0;">${escapeHtml(weightText)}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">ID pago:</td>
-                <td style="padding:6px 0;">${paymentId || 'No registrado'}</td>
+                <td style="padding:6px 0;">${escapeHtml(formatOptionalString(paymentId, 'No registrado'))}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Número de guía:</td>
-                <td style="padding:6px 0; font-weight:600; letter-spacing:0.5px;">${trackingNumber || 'Pendiente'}</td>
+                <td style="padding:6px 0; font-weight:600; letter-spacing:0.5px;">${escapeHtml(formatOptionalString(trackingNumber, 'Pendiente'))}</td>
               </tr>
             </table>
           </div>
 
-          ${notes ? `<div style="padding:18px; background:#fff7ed; border:1px solid #fbd38d; border-radius:10px; margin-bottom:24px;">
-              <p style="margin:0 0 4px 0; font-size:13px; text-transform:uppercase; color:#c05621; letter-spacing:0.4px;">Notas del cliente</p>
-              <p style="margin:0; font-size:14px; color:#7b341e; line-height:1.6;">${notes}</p>
-            </div>` : ''}
-
-          ${Object.keys(metadata || {}).length ? `<div style="padding:16px; background:#1e293b; border-radius:10px; margin-bottom:24px; color:#e2e8f0;">
-              <p style="margin:0 0 8px 0; font-size:13px; text-transform:uppercase; letter-spacing:0.4px; color:#38bdf8;">Metadata</p>
-              <pre style="margin:0; font-size:13px; line-height:1.6; white-space:pre-wrap;">${JSON.stringify(metadata, null, 2)}</pre>
-            </div>` : ''}
+          ${senderSectionHtml}
+          ${recipientSectionHtml}
+          ${packageSectionHtml}
+          ${paymentSectionHtml}
+          ${formPayloadHtml}
+          ${notesHtml}
+          ${metadataHtml}
 
           <p style="margin:0; font-size:13px; color:#475569;">Responde a este correo para coordinar la recolección o contacta al cliente directamente.</p>
         </td>
@@ -770,23 +909,78 @@ export async function sendAdminShipmentNotificationEmail({
   </body>
 </html>`
 
+  const textSections = []
+
+  if (senderSectionHtml) {
+    textSections.push([
+      'REMÍTENTE',
+      `Nombre: ${textValue(senderDetails?.nombre ?? senderName)}`,
+      `Teléfono: ${textValue(senderDetails?.telefono ?? senderPhone)}`,
+      `Dirección: ${textValue(senderDetails?.direccion ?? origin)}`,
+    ].join('\n'))
+  }
+
+  if (recipientSectionHtml) {
+    textSections.push([
+      'DESTINATARIO',
+      `Nombre: ${textValue(recipientDetails?.nombre ?? recipientName)}`,
+      `Teléfono: ${textValue(recipientDetails?.telefono ?? recipientPhone)}`,
+      `Dirección: ${textValue(recipientDetails?.direccion ?? destination)}`,
+      `Correo: ${textValue(recipientDetails?.email ?? customerEmail)}`,
+    ].join('\n'))
+  }
+
+  if (packageSectionHtml) {
+    textSections.push([
+      'DATOS DEL ENVÍO',
+      `Número de guía: ${textValue(packageDetails?.numeroGuia ?? trackingNumber)}`,
+      `Estado: ${textValue(packageDetails?.estado)}`,
+      `Origen: ${textValue(packageDetails?.origen ?? origin)}`,
+      `Destino: ${textValue(packageDetails?.destino ?? destination)}`,
+      `Peso: ${textValue(weightText)}`,
+      `Dimensiones: ${textValue(packageDetails?.dimensiones)}`,
+      `Valor declarado: ${declaredValueText}`,
+      `Notas: ${textValue(packageDetails?.notas ?? notes)}`,
+    ].join('\n'))
+  }
+
+  if (paymentSectionHtml) {
+    textSections.push([
+      'PAGO Y COTIZACIÓN',
+      `Método de pago: ${textValue(paymentDetails?.metodo)}`,
+      `Pagado: ${paymentStatusText}`,
+      `Monto total cobrado: ${montoTotalText}`,
+      `Costo cotizado: ${costoCotizadoText}`,
+      `ID de pago: ${textValue(paymentDetails?.paymentId ?? paymentId)}`,
+    ].join('\n'))
+  }
+
+  if (formPayload) {
+    textSections.push([
+      'FORMULARIO COMPLETO (JSON)',
+      JSON.stringify(formPayload, null, 2),
+    ].join('\n'))
+  }
+
+  const textSectionsBlock = textSections.length ? `\n\n${textSections.join('\n\n')}` : ''
+
   const textContent = `NUEVO ENVÍO SOLICITADO
 
-Cliente: ${customerName || 'Sin datos'}
-Correo cliente: ${customerEmail || 'Sin datos'}
-Remitente: ${senderName || customerName || 'Sin datos'} (${senderPhone || 'Sin teléfono'})
-Destinatario: ${recipientName || 'Sin datos'} (${recipientPhone || 'Sin teléfono'})
-Origen → Destino: ${origin || 'Sin datos'} → ${destination || 'Sin datos'}
+Cliente: ${textValue(customerName)}
+Correo cliente: ${textValue(customerEmail)}
+Remitente: ${textValue(senderName || customerName)} (${textValue(senderPhone)})
+Destinatario: ${textValue(recipientName)} (${textValue(recipientPhone)})
+Origen → Destino: ${textValue(origin)} → ${textValue(destination)}
 Fecha solicitud: ${formattedDate}
 Costo total: ${formatCurrency(totalCost)}
 Valor declarado: ${formatCurrency(declaredValue)}
-Peso: ${formatNumber(weight, ' kg')}
-ID pago: ${paymentId || 'No registrado'}
-Número de guía: ${trackingNumber || 'Pendiente'}
+Peso: ${weightText}
+ID pago: ${textValue(paymentId || 'No registrado')}
+Número de guía: ${textValue(trackingNumber || 'Pendiente')}
 
-Notas: ${notes || 'Sin notas'}
+Notas: ${textValue(notes || 'Sin notas')}
 
-Metadata: ${JSON.stringify(metadata || {})}
+Metadata: ${JSON.stringify(metadata || {})}${textSectionsBlock}
 `
 
   const transports = []

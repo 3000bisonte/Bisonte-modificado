@@ -238,6 +238,115 @@ export async function POST(request) {
       ?? body?.comments
       ?? null;
 
+    const senderDetailsForEmail = {
+      nombre: senderName || null,
+      direccion: remitenteObj?.Direccion
+        || remitenteObj?.direccion
+        || remitenteObj?.DireccionRecogida
+        || remitenteObj?.direccionRecogida
+        || newOrder.Origen
+        || null,
+      telefono: senderPhone,
+    };
+
+    const recipientDetailsForEmail = {
+      nombre: recipientName || null,
+      direccion: destinatarioObj?.Direccion
+        || destinatarioObj?.direccion
+        || destinatarioObj?.DireccionEntrega
+        || destinatarioObj?.direccionEntrega
+        || newOrder.Destino
+        || null,
+      telefono: recipientPhone,
+      email: body?.destinatarioEmail || null,
+    };
+
+    const rawDimensions = validatedData?.Dimensiones
+      ?? body?.Dimensiones
+      ?? body?.dimensiones
+      ?? null;
+
+    const packageDetailsForEmail = {
+      numeroGuia: newOrder.NumeroGuia,
+      estado: validatedData?.Estado ?? body?.Estado ?? newOrder.Estado ?? null,
+      origen: newOrder.Origen || null,
+      destino: newOrder.Destino || null,
+      peso: weightForEmail,
+      dimensiones: typeof rawDimensions === 'string' && rawDimensions.trim().length > 0 ? rawDimensions.trim() : null,
+      valorDeclarado: declaredValueForEmail,
+      notas: notesForEmail,
+    };
+
+    const normalizedMontoTotal = normalizeNumber(body?.montoTotal)
+      ?? normalizeNumber(body?.monto)
+      ?? totalCostForEmail;
+
+    const paymentDetailsForEmail = {
+      metodo: body?.metodoPago || body?.metodo || null,
+      pagado: typeof body?.pagado === 'boolean' ? body.pagado : null,
+      montoTotal: normalizedMontoTotal,
+      costoCotizado: totalCostForEmail,
+      paymentId: paymentIdRaw ? String(paymentIdRaw) : null,
+    };
+
+    const bodyExtras = { ...body };
+    const knownKeys = [
+      'NumeroGuia',
+      'Estado',
+      'Origen',
+      'Destino',
+      'Destinatario',
+      'Remitente',
+      'Peso',
+      'Dimensiones',
+      'ValorDeclarado',
+      'usuarioEmail',
+      'metodoPago',
+      'metodo',
+      'pagado',
+      'montoTotal',
+      'monto',
+      'paymentId',
+      'Notas',
+      'nota',
+      'observaciones',
+      'comments',
+      'costoTotal',
+      'CostoTotal',
+      'valorTotal',
+      'valorDeclarado',
+      'peso',
+      'alto',
+      'ancho',
+      'largo',
+    ];
+    for (const key of knownKeys) {
+      if (key in bodyExtras) {
+        delete bodyExtras[key];
+      }
+    }
+
+    const formPayloadForEmail = {
+      cliente: {
+        nombre: customerName,
+        email: userEmail,
+      },
+      remitente: senderDetailsForEmail,
+      destinatario: recipientDetailsForEmail,
+      envio: {
+        numeroGuia: newOrder.NumeroGuia,
+        estado: packageDetailsForEmail.estado,
+        origen: packageDetailsForEmail.origen,
+        destino: packageDetailsForEmail.destino,
+        peso: validatedData?.Peso ?? weightForEmail ?? null,
+        dimensiones: packageDetailsForEmail.dimensiones,
+        valorDeclarado: validatedData?.ValorDeclarado ?? declaredValueForEmail ?? null,
+        notas: notesForEmail,
+      },
+      pago: paymentDetailsForEmail,
+      extras: Object.keys(bodyExtras).length > 0 ? bodyExtras : undefined,
+    };
+
     // ✅ Enviar email de confirmación al cliente
     try {
       const emailResult = await sendOrderConfirmationEmail({
@@ -289,6 +398,11 @@ export async function POST(request) {
         orderDate: newOrder.FechaSolicitud,
         paymentId: paymentIdRaw ? String(paymentIdRaw) : null,
         notes: notesForEmail,
+        senderDetails: senderDetailsForEmail,
+        recipientDetails: recipientDetailsForEmail,
+        packageDetails: packageDetailsForEmail,
+        paymentDetails: paymentDetailsForEmail,
+        formPayload: formPayloadForEmail,
         metadata: {
           envioId: newOrder.id,
           usuarioId: usuario.id,
