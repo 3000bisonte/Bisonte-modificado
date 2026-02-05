@@ -10,6 +10,16 @@ interface NotificationPersona {
   Telefono?: string;
   correo?: string;
   Correo?: string;
+  tipoDocumento?: string;
+  TipoDocumento?: string;
+  tipo_documento?: string;
+  Tipo_documento?: string;
+  numeroDocumento?: string;
+  NumeroDocumento?: string;
+  numero_documento?: string;
+  Numero_documento?: string;
+  documento?: string;
+  Documento?: string;
   [key: string]: unknown;
 }
 
@@ -24,6 +34,12 @@ interface NotificationCotizador {
   peso?: number | string;
   notas?: string;
   observaciones?: string;
+  tipoEnvio?: string;
+  TipoEnvio?: string;
+  tipo_envio?: string;
+  tipoPaquete?: string;
+  tipo_paquete?: string;
+  categoriaEnvio?: string;
   [key: string]: unknown;
 }
 
@@ -41,6 +57,13 @@ interface NotificationData {
   ValorDeclarado?: number | string;
   Peso?: number | string;
   paymentId?: string;
+  tipoEnvio?: string;
+  TipoEnvio?: string;
+  tipo_envio?: string;
+  tipoPaquete?: string;
+  TipoPaquete?: string;
+  tipo_paquete?: string;
+  categoriaEnvio?: string;
   [key: string]: unknown;
 }
 
@@ -100,6 +123,37 @@ export async function POST(req: NextRequest) {
       return undefined;
     };
 
+    const extractDocumentDetails = (persona?: NotificationPersona) => {
+      if (!persona) {
+        return { tipoDocumento: undefined, numeroDocumento: undefined };
+      }
+
+      const tipoDocumento = pickFirst(
+        (persona as Record<string, unknown>)?.tipoDocumento,
+        (persona as Record<string, unknown>)?.TipoDocumento,
+        (persona as Record<string, unknown>)?.tipo_documento,
+        (persona as Record<string, unknown>)?.Tipo_documento,
+        (persona as Record<string, unknown>)?.documentoTipo,
+        (persona as Record<string, unknown>)?.tipoDoc,
+        (persona as Record<string, unknown>)?.tipo_doc
+      );
+
+      const numeroDocumento = pickFirst(
+        (persona as Record<string, unknown>)?.numeroDocumento,
+        (persona as Record<string, unknown>)?.NumeroDocumento,
+        (persona as Record<string, unknown>)?.numero_documento,
+        (persona as Record<string, unknown>)?.Numero_documento,
+        (persona as Record<string, unknown>)?.documento,
+        (persona as Record<string, unknown>)?.Documento,
+        (persona as Record<string, unknown>)?.numeroId,
+        (persona as Record<string, unknown>)?.numero_id,
+        (persona as Record<string, unknown>)?.identificacion,
+        (persona as Record<string, unknown>)?.Identificacion
+      );
+
+      return { tipoDocumento, numeroDocumento };
+    };
+
     const costNormalized = normalizeNumber(
       cotizador?.costoTotal
         ?? (data as Record<string, unknown>)?.costoTotal
@@ -129,6 +183,7 @@ export async function POST(req: NextRequest) {
         cotizador?.origen,
         (data as Record<string, unknown>)?.Origen,
       ),
+      ...extractDocumentDetails(remitente),
     };
 
     const recipientDetails = {
@@ -143,7 +198,25 @@ export async function POST(req: NextRequest) {
         (data as Record<string, unknown>)?.Destino,
       ),
       email: pickFirst(destinatario?.correo, destinatario?.Correo),
+      ...extractDocumentDetails(destinatario),
     };
+
+    const shipmentType = pickFirst(
+      cotizador?.tipoEnvio,
+      (cotizador as Record<string, unknown> | undefined)?.TipoEnvio,
+      (cotizador as Record<string, unknown> | undefined)?.tipo_envio,
+      (cotizador as Record<string, unknown> | undefined)?.tipoPaquete,
+      (cotizador as Record<string, unknown> | undefined)?.tipo_paquete,
+      (cotizador as Record<string, unknown> | undefined)?.categoriaEnvio,
+      (data as Record<string, unknown>)?.tipoEnvio,
+      (data as Record<string, unknown>)?.TipoEnvio,
+      (data as Record<string, unknown>)?.tipo_envio,
+      (data as Record<string, unknown>)?.tipoPaquete,
+      (data as Record<string, unknown>)?.TipoPaquete,
+      (data as Record<string, unknown>)?.tipo_paquete,
+      (data as Record<string, unknown>)?.categoriaEnvio,
+      (data as Record<string, unknown>)?.CategoriaEnvio
+    );
 
     const packageDetails = {
       numeroGuia: pickFirst((data as Record<string, unknown>)?.NumeroGuia),
@@ -154,6 +227,7 @@ export async function POST(req: NextRequest) {
       dimensiones: pickFirst((data as Record<string, unknown>)?.Dimensiones, (data as Record<string, unknown>)?.dimensiones),
       valorDeclarado: declaredNormalized,
       notas: mensaje || cotizador?.notas || cotizador?.observaciones,
+      tipoEnvio: shipmentType,
     };
 
     const rawMetodoPago = (data as Record<string, unknown>)?.metodoPago;
@@ -197,6 +271,14 @@ export async function POST(req: NextRequest) {
       'dimensiones',
       'Estado',
       'estado',
+      'tipoEnvio',
+      'TipoEnvio',
+      'tipo_envio',
+      'tipoPaquete',
+      'TipoPaquete',
+      'tipo_paquete',
+      'categoriaEnvio',
+      'CategoriaEnvio',
     ]);
 
     const extras = Object.fromEntries(

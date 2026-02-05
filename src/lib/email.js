@@ -666,6 +666,47 @@ export async function sendAdminShipmentNotificationEmail({
     return 'Sin datos'
   }
 
+  const formatDocumentValue = (details) => {
+    if (!details || typeof details !== 'object') {
+      return 'Sin datos'
+    }
+
+    const rawTipo = details.tipoDocumento
+      ?? details.TipoDocumento
+      ?? details.tipo_documento
+      ?? details.Tipo_documento
+      ?? details.documentoTipo
+      ?? details.tipoDoc
+      ?? details.tipo_doc
+
+    const rawNumero = details.numeroDocumento
+      ?? details.NumeroDocumento
+      ?? details.numero_documento
+      ?? details.Numero_documento
+      ?? details.documento
+      ?? details.Documento
+      ?? details.numeroId
+      ?? details.numero_id
+      ?? details.identificacion
+      ?? details.Identificacion
+
+    const parts = []
+
+    if (typeof rawTipo === 'string' && rawTipo.trim().length > 0) {
+      parts.push(rawTipo.trim())
+    }
+
+    if (typeof rawNumero === 'string' && rawNumero.trim().length > 0) {
+      parts.push(rawNumero.trim())
+    }
+
+    if (parts.length === 0) {
+      return 'Sin datos'
+    }
+
+    return parts.join(' ')
+  }
+
   const textValue = (value) => formatOptionalString(value)
 
   const normalizedTo = to || ADMIN_EMAIL
@@ -733,6 +774,13 @@ export async function sendAdminShipmentNotificationEmail({
     ? formatBoolean(paymentDetails.pagado)
     : 'Sin datos'
 
+  const shipmentTypeText = packageDetails?.tipoEnvio !== undefined && packageDetails?.tipoEnvio !== null
+    ? formatOptionalString(packageDetails.tipoEnvio)
+    : 'Sin datos'
+
+  const senderDocumentText = formatDocumentValue(senderDetails)
+  const recipientDocumentText = formatDocumentValue(recipientDetails)
+
   const renderDetailsSection = (title, rows) => {
     if (!Array.isArray(rows) || rows.length === 0) {
       return ''
@@ -771,6 +819,7 @@ export async function sendAdminShipmentNotificationEmail({
     { label: 'Nombre', value: senderDetails?.nombre ?? senderName },
     { label: 'Teléfono', value: senderDetails?.telefono ?? senderPhone },
     { label: 'Dirección', value: senderDetails?.direccion ?? origin },
+    { label: 'Documento', value: senderDocumentText },
   ])
 
   const recipientSectionHtml = renderDetailsSection('Destinatario', [
@@ -778,6 +827,7 @@ export async function sendAdminShipmentNotificationEmail({
     { label: 'Teléfono', value: recipientDetails?.telefono ?? recipientPhone },
     { label: 'Dirección', value: recipientDetails?.direccion ?? destination },
     { label: 'Correo', value: recipientDetails?.email ?? customerEmail },
+    { label: 'Documento', value: recipientDocumentText },
   ])
 
   const packageSectionHtml = renderDetailsSection('Datos del envío', [
@@ -788,6 +838,7 @@ export async function sendAdminShipmentNotificationEmail({
     { label: 'Peso', value: weightText },
     { label: 'Dimensiones', value: packageDetails?.dimensiones },
     { label: 'Valor declarado', value: declaredValueText },
+    { label: 'Tipo de envío', value: shipmentTypeText },
     { label: 'Notas', value: packageDetails?.notas ?? notes },
   ])
 
@@ -855,8 +906,16 @@ export async function sendAdminShipmentNotificationEmail({
                 <td style="padding:6px 0;">${escapeHtml(formatOptionalString(senderName || customerName))} (${escapeHtml(formatOptionalString(senderPhone, 'Sin teléfono'))})</td>
               </tr>
               <tr>
+                <td style="padding:6px 0; color:#64748b;">Documento remitente:</td>
+                <td style="padding:6px 0;">${escapeHtml(senderDocumentText)}</td>
+              </tr>
+              <tr>
                 <td style="padding:6px 0; color:#64748b;">Destinatario:</td>
                 <td style="padding:6px 0;">${escapeHtml(formatOptionalString(recipientName))} (${escapeHtml(formatOptionalString(recipientPhone, 'Sin teléfono'))})</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0; color:#64748b;">Documento destinatario:</td>
+                <td style="padding:6px 0;">${escapeHtml(recipientDocumentText)}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Origen → Destino:</td>
@@ -877,6 +936,10 @@ export async function sendAdminShipmentNotificationEmail({
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Peso (kg):</td>
                 <td style="padding:6px 0;">${escapeHtml(weightText)}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0; color:#64748b;">Tipo de envío:</td>
+                <td style="padding:6px 0;">${escapeHtml(shipmentTypeText)}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">ID pago:</td>
@@ -917,6 +980,7 @@ export async function sendAdminShipmentNotificationEmail({
       `Nombre: ${textValue(senderDetails?.nombre ?? senderName)}`,
       `Teléfono: ${textValue(senderDetails?.telefono ?? senderPhone)}`,
       `Dirección: ${textValue(senderDetails?.direccion ?? origin)}`,
+      `Documento: ${textValue(senderDocumentText)}`,
     ].join('\n'))
   }
 
@@ -927,6 +991,7 @@ export async function sendAdminShipmentNotificationEmail({
       `Teléfono: ${textValue(recipientDetails?.telefono ?? recipientPhone)}`,
       `Dirección: ${textValue(recipientDetails?.direccion ?? destination)}`,
       `Correo: ${textValue(recipientDetails?.email ?? customerEmail)}`,
+      `Documento: ${textValue(recipientDocumentText)}`,
     ].join('\n'))
   }
 
@@ -940,6 +1005,7 @@ export async function sendAdminShipmentNotificationEmail({
       `Peso: ${textValue(weightText)}`,
       `Dimensiones: ${textValue(packageDetails?.dimensiones)}`,
       `Valor declarado: ${declaredValueText}`,
+      `Tipo de envío: ${textValue(shipmentTypeText)}`,
       `Notas: ${textValue(packageDetails?.notas ?? notes)}`,
     ].join('\n'))
   }
@@ -969,12 +1035,15 @@ export async function sendAdminShipmentNotificationEmail({
 Cliente: ${textValue(customerName)}
 Correo cliente: ${textValue(customerEmail)}
 Remitente: ${textValue(senderName || customerName)} (${textValue(senderPhone)})
+Documento remitente: ${textValue(senderDocumentText)}
 Destinatario: ${textValue(recipientName)} (${textValue(recipientPhone)})
+Documento destinatario: ${textValue(recipientDocumentText)}
 Origen → Destino: ${textValue(origin)} → ${textValue(destination)}
 Fecha solicitud: ${formattedDate}
 Costo total: ${formatCurrency(totalCost)}
 Valor declarado: ${formatCurrency(declaredValue)}
 Peso: ${weightText}
+Tipo de envío: ${textValue(shipmentTypeText)}
 ID pago: ${textValue(paymentId || 'No registrado')}
 Número de guía: ${textValue(trackingNumber || 'Pendiente')}
 

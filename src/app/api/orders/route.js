@@ -199,6 +199,35 @@ export async function POST(request) {
       return null;
     };
 
+    const extractDocumentDetails = (persona) => {
+      if (!persona || typeof persona !== 'object') {
+        return { tipoDocumento: null, numeroDocumento: null };
+      }
+
+      const pickValue = (...keys) => {
+        for (const key of keys) {
+          const raw = persona[key];
+          if (typeof raw === 'string') {
+            const trimmed = raw.trim();
+            if (trimmed.length > 0) {
+              return trimmed;
+            }
+          } else if (raw !== null && raw !== undefined) {
+            const stringified = String(raw).trim();
+            if (stringified.length > 0) {
+              return stringified;
+            }
+          }
+        }
+        return null;
+      };
+
+      return {
+        tipoDocumento: pickValue('tipoDocumento', 'TipoDocumento', 'tipo_documento', 'Tipo_documento', 'documentoTipo', 'tipoDoc', 'tipo_doc'),
+        numeroDocumento: pickValue('numeroDocumento', 'NumeroDocumento', 'numero_documento', 'Numero_documento', 'documento', 'Documento', 'numeroId', 'numero_id', 'identificacion', 'Identificacion'),
+      };
+    };
+
     const normalizeNumber = (value) => {
       if (typeof value === 'number' && Number.isFinite(value)) {
         return value;
@@ -214,6 +243,9 @@ export async function POST(request) {
     const recipientName = parseJsonField(newOrder.Destinatario);
     const destinatarioObj = parsePersonaObject(validatedData?.Destinatario) || parsePersonaObject(newOrder.Destinatario);
     const remitenteObj = parsePersonaObject(validatedData?.Remitente) || parsePersonaObject(newOrder.Remitente);
+
+  const remitenteDocument = extractDocumentDetails(remitenteObj);
+  const destinatarioDocument = extractDocumentDetails(destinatarioObj);
 
     const recipientPhone = destinatarioObj?.Telefono || destinatarioObj?.telefono || destinatarioObj?.phone || null;
     const senderName = remitenteObj?.Nombre || remitenteObj?.nombre || remitenteObj?.name || customerName;
@@ -247,6 +279,8 @@ export async function POST(request) {
         || newOrder.Origen
         || null,
       telefono: senderPhone,
+      tipoDocumento: remitenteDocument.tipoDocumento,
+      numeroDocumento: remitenteDocument.numeroDocumento,
     };
 
     const recipientDetailsForEmail = {
@@ -259,12 +293,27 @@ export async function POST(request) {
         || null,
       telefono: recipientPhone,
       email: body?.destinatarioEmail || null,
+      tipoDocumento: destinatarioDocument.tipoDocumento,
+      numeroDocumento: destinatarioDocument.numeroDocumento,
     };
 
     const rawDimensions = validatedData?.Dimensiones
       ?? body?.Dimensiones
       ?? body?.dimensiones
       ?? null;
+
+    const shipmentType = (
+      body?.tipoEnvio
+      || body?.TipoEnvio
+      || body?.tipo_envio
+      || body?.tipoPaquete
+      || body?.tipo_paquete
+      || body?.TipoPaquete
+      || body?.categoriaEnvio
+      || body?.CategoriaEnvio
+      || validatedData?.tipoEnvio
+      || validatedData?.TipoEnvio
+    ) ?? null;
 
     const packageDetailsForEmail = {
       numeroGuia: newOrder.NumeroGuia,
@@ -275,6 +324,7 @@ export async function POST(request) {
       dimensiones: typeof rawDimensions === 'string' && rawDimensions.trim().length > 0 ? rawDimensions.trim() : null,
       valorDeclarado: declaredValueForEmail,
       notas: notesForEmail,
+      tipoEnvio: typeof shipmentType === 'string' && shipmentType.trim().length > 0 ? shipmentType.trim() : null,
     };
 
     const normalizedMontoTotal = normalizeNumber(body?.montoTotal)
@@ -319,6 +369,14 @@ export async function POST(request) {
       'alto',
       'ancho',
       'largo',
+      'tipoEnvio',
+      'TipoEnvio',
+      'tipo_envio',
+      'tipoPaquete',
+      'TipoPaquete',
+      'tipo_paquete',
+      'categoriaEnvio',
+      'CategoriaEnvio',
     ];
     for (const key of knownKeys) {
       if (key in bodyExtras) {
@@ -342,6 +400,7 @@ export async function POST(request) {
         dimensiones: packageDetailsForEmail.dimensiones,
         valorDeclarado: validatedData?.ValorDeclarado ?? declaredValueForEmail ?? null,
         notas: notesForEmail,
+        tipoEnvio: packageDetailsForEmail.tipoEnvio,
       },
       pago: paymentDetailsForEmail,
       extras: Object.keys(bodyExtras).length > 0 ? bodyExtras : undefined,

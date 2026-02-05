@@ -50,7 +50,7 @@ export const ADMOB_CONFIG = {
     isTesting: process.env.NODE_ENV !== 'production',
   },
   REWARD_SETTINGS: {
-    DISCOUNT_AMOUNT: 2013,
+    DISCOUNT_AMOUNT: 988,
     REWARD_TYPE: 'discount',
     CURRENCY: 'COP',
   },
