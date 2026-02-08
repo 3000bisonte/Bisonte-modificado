@@ -132,9 +132,30 @@ const PagarComponent = ({ saldo: _saldo, onRecargarSaldo: _onRecargarSaldo, onPa
                 return prevCostoTotal; // No cambiar nada si no hay costo inicial
               }
 
-              // Calcular el nuevo costo, asegurando que no sea negativo
+              // Calcular el nuevo costo, asegurando que no sea menor al mínimo permitido
+              let minAllowedCost = 0;
+              let cotizacionData = null;
+              try {
+                const savedCotizacionString =
+                  localStorage.getItem("cotizacion");
+
+                if (savedCotizacionString) {
+                  cotizacionData = JSON.parse(savedCotizacionString);
+                  const parsedMinCost = Number(cotizacionData?.minAllowedCost);
+                  if (Number.isFinite(parsedMinCost)) {
+                    minAllowedCost = parsedMinCost;
+                  }
+                }
+              } catch (error) {
+                console.error(
+                  "Error al leer 'cotizacion' en localStorage para mínimo:",
+                  error
+                );
+              }
+
+              // Calcular el nuevo costo, asegurando que no sea menor al mínimo permitido
               const newCostoTotal = Math.max(
-                0,
+                minAllowedCost,
                 prevCostoTotal - originalReward
               );
               console.log(

@@ -380,7 +380,10 @@ export default function Resumen() {
 
       const previousTotal = Number(stored.costoTotal);
       const normalizedDiscount = Number.isFinite(amount) ? amount : DEFAULT_REWARD_AMOUNT;
-      const nuevoCosto = Math.max(0, previousTotal - normalizedDiscount);
+      const minAllowedCost = Number.isFinite(Number(stored.minAllowedCost))
+        ? Number(stored.minAllowedCost)
+        : 0;
+      const nuevoCosto = Math.max(minAllowedCost, previousTotal - normalizedDiscount);
       const updated = {
         ...stored,
         costoTotal: nuevoCosto,

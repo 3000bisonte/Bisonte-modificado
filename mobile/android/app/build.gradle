@@ -11,8 +11,8 @@ android {
         applicationId "com.bisonteapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+    versionCode 18
+    versionName "1.0.18"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Configure manifest placeholders
         // admob_app_id can be overridden by gradle property ADMOB_APP_ID or ENV ADMOB_APP_ID

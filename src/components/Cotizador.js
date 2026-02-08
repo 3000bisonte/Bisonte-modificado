@@ -13,7 +13,7 @@ const normalizePerfilesResponse = (response) => {
   return perfiles.filter(p => p !== null);
 };
 
-import { getTestModeCost, getTestModeBanner } from "../config/testMode";
+import TEST_MODE, { getTestModeCost, getTestModeBanner } from "../config/testMode";
 import { useLoadingMonitor } from "../hooks/useLoadingMonitor";
 import { useNotification } from "../hooks/useNotification";
 
@@ -39,6 +39,29 @@ async function fetchPerfil() {
     } catch (error) {
         console.error("Error parsing perfil JSON:", error);
         return [];
+    }
+}
+
+async function fetchShipmentCount(email) {
+    if (!email) {
+        return 0;
+    }
+    try {
+        const response = await fetch(`/api/envios/historial?email=${encodeURIComponent(email)}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        if (!response.ok) {
+            console.error("Error fetching historial:", response.status, await response.text());
+            return 0;
+        }
+        const data = await response.json();
+        return Array.isArray(data) ? data.length : 0;
+    } catch (error) {
+        console.error("Error fetching shipment count:", error);
+        return 0;
     }
 }
 
@@ -99,6 +122,7 @@ export default function Cotizador() {
     const [, setProfileError] = useState(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [isLoadingAction, setIsLoadingAction] = useState(false);
+    const [shipmentCount, setShipmentCount] = useState(0);
 
     // 🎯 Monitorear estado isLoadingAction - activa pantalla global después de 3 segundos
     useLoadingMonitor(isLoadingAction, 'cotizador-action', 'Procesando cotización...');
@@ -132,6 +156,11 @@ export default function Cotizador() {
     const MAX_VOLUMETRIC_WEIGHT = 15;
     const MIN_DECLARED_VALUE_SURCHARGE = 20000;
     const DECLARED_VALUE_SURCHARGE_RATE = 0.01;
+    const BOGOTA_BASE = 15000;
+    const SABANA_BASE = 18000;
+    const BOGOTA_FLOOR_AFTER_4 = 8000;
+    const SABANA_FLOOR_AFTER_4 = 14000;
+    const SHIPMENT_FLOOR_THRESHOLD = 3;
 
     // --- Effects ---
 
@@ -152,6 +181,30 @@ export default function Cotizador() {
         };
         loadPerfil();
     }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        if (!session?.user?.email) {
+            setShipmentCount(0);
+            return () => {
+                isMounted = false;
+            };
+        }
+
+        const loadShipmentCount = async () => {
+            const count = await fetchShipmentCount(session.user.email);
+            if (isMounted) {
+                setShipmentCount(count);
+            }
+        };
+
+        loadShipmentCount();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [session?.user?.email]);
 
     // Calculate Volumetric Weight
     useEffect(() => {
@@ -195,14 +248,15 @@ export default function Cotizador() {
             const chargeableWeight = Math.max(actualPeso, volumetricWeight);
             
             const tarifas = {
-                Sobre: { hasta1Kilo: 12000, hasta3Kilos: 12000, adicional: 3000 },
-                Paquete: { hasta1Kilo: 12000, hasta3Kilos: 15000, adicional: 3000 },
-                Sábana: { hasta1Kilo: 15000, hasta3Kilos: 18000, adicional: 3000 },
+                Sobre: { hasta1Kilo: BOGOTA_BASE, hasta3Kilos: BOGOTA_BASE, adicional: 3000 },
+                Paquete: { hasta1Kilo: BOGOTA_BASE, hasta3Kilos: BOGOTA_BASE, adicional: 3000 },
+                Sábana: { hasta1Kilo: SABANA_BASE, hasta3Kilos: SABANA_BASE, adicional: 3000 },
             };
 
+            const isSabana = sabanaCities.includes(formData.ciudadDestino);
             let tarifa = tarifas[formData.tipoEnvio];
 
-            if (sabanaCities.includes(formData.ciudadDestino)) {
+            if (isSabana) {
                 tarifa = tarifas["Sábana"];
             }
 
@@ -227,9 +281,14 @@ export default function Cotizador() {
                 : 0;
 
             const costoFinal = costoBase + recargoValor;
+            const qualifiesForFloor = shipmentCount >= SHIPMENT_FLOOR_THRESHOLD;
+            const minAllowedCost = !TEST_MODE.FORCE_FREE_SHIPPING && qualifiesForFloor
+                ? (isSabana ? SABANA_FLOOR_AFTER_4 : BOGOTA_FLOOR_AFTER_4)
+                : 0;
+            const costoConMinimo = minAllowedCost ? Math.max(costoFinal, minAllowedCost) : costoFinal;
             
             // 🧪 Aplicar modo prueba (si está activo, retorna $0)
-            const costoConModoPrueba = getTestModeCost(costoFinal);
+            const costoConModoPrueba = getTestModeCost(costoConMinimo);
             
             setCostoTotal(costoConModoPrueba);
             setIsCalculating(false);
@@ -243,7 +302,8 @@ export default function Cotizador() {
         formData.ciudadDestino,
         formData.valorDeclarado,
         volumetricWeight,
-        volumetricError
+        volumetricError,
+        shipmentCount
     ]);
 
     // Load saved data from localStorage
@@ -340,15 +400,16 @@ export default function Cotizador() {
 
         // Tarifas según tipo de envío
         const tarifas = {
-            Sobre: { hasta1Kilo: 12000, hasta3Kilos: 12000, adicional: 3000 },
-            Paquete: { hasta1Kilo: 12000, hasta3Kilos: 15000, adicional: 3000 },
-            Sábana: { hasta1Kilo: 15000, hasta3Kilos: 18000, adicional: 3000 },
+            Sobre: { hasta1Kilo: BOGOTA_BASE, hasta3Kilos: BOGOTA_BASE, adicional: 3000 },
+            Paquete: { hasta1Kilo: BOGOTA_BASE, hasta3Kilos: BOGOTA_BASE, adicional: 3000 },
+            Sábana: { hasta1Kilo: SABANA_BASE, hasta3Kilos: SABANA_BASE, adicional: 3000 },
         };
 
+        const isSabana = sabanaCities.includes(formData.ciudadDestino);
         let tarifa = tarifas[formData.tipoEnvio];
 
         // Si la ciudad destino está en lista de sábana, usar tarifa Sábana
-        if (sabanaCities.includes(formData.ciudadDestino)) {
+        if (isSabana) {
             tarifa = tarifas["Sábana"];
         }
 
@@ -373,16 +434,23 @@ export default function Cotizador() {
             : 0;
 
         const costoFinal = costoBase + recargoValor;
+        const qualifiesForFloor = shipmentCount >= SHIPMENT_FLOOR_THRESHOLD;
+        const minAllowedCost = !TEST_MODE.FORCE_FREE_SHIPPING && qualifiesForFloor
+            ? (isSabana ? SABANA_FLOOR_AFTER_4 : BOGOTA_FLOOR_AFTER_4)
+            : 0;
+        const costoConMinimo = minAllowedCost ? Math.max(costoFinal, minAllowedCost) : costoFinal;
 
         // Aplicar modo prueba si está activo
-        const costoConModoPrueba = getTestModeCost(costoFinal);
+        const costoConModoPrueba = getTestModeCost(costoConMinimo);
 
         return {
             costoTotal: costoConModoPrueba,
             pesoVolumetrico: volWeight,
             pesoFacturable: chargeableWeight,
             costoBase,
-            recargoValor
+            recargoValor,
+            minAllowedCost,
+            shipmentCount
         };
     };
 
@@ -426,7 +494,9 @@ export default function Cotizador() {
             fechaCotizacion: new Date().toISOString(),
             // Metadatos adicionales para auditoría
             costoBase: costoRecalculado.costoBase,
-            recargoValor: costoRecalculado.recargoValor
+            recargoValor: costoRecalculado.recargoValor,
+            minAllowedCost: costoRecalculado.minAllowedCost,
+            shipmentCount: costoRecalculado.shipmentCount
         };
 
         console.log("🔒 Costo recalculado de forma segura:", {

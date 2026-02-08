@@ -10,6 +10,21 @@ legacy/
 **/*.original.js
 **/*.diag.js
 
+# Scripts locales de diagnóstico
+build-*.js
+check-*.js
+compare-*.js
+create-*.js
+debugging-*.js
+diagnose-*.js
+fix-*.js
+probar-*.js
+setup-*.js
+switch-*.js
+validate-*.js
+verify-*.js
+verificar-*.js
+
 # Build outputs
 .next/
 out/
