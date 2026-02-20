@@ -1,9 +1,13 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 
 import BottomNav from "@/components/BottomNav";
+
+// ✅ SOLO ENTREGADOS SE ARCHIVAN AUTOMÁTICAMENTE
+const ESTADOS_ARCHIVADOS = ["ENTREGADO"];
+const ITEMS_POR_PAGINA = 15;
 
 export default function AdminEnvios() {
   const { data: session, status } = useSession();
@@ -14,6 +18,13 @@ export default function AdminEnvios() {
   const [envioExpandido, setEnvioExpandido] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEstado, setFilterEstado] = useState("all");
+  
+  // ✅ NUEVOS ESTADOS PARA OPTIMIZACIÓN
+  const [vistaActual, setVistaActual] = useState("activos"); // "activos" | "archivados"
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [ordenamiento, setOrdenamiento] = useState("reciente"); // "reciente" | "antiguo"
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState("");
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState("");
   
   // ✅ SISTEMA DE NOTIFICACIONES LOCAL SIMPLE
   const [notification, setNotification] = useState(null);
@@ -275,20 +286,91 @@ export default function AdminEnvios() {
   };
 
   // Filtrar envíos según búsqueda y estado
-  const enviosFiltrados = envios.filter(envio => {
-    const destinatarioNombre = parseJsonField(envio.Destinatario).toLowerCase();
-    const remitenteNombre = parseJsonField(envio.Remitente).toLowerCase();
+  const enviosFiltrados = useMemo(() => {
+    let resultado = envios.filter(envio => {
+      const destinatarioNombre = parseJsonField(envio.Destinatario).toLowerCase();
+      const remitenteNombre = parseJsonField(envio.Remitente).toLowerCase();
+      
+      // ✅ FILTRO POR VISTA (ACTIVOS vs ARCHIVADOS)
+      const esArchivado = ESTADOS_ARCHIVADOS.includes(envio.Estado);
+      if (vistaActual === "activos" && esArchivado) return false;
+      if (vistaActual === "archivados" && !esArchivado) return false;
+      
+      const matchSearch = (
+        envio.NumeroGuia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        remitenteNombre.includes(searchTerm.toLowerCase()) ||
+        destinatarioNombre.includes(searchTerm.toLowerCase()) ||
+        envio.Origen?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        envio.Destino?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      const matchEstado = filterEstado === "all" || envio.Estado === filterEstado;
+      
+      // ✅ FILTRO POR FECHA
+      let matchFecha = true;
+      if (filtroFechaDesde) {
+        const fechaEnvio = new Date(envio.FechaSolicitud);
+        const fechaDesde = new Date(filtroFechaDesde);
+        fechaDesde.setHours(0, 0, 0, 0);
+        if (fechaEnvio < fechaDesde) matchFecha = false;
+      }
+      if (filtroFechaHasta) {
+        const fechaEnvio = new Date(envio.FechaSolicitud);
+        const fechaHasta = new Date(filtroFechaHasta);
+        fechaHasta.setHours(23, 59, 59, 999);
+        if (fechaEnvio > fechaHasta) matchFecha = false;
+      }
+      
+      return matchSearch && matchEstado && matchFecha;
+    });
     
-    const matchSearch = (
-      envio.NumeroGuia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      remitenteNombre.includes(searchTerm.toLowerCase()) ||
-      destinatarioNombre.includes(searchTerm.toLowerCase()) ||
-      envio.Origen?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      envio.Destino?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    const matchEstado = filterEstado === "all" || envio.Estado === filterEstado;
-    return matchSearch && matchEstado;
-  });
+    // ✅ ORDENAMIENTO
+    resultado.sort((a, b) => {
+      const fechaA = new Date(a.FechaSolicitud);
+      const fechaB = new Date(b.FechaSolicitud);
+      return ordenamiento === "reciente" ? fechaB - fechaA : fechaA - fechaB;
+    });
+    
+    return resultado;
+  }, [envios, searchTerm, filterEstado, vistaActual, ordenamiento, filtroFechaDesde, filtroFechaHasta]);
+
+  // ✅ PAGINACIÓN
+  const totalPaginas = Math.ceil(enviosFiltrados.length / ITEMS_POR_PAGINA);
+  const enviosPaginados = useMemo(() => {
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+    return enviosFiltrados.slice(inicio, inicio + ITEMS_POR_PAGINA);
+  }, [enviosFiltrados, paginaActual]);
+
+  // ✅ ESTADÍSTICAS SEPARADAS
+  const estadisticasActivos = useMemo(() => {
+    return envios.filter(e => !ESTADOS_ARCHIVADOS.includes(e.Estado)).reduce((acc, envio) => {
+      acc[envio.Estado] = (acc[envio.Estado] || 0) + 1;
+      return acc;
+    }, {});
+  }, [envios]);
+
+  const estadisticasArchivados = useMemo(() => {
+    return envios.filter(e => ESTADOS_ARCHIVADOS.includes(e.Estado)).reduce((acc, envio) => {
+      acc[envio.Estado] = (acc[envio.Estado] || 0) + 1;
+      return acc;
+    }, {});
+  }, [envios]);
+
+  const totalActivos = envios.filter(e => !ESTADOS_ARCHIVADOS.includes(e.Estado)).length;
+  const totalArchivados = envios.filter(e => ESTADOS_ARCHIVADOS.includes(e.Estado)).length;
+
+  // Reset página cuando cambian filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, filterEstado, vistaActual, filtroFechaDesde, filtroFechaHasta]);
+
+  // Limpiar filtros
+  const limpiarFiltros = () => {
+    setSearchTerm("");
+    setFilterEstado("all");
+    setFiltroFechaDesde("");
+    setFiltroFechaHasta("");
+    setPaginaActual(1);
+  };
 
   if (status === "loading" || loading) {
     return (
@@ -305,7 +387,7 @@ export default function AdminEnvios() {
     );
   };
 
-  const estadisticas = getEstadisticas();
+  const estadisticas = vistaActual === "activos" ? estadisticasActivos : estadisticasArchivados;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
@@ -332,15 +414,58 @@ export default function AdminEnvios() {
               </div>
             </div>
 
-            {/* Buscador y Filtros */}
-            <div className="flex flex-col sm:flex-row gap-3 flex-1 lg:max-w-2xl">
+            {/* ✅ TABS ACTIVOS/ARCHIVADOS */}
+            <div className="flex bg-white rounded-xl p-1 shadow-lg border border-slate-200">
+              <button
+                onClick={() => setVistaActual("activos")}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                  vistaActual === "activos"
+                    ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>Activos</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  vistaActual === "activos" ? "bg-white/20" : "bg-emerald-100 text-emerald-700"
+                }`}>
+                  {totalActivos}
+                </span>
+              </button>
+              <button
+                onClick={() => setVistaActual("archivados")}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                  vistaActual === "archivados"
+                    ? "bg-gradient-to-r from-slate-500 to-slate-600 text-white shadow-md"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                <span>Archivados</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  vistaActual === "archivados" ? "bg-white/20" : "bg-slate-200 text-slate-600"
+                }`}>
+                  {totalArchivados}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* ✅ BARRA DE FILTROS MEJORADA */}
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-4 mb-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Buscador */}
               <div className="relative flex-1">
                 <input
                   type="text"
                   placeholder="Buscar por guía, remitente, destinatario..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 text-slate-700 placeholder-slate-400 text-sm"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:bg-white transition-all duration-200 text-slate-700 placeholder-slate-400 text-sm"
                 />
                 <svg className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -356,26 +481,87 @@ export default function AdminEnvios() {
                   </button>
                 )}
               </div>
-              
-              <div className="flex gap-2">
+
+              {/* Filtros en fila */}
+              <div className="flex flex-wrap gap-2">
+                {/* Filtro Estado */}
                 <select
                   value={filterEstado}
                   onChange={(e) => setFilterEstado(e.target.value)}
-                  className="px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 text-slate-700 text-sm font-medium cursor-pointer"
+                  className="px-3 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 text-slate-700 text-sm font-medium cursor-pointer"
                 >
-                  <option value="all">Todos los estados</option>
-                  <option value="RECOLECCION_PENDIENTE">🕐 Recolección pendiente</option>
-                  <option value="RECOGIDO_TRANSPORTADORA">✅ Recogido</option>
-                  <option value="EN_TRANSPORTE">🚛 En transporte</option>
-                  <option value="EN_CIUDAD_DESTINO">🏙️ En destino</option>
-                  <option value="EN_DISTRIBUCION">📦 En distribución</option>
-                  <option value="ENTREGADO">✅ Entregado</option>
+                  <option value="all">📋 Todos</option>
+                  {vistaActual === "activos" ? (
+                    <>
+                      <option value="RECOLECCION_PENDIENTE">🕐 Pendiente</option>
+                      <option value="RECOGIDO_TRANSPORTADORA">✅ Recogido</option>
+                      <option value="EN_TRANSPORTE">🚛 En transporte</option>
+                      <option value="EN_CIUDAD_DESTINO">🏙️ En destino</option>
+                      <option value="EN_DISTRIBUCION">📦 En distribución</option>
+                      <option value="NO_ENTREGADO">❌ No entregado</option>
+                      <option value="REPROGRAMAR">🔄 Reprogramar</option>
+                      <option value="DEVOLUCION">↩️ Devolución</option>
+                      <option value="DEVUELTO_ORIGEN">⬅️ Devuelto</option>
+                      <option value="ENVIO_CANCELADO">🚫 Cancelado</option>
+                      <option value="EN_ESPERA_CLIENTE">👤 En espera</option>
+                    </>
+                  ) : (
+                    /* Solo ENTREGADO en archivados */
+                    <option value="ENTREGADO">✅ Entregado</option>
+                  )}
                 </select>
-                
+
+                {/* Ordenamiento */}
+                <select
+                  value={ordenamiento}
+                  onChange={(e) => setOrdenamiento(e.target.value)}
+                  className="px-3 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 text-slate-700 text-sm font-medium cursor-pointer"
+                >
+                  <option value="reciente">📅 Más reciente</option>
+                  <option value="antiguo">📅 Más antiguo</option>
+                </select>
+
+                {/* Fecha Desde */}
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={filtroFechaDesde}
+                    onChange={(e) => setFiltroFechaDesde(e.target.value)}
+                    className="px-3 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 text-slate-700 text-sm font-medium cursor-pointer"
+                    title="Fecha desde"
+                  />
+                </div>
+
+                {/* Fecha Hasta */}
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={filtroFechaHasta}
+                    onChange={(e) => setFiltroFechaHasta(e.target.value)}
+                    className="px-3 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-200 text-slate-700 text-sm font-medium cursor-pointer"
+                    title="Fecha hasta"
+                  />
+                </div>
+
+                {/* Botón Limpiar */}
+                {(searchTerm || filterEstado !== "all" || filtroFechaDesde || filtroFechaHasta) && (
+                  <button
+                    onClick={limpiarFiltros}
+                    className="px-3 py-2.5 bg-red-50 text-red-600 border-2 border-red-200 rounded-xl hover:bg-red-100 transition-all duration-200 text-sm font-medium"
+                    title="Limpiar filtros"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
+
+                {/* Botón Refrescar */}
                 <button
                   onClick={loadEnvios}
                   disabled={loading}
-                  className="flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+                  className="flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+                  title="Actualizar lista"
                 >
                   <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -383,127 +569,183 @@ export default function AdminEnvios() {
                 </button>
               </div>
             </div>
+
+            {/* Contador de resultados */}
+            <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
+              <span>
+                Mostrando <strong className="text-slate-700">{enviosPaginados.length}</strong> de <strong className="text-slate-700">{enviosFiltrados.length}</strong> envíos
+                {(searchTerm || filterEstado !== "all" || filtroFechaDesde || filtroFechaHasta) && (
+                  <span className="text-emerald-600 ml-1">(filtrados)</span>
+                )}
+              </span>
+              {totalPaginas > 1 && (
+                <span>Página {paginaActual} de {totalPaginas}</span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* ✅ ESTADÍSTICAS MEJORADAS CON ANIMACIONES */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-6 sm:mb-8">
-          <div className="group bg-gradient-to-br from-emerald-50 to-white rounded-2xl shadow-lg border border-emerald-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-emerald-400 to-green-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
+        {/* ✅ ESTADÍSTICAS SEGÚN VISTA ACTUAL */}
+        {vistaActual === "activos" ? (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5 mb-6 sm:mb-8">
+            <div className="group bg-gradient-to-br from-emerald-50 to-white rounded-2xl shadow-lg border border-emerald-100 p-4 sm:p-5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-400 to-green-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                </div>
               </div>
-              <div className="flex items-center space-x-1 text-xs font-semibold text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full">
-                <span>Total</span>
-              </div>
+              <p className="text-xs text-slate-500 font-medium">Total Activos</p>
+              <p className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">{totalActivos}</p>
             </div>
-            <div>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">Total Envíos</p>
-              <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">{enviosFiltrados.length}</p>
-            </div>
-          </div>
 
-          <div className="group bg-gradient-to-br from-yellow-50 to-white rounded-2xl shadow-lg border border-yellow-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div className="group bg-gradient-to-br from-yellow-50 to-white rounded-2xl shadow-lg border border-yellow-100 p-4 sm:p-5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
               </div>
-              <div className="flex items-center space-x-1 text-xs font-semibold text-yellow-700 bg-yellow-100 px-2.5 py-1 rounded-full">
-                <span>{enviosFiltrados.length > 0 ? Math.round((enviosFiltrados.filter(e => e.Estado === 'RECOLECCION_PENDIENTE').length / enviosFiltrados.length) * 100) : 0}%</span>
-              </div>
+              <p className="text-xs text-slate-500 font-medium">Pendientes</p>
+              <p className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">{estadisticas.RECOLECCION_PENDIENTE || 0}</p>
             </div>
-            <div>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">Pendientes</p>
-              <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">{estadisticas.RECOLECCION_PENDIENTE || 0}</p>
-            </div>
-          </div>
 
-          <div className="group bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-lg border border-blue-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-400 to-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+            <div className="group bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-lg border border-blue-100 p-4 sm:p-5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-400 to-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
               </div>
-              <div className="flex items-center space-x-1 text-xs font-semibold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full">
-                <span>{enviosFiltrados.length > 0 ? Math.round((enviosFiltrados.filter(e => e.Estado === 'EN_TRANSPORTE').length / enviosFiltrados.length) * 100) : 0}%</span>
-              </div>
+              <p className="text-xs text-slate-500 font-medium">En Tránsito</p>
+              <p className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">{estadisticas.EN_TRANSPORTE || 0}</p>
             </div>
-            <div>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">En Tránsito</p>
-              <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">{estadisticas.EN_TRANSPORTE || 0}</p>
-            </div>
-          </div>
 
-          <div className="group bg-gradient-to-br from-green-50 to-white rounded-2xl shadow-lg border border-green-100 p-5 sm:p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div className="group bg-gradient-to-br from-purple-50 to-white rounded-2xl shadow-lg border border-purple-100 p-4 sm:p-5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-400 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                </div>
               </div>
-              <div className="flex items-center space-x-1 text-xs font-semibold text-green-700 bg-green-100 px-2.5 py-1 rounded-full">
-                <span>{enviosFiltrados.length > 0 ? Math.round((enviosFiltrados.filter(e => e.Estado === 'ENTREGADO').length / enviosFiltrados.length) * 100) : 0}%</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mb-1">Entregados</p>
-              <p className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{estadisticas.ENTREGADO || 0}</p>
+              <p className="text-xs text-slate-500 font-medium">En Distribución</p>
+              <p className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">{estadisticas.EN_DISTRIBUCION || 0}</p>
             </div>
           </div>
-        </div>
+        ) : (
+          /* ✅ ESTADÍSTICAS PARA ARCHIVADOS - SOLO ENTREGADOS */
+          <div className="mb-6 sm:mb-8">
+            <div className="group bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-lg border border-green-200 p-6 sm:p-8 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-7 h-7 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-600 font-medium">Total de Entregas Completadas</p>
+                    <p className="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{totalArchivados}</p>
+                  </div>
+                </div>
+                <div className="hidden sm:flex flex-col items-end">
+                  <div className="flex items-center space-x-2 text-green-600 bg-green-100 px-3 py-1.5 rounded-full">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                    <span className="text-sm font-semibold">Archivados automáticamente</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">Los envíos marcados como ENTREGADO se archivan aquí</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ✅ TABLA CON PADDING Y SCROLL MEJORADOS */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200">
-            <h2 className="text-lg sm:text-xl font-semibold text-slate-800">Lista de Envíos</h2>
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="text-lg sm:text-xl font-semibold text-slate-800">
+              {vistaActual === "activos" ? "📦 Envíos Activos" : "📁 Envíos Archivados"}
+            </h2>
+            {vistaActual === "archivados" && (
+              <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full flex items-center">
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Entregas completadas
+              </span>
+            )}
           </div>
           
           {enviosFiltrados.length === 0 ? (
             <div className="p-8 sm:p-12 text-center">
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-slate-100 to-emerald-50 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6 sm:w-8 sm:h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  {vistaActual === "archivados" ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  )}
                 </svg>
               </div>
               <p className="text-slate-700 font-semibold text-base sm:text-lg mb-1">
-                {searchTerm || filterEstado !== "all" ? "No se encontraron resultados" : "No hay envíos registrados"}
+                {searchTerm || filterEstado !== "all" || filtroFechaDesde || filtroFechaHasta
+                  ? "No se encontraron resultados"
+                  : vistaActual === "archivados"
+                    ? "No hay envíos archivados"
+                    : "No hay envíos activos"
+                }
               </p>
               <p className="text-slate-500 text-sm">
-                {searchTerm || filterEstado !== "all" ? "Intenta con otros términos de búsqueda o filtros" : "Los envíos aparecerán aquí cuando se registren"}
+                {searchTerm || filterEstado !== "all" || filtroFechaDesde || filtroFechaHasta
+                  ? "Intenta con otros términos de búsqueda o filtros"
+                  : vistaActual === "archivados"
+                    ? "Los envíos marcados como ENTREGADO se archivan automáticamente aquí"
+                    : "Los envíos activos aparecerán aquí cuando se registren"
+                }
               </p>
+              {(searchTerm || filterEstado !== "all" || filtroFechaDesde || filtroFechaHasta) && (
+                <button
+                  onClick={limpiarFiltros}
+                  className="mt-4 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors text-sm font-medium"
+                >
+                  Limpiar filtros
+                </button>
+              )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-50">
-                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider">
-                      Número de Guía
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
-                      Remitente
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
-                      Destinatario
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden lg:table-cell">
-                      Rutas
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider">
-                      Estado
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {enviosFiltrados.map((envio) => (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Número de Guía
+                      </th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
+                        Remitente
+                      </th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">
+                        Destinatario
+                      </th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider hidden lg:table-cell">
+                        Rutas
+                      </th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Estado
+                      </th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {enviosPaginados.map((envio) => (
                     <React.Fragment key={envio.id}>
                       <tr className="hover:bg-slate-50 transition-colors duration-150">
                         <td className="px-3 sm:px-6 py-3 sm:py-4">
@@ -665,6 +907,98 @@ export default function AdminEnvios() {
                 </tbody>
               </table>
             </div>
+
+            {/* ✅ PAGINACIÓN */}
+            {totalPaginas > 1 && (
+              <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-slate-50">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-sm text-slate-600">
+                    Mostrando {((paginaActual - 1) * ITEMS_POR_PAGINA) + 1} - {Math.min(paginaActual * ITEMS_POR_PAGINA, enviosFiltrados.length)} de {enviosFiltrados.length}
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    {/* Botón Primera página */}
+                    <button
+                      onClick={() => setPaginaActual(1)}
+                      disabled={paginaActual === 1}
+                      className="p-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title="Primera página"
+                    >
+                      <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    
+                    {/* Botón Anterior */}
+                    <button
+                      onClick={() => setPaginaActual(prev => Math.max(prev - 1, 1))}
+                      disabled={paginaActual === 1}
+                      className="p-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title="Página anterior"
+                    >
+                      <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Números de página */}
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                        let pageNum;
+                        if (totalPaginas <= 5) {
+                          pageNum = i + 1;
+                        } else if (paginaActual <= 3) {
+                          pageNum = i + 1;
+                        } else if (paginaActual >= totalPaginas - 2) {
+                          pageNum = totalPaginas - 4 + i;
+                        } else {
+                          pageNum = paginaActual - 2 + i;
+                        }
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setPaginaActual(pageNum)}
+                            className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                              paginaActual === pageNum
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                                : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Botón Siguiente */}
+                    <button
+                      onClick={() => setPaginaActual(prev => Math.min(prev + 1, totalPaginas))}
+                      disabled={paginaActual === totalPaginas}
+                      className="p-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title="Página siguiente"
+                    >
+                      <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+
+                    {/* Botón Última página */}
+                    <button
+                      onClick={() => setPaginaActual(totalPaginas)}
+                      disabled={paginaActual === totalPaginas}
+                      className="p-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title="Última página"
+                    >
+                      <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>
