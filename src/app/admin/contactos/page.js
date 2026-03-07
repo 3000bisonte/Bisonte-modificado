@@ -60,7 +60,6 @@ export default function AdminContactos() {
       "3000bisonte@gmail.com",
       "bisonteangela@gmail.com",
       "bisonteoskar@gmail.com",
-      "test@bisonteapp.com",
     ];
 
     if (status === "loading") {

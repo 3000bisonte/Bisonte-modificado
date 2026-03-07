@@ -7,7 +7,17 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const revalidate = 0;
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export async function GET() {
+  // ✅ BLOQUEAR en producción - expone información interna del servidor
+  if (isProduction) {
+    return NextResponse.json(
+      { success: false, error: "Endpoint de diagnóstico no disponible en producción" },
+      { status: 403 }
+    );
+  }
+
   const diagnostics = {
     timestamp: new Date().toISOString(),
     environment: {

@@ -10,7 +10,6 @@ export default function TestSession() {
     "3000bisonte@gmail.com",
     "bisonteangela@gmail.com",
     "bisonteoskar@gmail.com",
-    "test@bisonteapp.com",
   ];
 
   const goToAdmin = () => {
@@ -209,7 +208,7 @@ export default function TestSession() {
           <li><strong>Limpia las cookies</strong> del navegador (F12 → Application → Cookies → Clear)</li>
           <li><strong>Cierra el navegador</strong> completamente</li>
           <li><strong>Abre una ventana de incógnito</strong></li>
-          <li><strong>Inicia sesión de nuevo</strong> con test@bisonteapp.com</li>
+          <li><strong>Inicia sesión de nuevo</strong> con tu cuenta de administrador</li>
           <li><strong>Vuelve a esta página</strong>: /admin/test-session</li>
         </ol>
       </div>

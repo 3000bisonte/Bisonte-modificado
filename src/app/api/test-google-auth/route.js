@@ -3,11 +3,21 @@ import { NextResponse } from 'next/server';
 // export const dynamic = 'force-dynamic';  // Comentado para compatibilidad con export build
 export const runtime = 'nodejs';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 /**
  * Test endpoint para verificar que los endpoints funcionan
  * GET /api/test-google-auth
+ * ⚠️ BLOQUEADO EN PRODUCCIÓN
  */
 export async function GET(request) {
+  if (isProduction) {
+    return NextResponse.json(
+      { success: false, error: "Endpoint de prueba no disponible en producción" },
+      { status: 403 }
+    );
+  }
+
   console.log('TEST Google Auth endpoint - GET request received');
   
   return NextResponse.json({
@@ -24,8 +34,16 @@ export async function GET(request) {
 /**
  * Test endpoint para verificar POST requests
  * POST /api/test-google-auth
+ * ⚠️ BLOQUEADO EN PRODUCCIÓN
  */
 export async function POST(request) {
+  if (isProduction) {
+    return NextResponse.json(
+      { success: false, error: "Endpoint de prueba no disponible en producción" },
+      { status: 403 }
+    );
+  }
+
   try {
     console.log('TEST Google Auth endpoint - POST request received');
     

@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 function parseCookies(header: string | null) {
   const out: Record<string, string> = {};
   if (!header) {return out;}
@@ -16,6 +18,14 @@ function parseCookies(header: string | null) {
 }
 
 export function GET(request: NextRequest) {
+  // ✅ BLOQUEAR en producción - expone cookies de sesión y permite manipulación
+  if (isProduction) {
+    return NextResponse.json(
+      { success: false, error: "Endpoint de diagnóstico no disponible en producción" },
+      { status: 403 }
+    );
+  }
+
   const url = new URL(request.url);
   const ua = request.headers.get('user-agent') || '';
   const cookie = request.headers.get('cookie') || '';

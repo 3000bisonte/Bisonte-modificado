@@ -6,10 +6,20 @@ import { NextResponse } from 'next/server';
  * Este endpoint se usa para probar el flujo de creación de envíos
  * sin necesitar una tarjeta real de MercadoPago.
  * 
- * ⚠️ SOLO PARA DESARROLLO/TESTING - Desactivar en producción
+ * ⚠️ BLOQUEADO EN PRODUCCIÓN - Solo funciona en desarrollo local
  */
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export async function POST(request) {
+  // ✅ BLOQUEAR en producción para evitar pagos simulados fraudulentos
+  if (isProduction) {
+    return NextResponse.json(
+      { success: false, error: "Endpoint de prueba no disponible en producción" },
+      { status: 403 }
+    );
+  }
+
   try {
     console.log("🧪 [TEST] Simulando pago exitoso...");
 
@@ -52,6 +62,12 @@ export async function POST(request) {
 
 // GET para verificar que el endpoint está disponible
 export async function GET() {
+  if (isProduction) {
+    return NextResponse.json(
+      { success: false, error: "Endpoint de prueba no disponible en producción" },
+      { status: 403 }
+    );
+  }
   return NextResponse.json({
     message: "🧪 Endpoint de prueba de pago - disponible",
     usage: "POST /api/test-payment-success para simular un pago exitoso",
