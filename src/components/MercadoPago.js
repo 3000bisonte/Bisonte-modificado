@@ -706,6 +706,7 @@ const MercadoPagoComponent = () => {
         metodoPago: "MERCADO_PAGO",
         pagado: true,
         montoTotal,
+        costoTotal: montoTotal, // ✅ Enviar costoTotal para que el email de confirmación muestre el precio correcto
         paymentId: paymentId ?? `MP-${Date.now()}`,
       };
 

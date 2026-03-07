@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { withValidation } from "@/server/http/withValidation";
 import { contactoCreateSchema } from "@/server/schemas/contacto";
+import { sendContactNotificationEmail } from "@/lib/email";
 
 import prisma from "../../../libs/prisma";
 
@@ -39,6 +40,26 @@ export const POST = withValidation(contactoCreateSchema, async (_req, body) => {
     correo,
       },
     });
+
+    // 📧 Enviar notificación por email a bisontepqrs@gmail.com
+    try {
+      const emailResult = await sendContactNotificationEmail({
+        nombre: body.nombre,
+        correo,
+        celular: body.celular,
+        ciudad: body.ciudad,
+        mensaje: body.mensaje,
+      });
+      if (emailResult.sent) {
+        console.log('📧 Notificación de contacto enviada a bisontepqrs@gmail.com:', emailResult.id);
+      } else {
+        console.warn('⚠️ No se pudo enviar notificación de contacto:', emailResult.reason || emailResult.error);
+      }
+    } catch (emailError) {
+      // No fallar la solicitud si el email no se envía
+      console.error('❌ Error al enviar notificación de contacto:', emailError);
+    }
+
     return NextResponse.json({ success: true, mensaje: 'Mensaje enviado correctamente', data: nuevoMensaje });
   } catch (error) {
     console.error('Error al guardar mensaje:', error);

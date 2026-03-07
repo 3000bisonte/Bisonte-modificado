@@ -1365,6 +1365,7 @@ export default function Resumen() {
       pagado: true,
       pagoId: `FREE-${Date.now()}`,
       montoTotal: 0,
+      costoTotal: 0, // ✅ Enviar costoTotal=0 para que el email de confirmación muestre precio correcto
     };
 
     console.log("📦 Creando envío gratuito:", envioData);

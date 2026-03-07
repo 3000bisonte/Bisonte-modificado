@@ -363,6 +363,170 @@ Bisonte Logística
 }
 
 /**
+ * Envía notificación al equipo PQRS cuando un usuario envía un mensaje de contacto
+ * @param {Object} params
+ * @param {string} params.nombre - Nombre del cliente
+ * @param {string} params.correo - Correo del cliente
+ * @param {string} params.celular - Celular del cliente
+ * @param {string} params.ciudad - Ciudad del cliente
+ * @param {string} params.mensaje - Mensaje del cliente
+ * @returns {Promise<Object>} Resultado del envío
+ */
+export async function sendContactNotificationEmail({ nombre, correo, celular, ciudad, mensaje }) {
+  const PQRS_EMAIL = 'bisontepqrs@gmail.com'
+  
+  const result = {
+    attempted: false,
+    sent: false,
+    id: null,
+    error: null,
+    reason: null,
+    transport: null,
+    transportsTried: [],
+  }
+
+  const resend = getResendClient()
+  const smtpTransport = getSmtpTransport()
+
+  const fecha = new Date().toLocaleString('es-CO', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  })
+
+  const htmlContent = `<!doctype html>
+<html lang="es">
+  <head><meta charset="utf-8" /><title>Nuevo mensaje de contacto</title></head>
+  <body style="font-family: Arial, sans-serif; background:#f5f5f5; padding:24px; color:#222">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 24px rgba(15,23,42,0.12)">
+      <tr>
+        <td style="background:linear-gradient(135deg, #41e0b3 0%, #2bbd8c 100%); padding:24px; text-align:center; color:#ffffff">
+          <h1 style="margin:0; font-size:20px; font-weight:700">📩 Nuevo Mensaje de Contacto</h1>
+          <p style="margin:8px 0 0 0; font-size:13px; opacity:0.95">Bisonte Logística - PQRS</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:32px">
+          <p style="margin:0 0 20px 0; font-size:15px; color:#374151">Se ha recibido un nuevo mensaje desde el formulario de contacto de la app:</p>
+          
+          <div style="background:#f9fafb; padding:20px; border-radius:8px; border:1px solid #e5e7eb; margin:0 0 24px 0">
+            <table style="width:100%; border-collapse:collapse">
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; width:30%">👤 Nombre:</td>
+                <td style="padding:8px 0; font-size:14px; color:#111827; font-weight:500">${nombre || 'No especificado'}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; border-top:1px solid #e5e7eb">📧 Correo:</td>
+                <td style="padding:8px 0; font-size:14px; color:#111827; font-weight:500; border-top:1px solid #e5e7eb"><a href="mailto:${correo}" style="color:#2563eb">${correo || 'No especificado'}</a></td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; border-top:1px solid #e5e7eb">📱 Celular:</td>
+                <td style="padding:8px 0; font-size:14px; color:#111827; font-weight:500; border-top:1px solid #e5e7eb">${celular || 'No especificado'}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; border-top:1px solid #e5e7eb">🏙️ Ciudad:</td>
+                <td style="padding:8px 0; font-size:14px; color:#111827; font-weight:500; border-top:1px solid #e5e7eb">${ciudad || 'No especificada'}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; border-top:1px solid #e5e7eb">📅 Fecha:</td>
+                <td style="padding:8px 0; font-size:14px; color:#111827; font-weight:500; border-top:1px solid #e5e7eb">${fecha}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="background:#eff6ff; border-left:4px solid #3b82f6; padding:16px; border-radius:4px; margin:0 0 24px 0">
+            <p style="margin:0 0 8px 0; font-size:13px; font-weight:600; color:#1e40af; text-transform:uppercase">Mensaje:</p>
+            <p style="margin:0; font-size:15px; color:#1e3a8a; line-height:1.6; white-space:pre-wrap">${mensaje || 'Sin mensaje'}</p>
+          </div>
+          
+          <p style="margin:0; font-size:13px; color:#9ca3af; text-align:center">Puedes responder a este contacto desde el panel de administración de Bisonte App.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#f9fafb; padding:16px; text-align:center">
+          <p style="margin:0; font-size:11px; color:#9ca3af">© ${new Date().getFullYear()} Bisonte Logística - Notificación automática</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`
+
+  const textContent = `📩 NUEVO MENSAJE DE CONTACTO - Bisonte Logística
+
+Nombre: ${nombre || 'No especificado'}
+Correo: ${correo || 'No especificado'}
+Celular: ${celular || 'No especificado'}
+Ciudad: ${ciudad || 'No especificada'}
+Fecha: ${fecha}
+
+Mensaje:
+${mensaje || 'Sin mensaje'}
+
+---
+Puedes responder desde el panel de administración.`
+
+  const transports = []
+
+  if (resend) {
+    transports.push({
+      type: 'resend',
+      send: async () => {
+        const { data, error } = await resend.emails.send({
+          from: normalizeFromAddress(),
+          to: PQRS_EMAIL,
+          replyTo: correo || undefined,
+          subject: `📩 Nuevo mensaje de contacto - ${nombre || 'Usuario'}`,
+          html: htmlContent,
+          text: textContent,
+        })
+        if (error) throw new Error(error.message || String(error))
+        return { id: data?.id ?? null }
+      },
+    })
+  }
+
+  if (smtpTransport) {
+    transports.push({
+      type: 'smtp',
+      send: async () => {
+        const info = await smtpTransport.sendMail({
+          from: normalizeFromAddress(),
+          to: PQRS_EMAIL,
+          replyTo: correo || undefined,
+          subject: `📩 Nuevo mensaje de contacto - ${nombre || 'Usuario'}`,
+          html: htmlContent,
+          text: textContent,
+        })
+        return { id: info?.messageId ?? null }
+      },
+    })
+  }
+
+  if (transports.length === 0) {
+    result.reason = 'no_email_transport_configured'
+    return result
+  }
+
+  for (const transport of transports) {
+    try {
+      result.transportsTried.push(transport.type)
+      result.attempted = true
+      const response = await transport.send()
+      result.sent = true
+      result.transport = transport.type
+      result.id = response.id
+      result.reason = null
+      result.error = null
+      return result
+    } catch (err) {
+      result.error = err?.message || String(err)
+      result.reason = `${transport.type}_error`
+    }
+  }
+
+  return result
+}
+
+/**
  * Envía un email de confirmación de pedido al cliente
  * @param {Object} params
  * @param {string} params.to - Email del cliente

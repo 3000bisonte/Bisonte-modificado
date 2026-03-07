@@ -132,7 +132,9 @@ export const AdMobService = {
         requestTrackingAuthorization: true,
       };
 
-      if (isTesting) {
+      // Solo agregar dispositivos de prueba si EXPLÍCITAMENTE está en modo testing
+      // En producción isTesting=false, así AdMob NO mostrará "Anuncio de prueba"
+      if (isTesting === true) {
         Object.assign(initializeOptions, {
           testingDevices: TEST_DEVICE_IDS,
           initializeForTesting: true,
@@ -206,10 +208,15 @@ export const AdMobService = {
         console.log(`   - Ad Unit ID: ${ADMOB_CONFIG.REWARDED_AD_UNIT_ID}`);
         console.log(`   - Testing Mode: ${ADMOB_CONFIG.SETTINGS.isTesting}`);
         
-        const info = await AdMob.prepareRewardVideoAd({
+        const prepareOptions = {
           adId: ADMOB_CONFIG.REWARDED_AD_UNIT_ID,
-          isTesting: ADMOB_CONFIG.SETTINGS.isTesting,
-        });
+        };
+        // Solo pasar isTesting:true si EXPLÍCITAMENTE está en modo pruebas
+        if (ADMOB_CONFIG.SETTINGS.isTesting === true) {
+          prepareOptions.isTesting = true;
+        }
+        
+        const info = await AdMob.prepareRewardVideoAd(prepareOptions);
         
         console.log('✅ Anuncio recompensado preparado exitosamente', info);
         markRewardReady(true);
@@ -287,13 +294,18 @@ export const AdMobService = {
     }
 
     try {
-      await AdMob.showBanner({
+      const bannerOptions = {
         adId: ADMOB_CONFIG.BANNER_AD_UNIT_ID,
-        isTesting: ADMOB_CONFIG.SETTINGS.isTesting,
         margin: 0,
         position: 'BOTTOM_CENTER',
-        npa: true
-      });
+        npa: true,
+      };
+      // Solo pasar isTesting:true si EXPLÍCITAMENTE está en modo pruebas
+      if (ADMOB_CONFIG.SETTINGS.isTesting === true) {
+        bannerOptions.isTesting = true;
+      }
+      
+      await AdMob.showBanner(bannerOptions);
       
       console.log('📱 Banner publicitario mostrado');
       return true;

@@ -1,53 +1,54 @@
 // Minimal AdMob config for web/PWA builds; safe defaults for non-native environments
+// ⚠️ IMPORTANTE: En producción SIEMPRE se usan IDs reales y isTesting=false
 
-const RAW_ENV = (typeof window !== 'undefined' ? (document.querySelector('meta[name="admob-env"]')?.content || '') : (process.env.NODE_ENV || '')).trim().toLowerCase();
-const IS_PRODUCTION = RAW_ENV === 'production' || process.env.NODE_ENV === 'production';
+// IDs reales de producción de AdMob (hardcoded como respaldo definitivo)
+const PRODUCTION_IDS = {
+  APP: 'ca-app-pub-1352045169606160~5443732431',
+  REWARDED: 'ca-app-pub-1352045169606160/7908962294',
+  BANNER: 'ca-app-pub-1352045169606160/7029983134',
+};
 
 const GOOGLE_TEST = {
   APP: 'ca-app-pub-3940256099942544~3347511713',
   REWARDED: 'ca-app-pub-3940256099942544/5224354917',
-  BANNER: 'ca-app-pub-3940256099942544/6300978111'
+  BANNER: 'ca-app-pub-3940256099942544/6300978111',
 };
 
-// 🧪 MODO DE PRUEBA: Cambiar a true para usar Test IDs (anuncios garantizados)
-const FORCE_TEST_IDS = false; // ✅ TRUE = Test IDs (anuncios funcionan siempre) | FALSE = Production IDs
+// 🧪 MODO DE PRUEBA: Cambiar a true SOLO para desarrollo local
+const FORCE_TEST_IDS = false; // ✅ FALSE = Producción | TRUE = Solo desarrollo
 
-function chooseId(kind, real, test) {
-  // 🧪 Forzar Test IDs si está habilitado
+// Determinar si estamos en producción
+// En el build de Next.js, process.env.NODE_ENV se reemplaza en build-time
+// Para la app móvil siempre debe ser producción
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || typeof window !== 'undefined';
+
+function chooseId(kind, envId, hardcodedId, testId) {
   if (FORCE_TEST_IDS) {
-    console.log(`[AdMob Config] 🧪 FORZANDO ${kind} TEST ID (modo prueba):`, test);
-    return test;
+    return testId;
   }
   
-  // En desarrollo, usar IDs de prueba (tienen anuncios garantizados)
-  if (!IS_PRODUCTION) {
-    console.log(`[AdMob Config] Usando ${kind} TEST ID (desarrollo):`, test);
-    return test;
+  // Verificar si el ID del env es válido (no vacío, no placeholder, no es un test ID)
+  if (envId && envId.length > 10 && !envId.includes('XXXX') && !envId.startsWith('ca-app-pub-3940256099942544')) {
+    return envId;
   }
   
-  // En producción, validar que el ID real sea válido
-  if (real && real.length > 10 && !real.includes('XXXX') && real !== test) {
-    console.log(`[AdMob Config] Usando ${kind} REAL ID (producción):`, real);
-    return real;
-  }
-  
-  // Fallback a test ID si el real no es válido
-  console.warn(`[AdMob Config] ⚠️ ${kind} REAL ID inválido, usando TEST ID:`, test);
-  return test;
+  // Siempre usar el ID hardcoded de producción como respaldo
+  return hardcodedId;
 }
 
-const REAL_IDS = {
+const ENV_IDS = {
   APP: process.env.NEXT_PUBLIC_ADMOB_APP_ID || '',
   REWARDED: process.env.NEXT_PUBLIC_ADMOB_REWARDED_ID || '',
-  BANNER: process.env.NEXT_PUBLIC_ADMOB_BANNER_ID || ''
+  BANNER: process.env.NEXT_PUBLIC_ADMOB_BANNER_ID || '',
 };
 
 export const ADMOB_CONFIG = {
-  APP_ID: chooseId('APP', REAL_IDS.APP, GOOGLE_TEST.APP),
-  REWARDED_AD_UNIT_ID: chooseId('REWARDED', REAL_IDS.REWARDED, GOOGLE_TEST.REWARDED),
-  BANNER_AD_UNIT_ID: chooseId('BANNER', REAL_IDS.BANNER, GOOGLE_TEST.BANNER),
+  APP_ID: chooseId('APP', ENV_IDS.APP, PRODUCTION_IDS.APP, GOOGLE_TEST.APP),
+  REWARDED_AD_UNIT_ID: chooseId('REWARDED', ENV_IDS.REWARDED, PRODUCTION_IDS.REWARDED, GOOGLE_TEST.REWARDED),
+  BANNER_AD_UNIT_ID: chooseId('BANNER', ENV_IDS.BANNER, PRODUCTION_IDS.BANNER, GOOGLE_TEST.BANNER),
   SETTINGS: {
-    isTesting: process.env.NODE_ENV !== 'production',
+    // ✅ FORZAR isTesting=false en producción para NUNCA mostrar "Anuncio de prueba"
+    isTesting: FORCE_TEST_IDS === true ? true : false,
   },
   REWARD_SETTINGS: {
     DISCOUNT_AMOUNT: 988,
@@ -63,7 +64,10 @@ export function validateAdMobConfig() {
   if (!ADMOB_CONFIG.BANNER_AD_UNIT_ID) {errors.push('BANNER_AD_UNIT_ID vacío');}
   const usingTestIds = [GOOGLE_TEST.APP, GOOGLE_TEST.REWARDED, GOOGLE_TEST.BANNER]
     .some((id) => Object.values(ADMOB_CONFIG).includes(id));
-  return { isValid: errors.length === 0, errors, isProduction: IS_PRODUCTION, usingTestIds };
+  if (usingTestIds && !FORCE_TEST_IDS) {
+    errors.push('⚠️ Se detectaron IDs de test en producción');
+  }
+  return { isValid: errors.length === 0, errors, isProduction: !FORCE_TEST_IDS, usingTestIds, isTesting: ADMOB_CONFIG.SETTINGS.isTesting };
 }
 
 export function getCurrentAdMobConfig() {
