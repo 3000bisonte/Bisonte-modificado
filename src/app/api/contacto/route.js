@@ -37,6 +37,8 @@ export const POST = withValidation(contactoCreateSchema, async (_req, body) => {
         mensaje: body.mensaje,
         celular: body.celular,
         ciudad: body.ciudad,
+        tipo_documento: body.tipo_documento || null,
+        numero_documento: body.numero_documento || null,
     correo,
       },
     });

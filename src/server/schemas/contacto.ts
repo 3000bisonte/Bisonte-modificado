@@ -7,6 +7,8 @@ export const contactoCreateSchema = z
     mensaje: z.string().min(1, 'Mensaje requerido'),
     celular: z.string().optional(),
     ciudad: z.string().optional(),
+    tipo_documento: z.string().optional(),
+    numero_documento: z.string().optional(),
   correo: z.string().email('Email inválido').optional().or(z.literal('').transform(() => undefined)),
   email: z.string().email('Email inválido').optional().or(z.literal('').transform(() => undefined)),
   })
@@ -15,6 +17,8 @@ export const contactoCreateSchema = z
     mensaje: data.mensaje,
     celular: data.celular,
     ciudad: data.ciudad,
+    tipo_documento: data.tipo_documento,
+    numero_documento: data.numero_documento,
   correo: (data.correo ?? data.email ?? 'anonimo@bisonte.com') as string,
   }));
 

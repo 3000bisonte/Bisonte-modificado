@@ -12,5 +12,7 @@ export function createContactoSvc(input: ContactoCreate) {
     correo,
     celular: input.celular,
     ciudad: input.ciudad,
+    tipo_documento: input.tipo_documento,
+    numero_documento: input.numero_documento,
   });
 }
