@@ -7,15 +7,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { ADMOB_CONFIG } from '../config/admob.config';
 
 const NATIVE_PLATFORMS = new Set(['ios', 'android']);
-const DEFAULT_TEST_DEVICE_ID = '2077ef9a63d2b398840261c8221a0c9b';
-const CONFIGURED_TEST_DEVICE_IDS = (process.env.NEXT_PUBLIC_ADMOB_TEST_DEVICES || '')
-  .split(',')
-  .map((id) => id.trim())
-  .filter((id) => id.length > 0);
-const TEST_DEVICE_IDS = (CONFIGURED_TEST_DEVICE_IDS.length > 0
-  ? CONFIGURED_TEST_DEVICE_IDS
-  : [DEFAULT_TEST_DEVICE_ID]
-).filter((id, index, array) => array.indexOf(id) === index);
 
 const runtimeState = {
   initialized: false,
@@ -127,25 +118,14 @@ export const AdMobService = {
       if (runtimeState.initialized) {
         return true;
       }
-      const isTesting = ADMOB_CONFIG.SETTINGS.isTesting;
+
+      // ✅ Producción: Solo requestTrackingAuthorization, SIN testingDevices ni initializeForTesting
       const initializeOptions = {
         requestTrackingAuthorization: true,
       };
 
-      // Solo agregar dispositivos de prueba si EXPLÍCITAMENTE está en modo testing
-      // En producción isTesting=false, así AdMob NO mostrará "Anuncio de prueba"
-      if (isTesting === true) {
-        Object.assign(initializeOptions, {
-          testingDevices: TEST_DEVICE_IDS,
-          initializeForTesting: true,
-        });
-      }
-
       await AdMob.initialize(initializeOptions);
-      console.log(
-        `✅ AdMob inicializado en modo ${isTesting ? 'pruebas' : 'producción'}`,
-        isTesting ? { testingDevices: TEST_DEVICE_IDS } : undefined
-      );
+      console.log('✅ AdMob inicializado en modo producción');
       markInitialized(true);
       markRewardReady(false);
       
@@ -206,15 +186,12 @@ export const AdMobService = {
       try {
         console.log('🚀 Preparando anuncio recompensado...');
         console.log(`   - Ad Unit ID: ${ADMOB_CONFIG.REWARDED_AD_UNIT_ID}`);
-        console.log(`   - Testing Mode: ${ADMOB_CONFIG.SETTINGS.isTesting}`);
         
+        // ✅ Pasar EXPLÍCITAMENTE isTesting:false para garantizar modo producción
         const prepareOptions = {
           adId: ADMOB_CONFIG.REWARDED_AD_UNIT_ID,
+          isTesting: false,
         };
-        // Solo pasar isTesting:true si EXPLÍCITAMENTE está en modo pruebas
-        if (ADMOB_CONFIG.SETTINGS.isTesting === true) {
-          prepareOptions.isTesting = true;
-        }
         
         const info = await AdMob.prepareRewardVideoAd(prepareOptions);
         
@@ -298,12 +275,8 @@ export const AdMobService = {
         adId: ADMOB_CONFIG.BANNER_AD_UNIT_ID,
         margin: 0,
         position: 'BOTTOM_CENTER',
-        npa: true,
+        isTesting: false,
       };
-      // Solo pasar isTesting:true si EXPLÍCITAMENTE está en modo pruebas
-      if (ADMOB_CONFIG.SETTINGS.isTesting === true) {
-        bannerOptions.isTesting = true;
-      }
       
       await AdMob.showBanner(bannerOptions);
       
@@ -362,7 +335,8 @@ export const AdMobService = {
       config: {
         appId: ADMOB_CONFIG.APP_ID,
         rewardedId: ADMOB_CONFIG.REWARDED_AD_UNIT_ID,
-        isTesting: ADMOB_CONFIG.SETTINGS.isTesting,
+        bannerId: ADMOB_CONFIG.BANNER_AD_UNIT_ID,
+        isTesting: false,
       }
     };
   }

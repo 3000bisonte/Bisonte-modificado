@@ -18,9 +18,9 @@ android {
         // admob_app_id can be overridden by gradle property ADMOB_APP_ID or ENV ADMOB_APP_ID
         def envAdmob = System.getenv('ADMOB_APP_ID')
         def propAdmob = project.hasProperty('ADMOB_APP_ID') ? project.property('ADMOB_APP_ID') : null
-        // Google official test App ID fallback if none provided
-        def defaultTestAdmob = 'ca-app-pub-3940256099942544~3347511713'
-        def resolvedAdmob = (propAdmob ?: envAdmob) ?: defaultTestAdmob
+        // ID de producción de AdMob como fallback
+        def defaultAdmob = 'ca-app-pub-1352045169606160~5443732431'
+        def resolvedAdmob = (propAdmob ?: envAdmob) ?: defaultAdmob
 
         // Google OAuth Android Client ID (for native AppAuth flow)
         def envAndroidClientId = System.getenv('GOOGLE_ANDROID_CLIENT_ID')
