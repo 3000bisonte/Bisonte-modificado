@@ -305,6 +305,7 @@ export default function AdminUsuarios() {
                             const date = new Date(fecha);
                             if (isNaN(date.getTime())) return 'Fecha inválida';
                             return date.toLocaleDateString('es-CO', { 
+                              timeZone: 'America/Bogota',
                               year: 'numeric', 
                               month: 'short', 
                               day: 'numeric' 

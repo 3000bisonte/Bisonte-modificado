@@ -389,6 +389,7 @@ export async function sendContactNotificationEmail({ nombre, correo, celular, ci
   const smtpTransport = getSmtpTransport()
 
   const fecha = new Date().toLocaleString('es-CO', {
+    timeZone: 'America/Bogota',
     dateStyle: 'long',
     timeStyle: 'short',
   })
@@ -570,6 +571,7 @@ export async function sendOrderConfirmationEmail({
   }).format(totalCost)
 
   const formattedDate = new Date(orderDate).toLocaleString('es-CO', {
+    timeZone: 'America/Bogota',
     dateStyle: 'long',
     timeStyle: 'short',
   })
@@ -909,6 +911,7 @@ export async function sendAdminShipmentNotificationEmail({
 
   const formattedDate = orderDate
     ? new Date(orderDate).toLocaleString('es-CO', {
+        timeZone: 'America/Bogota',
         dateStyle: 'long',
         timeStyle: 'short',
       })

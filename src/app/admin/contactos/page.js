@@ -179,7 +179,8 @@ export default function AdminContactos() {
   const formatDate = (dateString) => {
     if (!dateString) {return "Sin fecha";}
     try {
-      return new Date(dateString).toLocaleDateString("es-ES", {
+      return new Date(dateString).toLocaleDateString("es-CO", {
+        timeZone: "America/Bogota",
         year: "numeric",
         month: "short",
         day: "numeric",

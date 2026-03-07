@@ -1,9 +1,16 @@
 "use client";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 
 import BottomNav from "@/components/BottomNav";
+
+// Configurar dayjs con zona horaria de Colombia
+dayjs.extend(utc);
+dayjs.extend(timezone);
+const TZ_COLOMBIA = "America/Bogota";
 
 
 // Colores y estilos
@@ -192,10 +199,10 @@ export default function MisEnvios() {
       envio.Estado?.toLowerCase() || "",
       STATUS_STYLES[envio.Estado]?.label?.toLowerCase() || "",
       dayjs(envio.FechaSolicitud).isValid()
-        ? dayjs(envio.FechaSolicitud).format("DD/MM/YYYY").toLowerCase()
+        ? dayjs.utc(envio.FechaSolicitud).tz(TZ_COLOMBIA).format("DD/MM/YYYY").toLowerCase()
         : "",
       dayjs(envio.FechaSolicitud).isValid()
-        ? dayjs(envio.FechaSolicitud).format("DD/MM/YYYY HH:mm").toLowerCase()
+        ? dayjs.utc(envio.FechaSolicitud).tz(TZ_COLOMBIA).format("DD/MM/YYYY HH:mm").toLowerCase()
         : "",
     ];
 
@@ -447,7 +454,7 @@ export default function MisEnvios() {
                         <td className="px-2 sm:px-3 py-2 sm:py-3 text-gray-300 text-xs sm:text-sm">
                           <div className="truncate">
                             {dayjs(envio.FechaSolicitud).isValid()
-                              ? dayjs(envio.FechaSolicitud).format("DD/MM/YYYY HH:mm")
+                              ? dayjs.utc(envio.FechaSolicitud).tz(TZ_COLOMBIA).format("DD/MM/YYYY HH:mm")
                               : "Fecha inválida"}
                           </div>
                         </td>

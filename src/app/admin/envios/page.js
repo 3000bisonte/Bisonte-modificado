@@ -256,6 +256,7 @@ export default function AdminEnvios() {
 
   const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleDateString('es-CO', {
+      timeZone: 'America/Bogota',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
