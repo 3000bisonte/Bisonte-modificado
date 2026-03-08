@@ -50,6 +50,7 @@ export default function Resumen() {
   const [remitente, setRemitente] = useState(null);
   const [destinatario, setDestinatario] = useState(null);
   const [costoTotal, setCostoTotal] = useState(null);
+  const [costoOriginal, setCostoOriginal] = useState(null); // Cotización inicial antes de descuentos
   const fecha = useMemo(() => formatDate(new Date()), []);
   const [isCreatingShipment, setIsCreatingShipment] = useState(false);
   const [rewardBanner, setRewardBanner] = useState(null);
@@ -160,10 +161,17 @@ export default function Resumen() {
           ...existing,
           ...data,
           costoTotal: data.costoTotal,
+          // Preservar costoOriginal: usar el existente si ya fue guardado, si no usar el del dato original
+          costoOriginal: existing.costoOriginal ?? data.costoOriginal ?? data.costoTotal,
         };
         localStorage.setItem("cotizacion", JSON.stringify(merged));
       } else {
-        localStorage.setItem("cotizacion", JSON.stringify(data));
+        // Primera vez guardando: costoOriginal = costoTotal (precio de cotización sin descuentos)
+        const dataWithOriginal = {
+          ...data,
+          costoOriginal: data.costoOriginal ?? data.costoTotal,
+        };
+        localStorage.setItem("cotizacion", JSON.stringify(dataWithOriginal));
       }
     } catch (error) {
       console.error("[Resumen] Error sincronizando cotizacion:", error);
@@ -1000,7 +1008,13 @@ export default function Resumen() {
       setCotizador(mergedCotizador);
       if (typeof mergedCotizador.costoTotal === "number") {
         setCostoTotal(mergedCotizador.costoTotal);
-        console.log("✅ [Resumen] Precio actualizado a:", mergedCotizador.costoTotal);
+        // Guardar el costo original (cotización inicial antes de descuentos por anuncios)
+        // Si ya existe costoOriginal en el objeto, usarlo; si no, usar costoTotal como original
+        const originalFromData = typeof mergedCotizador.costoOriginal === "number"
+          ? mergedCotizador.costoOriginal
+          : mergedCotizador.costoTotal;
+        setCostoOriginal((prev) => prev ?? originalFromData);
+        console.log("✅ [Resumen] Precio actualizado a:", mergedCotizador.costoTotal, "| Cotización inicial:", originalFromData);
       } else {
         console.warn("⚠️ [Resumen] No se pudo actualizar el precio - costoTotal no es un número válido");
       }
@@ -1366,6 +1380,7 @@ export default function Resumen() {
       pagoId: `FREE-${Date.now()}`,
       montoTotal: 0,
       costoTotal: 0, // ✅ Enviar costoTotal=0 para que el email de confirmación muestre precio correcto
+      cotizacionInicial: costoOriginal ?? 0, // 💰 Cotización inicial antes de descuentos
     };
 
     console.log("📦 Creando envío gratuito:", envioData);

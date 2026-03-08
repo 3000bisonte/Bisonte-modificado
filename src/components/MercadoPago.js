@@ -684,6 +684,11 @@ const MercadoPagoComponent = () => {
 
       const montoTotal = Number.isFinite(Number(cotizacionLocal?.costoTotal)) ? Number(cotizacionLocal.costoTotal) : 0;
 
+      // 💰 Obtener cotización inicial (antes de descuentos por anuncios)
+      const cotizacionInicial = Number.isFinite(Number(cotizacionLocal?.costoOriginal))
+        ? Number(cotizacionLocal.costoOriginal)
+        : montoTotal; // Si no hay costoOriginal guardado, usar montoTotal como fallback
+
       const envioData = {
         NumeroGuia: numeroGuia,
         Estado: "RECOLECCION_PENDIENTE",
@@ -707,6 +712,7 @@ const MercadoPagoComponent = () => {
         pagado: true,
         montoTotal,
         costoTotal: montoTotal, // ✅ Enviar costoTotal para que el email de confirmación muestre el precio correcto
+        cotizacionInicial, // 💰 Cotización inicial antes de descuentos
         paymentId: paymentId ?? `MP-${Date.now()}`,
       };
 

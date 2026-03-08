@@ -548,6 +548,7 @@ export async function sendOrderConfirmationEmail({
   destination, 
   recipientName, 
   totalCost, 
+  cotizacionInicial,
   orderDate 
 }) {
   const result = {
@@ -564,11 +565,21 @@ export async function sendOrderConfirmationEmail({
   const resend = getResendClient()
   const smtpTransport = getSmtpTransport()
 
-  const formattedCost = new Intl.NumberFormat('es-CO', {
+  const currencyFormat = new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',
     minimumFractionDigits: 0,
-  }).format(totalCost)
+  })
+
+  const formattedCost = currencyFormat.format(totalCost)
+
+  // Cotización inicial vs precio final
+  const hasCotizacionInicial = typeof cotizacionInicial === 'number' 
+    && Number.isFinite(cotizacionInicial) 
+    && cotizacionInicial > 0 
+    && cotizacionInicial !== totalCost
+  const formattedCotizacionInicial = hasCotizacionInicial ? currencyFormat.format(cotizacionInicial) : null
+  const descuentoAplicado = hasCotizacionInicial ? currencyFormat.format(cotizacionInicial - totalCost) : null
 
   const formattedDate = new Date(orderDate).toLocaleString('es-CO', {
     timeZone: 'America/Bogota',
@@ -624,9 +635,26 @@ export async function sendOrderConfirmationEmail({
                 <td style="padding:8px 0; font-size:14px; color:#6b7280; border-top:1px solid #e5e7eb">Fecha de solicitud:</td>
                 <td style="padding:8px 0; font-size:14px; color:#111827; font-weight:500; border-top:1px solid #e5e7eb">${formattedDate}</td>
               </tr>
-              <tr style="background:#ecfdf5">
-                <td style="padding:12px 8px; font-size:15px; color:#047857; font-weight:600; border-top:2px solid #10b981; border-radius:4px">Costo Total:</td>
-                <td style="padding:12px 8px; font-size:16px; color:#047857; font-weight:700; border-top:2px solid #10b981; border-radius:4px">${formattedCost}</td>
+            </table>
+          </div>
+          
+          <!-- Cotización y Precio -->
+          <div style="background:#f0fdf4; padding:20px; margin:0 0 24px 0; border-radius:8px; border:1px solid #bbf7d0">
+            <h2 style="margin:0 0 16px 0; font-size:16px; color:#047857; font-weight:600">💰 Resumen de costos</h2>
+            <table style="width:100%; border-collapse:collapse">
+              ${hasCotizacionInicial ? `
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; width:50%">Cotización inicial:</td>
+                <td style="padding:8px 0; font-size:14px; color:#6b7280; font-weight:500; text-decoration:line-through">${formattedCotizacionInicial}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0; font-size:14px; color:#059669; border-top:1px solid #d1fae5">Descuento aplicado:</td>
+                <td style="padding:8px 0; font-size:14px; color:#059669; font-weight:600; border-top:1px solid #d1fae5">- ${descuentoAplicado}</td>
+              </tr>
+              ` : ''}
+              <tr style="background:#dcfce7">
+                <td style="padding:14px 8px; font-size:16px; color:#047857; font-weight:700; border-top:2px solid #10b981; border-radius:4px">Precio final:</td>
+                <td style="padding:14px 8px; font-size:18px; color:#047857; font-weight:700; border-top:2px solid #10b981; border-radius:4px">${totalCost === 0 ? '¡GRATIS!' : formattedCost}</td>
               </tr>
             </table>
           </div>
@@ -677,7 +705,11 @@ DETALLES DEL ENVÍO:
 • Destino: ${destination}
 • Destinatario: ${recipientName}
 • Fecha de solicitud: ${formattedDate}
-• Costo Total: ${formattedCost}
+
+RESUMEN DE COSTOS:
+${hasCotizacionInicial ? `• Cotización inicial: ${formattedCotizacionInicial}
+• Descuento aplicado: - ${descuentoAplicado}
+` : ''}• Precio final: ${totalCost === 0 ? '¡GRATIS!' : formattedCost}
 
 PRÓXIMOS PASOS:
 • Tu pedido será procesado en las próximas horas
@@ -937,6 +969,10 @@ export async function sendAdminShipmentNotificationEmail({
     ? formatCurrency(paymentDetails.costoCotizado)
     : formatCurrency(totalCost)
 
+  const cotizacionInicialText = paymentDetails?.cotizacionInicial !== undefined && paymentDetails?.cotizacionInicial !== null
+    ? formatCurrency(paymentDetails.cotizacionInicial)
+    : 'Sin datos'
+
   const paymentStatusText = paymentDetails?.pagado !== null && paymentDetails?.pagado !== undefined
     ? formatBoolean(paymentDetails.pagado)
     : 'Sin datos'
@@ -1012,8 +1048,9 @@ export async function sendAdminShipmentNotificationEmail({
   const paymentSectionHtml = renderDetailsSection('Pago y cotización', [
     { label: 'Método de pago', value: paymentDetails?.metodo },
     { label: 'Pagado', value: paymentStatusText },
-    { label: 'Monto total cobrado', value: montoTotalText },
-    { label: 'Costo cotizado', value: costoCotizadoText },
+    { label: '📋 Cotización inicial', value: cotizacionInicialText },
+    { label: '💰 Precio final cobrado', value: montoTotalText },
+    { label: 'Costo cotizado (sistema)', value: costoCotizadoText },
     { label: 'ID de pago', value: paymentDetails?.paymentId ?? paymentId },
   ])
 
@@ -1093,8 +1130,12 @@ export async function sendAdminShipmentNotificationEmail({
                 <td style="padding:6px 0;">${escapeHtml(formattedDate)}</td>
               </tr>
               <tr>
-                <td style="padding:6px 0; color:#64748b;">Costo total:</td>
-                <td style="padding:6px 0;">${escapeHtml(formatCurrency(totalCost))}</td>
+                <td style="padding:6px 0; color:#64748b;">📋 Cotización inicial:</td>
+                <td style="padding:6px 0; font-weight:500;">${escapeHtml(cotizacionInicialText)}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0; color:#64748b;">💰 Precio final:</td>
+                <td style="padding:6px 0; font-weight:700; color:#047857;">${escapeHtml(formatCurrency(totalCost))}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0; color:#64748b;">Valor declarado:</td>
@@ -1182,8 +1223,9 @@ export async function sendAdminShipmentNotificationEmail({
       'PAGO Y COTIZACIÓN',
       `Método de pago: ${textValue(paymentDetails?.metodo)}`,
       `Pagado: ${paymentStatusText}`,
-      `Monto total cobrado: ${montoTotalText}`,
-      `Costo cotizado: ${costoCotizadoText}`,
+      `📋 Cotización inicial: ${cotizacionInicialText}`,
+      `💰 Precio final cobrado: ${montoTotalText}`,
+      `Costo cotizado (sistema): ${costoCotizadoText}`,
       `ID de pago: ${textValue(paymentDetails?.paymentId ?? paymentId)}`,
     ].join('\n'))
   }
@@ -1207,7 +1249,8 @@ Destinatario: ${textValue(recipientName)} (${textValue(recipientPhone)})
 Documento destinatario: ${textValue(recipientDocumentText)}
 Origen → Destino: ${textValue(origin)} → ${textValue(destination)}
 Fecha solicitud: ${formattedDate}
-Costo total: ${formatCurrency(totalCost)}
+📋 Cotización inicial: ${cotizacionInicialText}
+💰 Precio final: ${formatCurrency(totalCost)}
 Valor declarado: ${formatCurrency(declaredValue)}
 Peso: ${weightText}
 Tipo de envío: ${textValue(shipmentTypeText)}

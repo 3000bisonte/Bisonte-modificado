@@ -331,11 +331,17 @@ export async function POST(request) {
       ?? normalizeNumber(body?.monto)
       ?? totalCostForEmail;
 
+    // 💰 Cotización inicial (antes de descuentos por anuncios)
+    const cotizacionInicialForEmail = normalizeNumber(body?.cotizacionInicial)
+      ?? normalizeNumber(body?.costoOriginal)
+      ?? totalCostForEmail; // Fallback: si no hay cotización inicial, usar el costo total
+
     const paymentDetailsForEmail = {
       metodo: body?.metodoPago || body?.metodo || null,
       pagado: typeof body?.pagado === 'boolean' ? body.pagado : null,
       montoTotal: normalizedMontoTotal,
       costoCotizado: totalCostForEmail,
+      cotizacionInicial: cotizacionInicialForEmail,
       paymentId: paymentIdRaw ? String(paymentIdRaw) : null,
     };
 
@@ -377,6 +383,8 @@ export async function POST(request) {
       'tipo_paquete',
       'categoriaEnvio',
       'CategoriaEnvio',
+      'cotizacionInicial',
+      'costoOriginal',
     ];
     for (const key of knownKeys) {
       if (key in bodyExtras) {
@@ -416,6 +424,7 @@ export async function POST(request) {
         destination: newOrder.Destino || 'N/A',
         recipientName,
         totalCost: totalCostForEmail ?? 0,
+        cotizacionInicial: cotizacionInicialForEmail,
         orderDate: newOrder.FechaSolicitud,
       });
 
