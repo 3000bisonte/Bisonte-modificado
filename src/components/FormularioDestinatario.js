@@ -21,13 +21,10 @@ export default function FormularioDestinatario({ id }) {
   // Estado inicial del formulario
   const initialFormData = {
     nombre: "",
-    tipoDocumento: "",
-    numeroDocumento: "",
     celular: "",
-    correo: "",
+    contactoAlterno: "",
     direccionEntrega: "",
-    detalleDireccion: "",
-    recomendaciones: "",
+    nota: "",
     noProhibidos: false,
     aceptaTerminos: false,
   };
@@ -92,13 +89,10 @@ export default function FormularioDestinatario({ id }) {
         setFormData((prev) => {
           const updatedData = {
             nombre: prev.nombre || data.nombre || "",
-            numeroDocumento: prev.numeroDocumento || data.numero_documento || "",
-            tipoDocumento: prev.tipoDocumento || data.tipo_documento || "",
             celular: prev.celular || data.celular || "",
-            correo: prev.correo || data.correo || "",
+            contactoAlterno: prev.contactoAlterno || data.contactoAlterno || "",
             direccionEntrega: prev.direccionEntrega || data.direccion_entrega || "",
-            detalleDireccion: prev.detalleDireccion || data.detalle_direccion || "",
-            recomendaciones: prev.recomendaciones || data.recomendaciones || "",
+            nota: prev.nota || data.nota || data.recomendaciones || "",
             noProhibidos: prev.noProhibidos,
             aceptaTerminos: prev.aceptaTerminos,
           };
@@ -126,33 +120,23 @@ export default function FormularioDestinatario({ id }) {
         else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{2,40}$/.test(value))
           {error = "El nombre completo solo debe contener letras y espacios (2-40 caracteres).";}
         break;
-      case "tipoDocumento":
-        if (!value.trim()) {error = "Selecciona el tipo de documento.";}
-        break;
-      case "numeroDocumento":
-        if (!value.trim()) {error = "El número de documento es obligatorio.";}
-        else if (!/^\d{6,12}$/.test(value))
-          {error = "El número de documento debe tener entre 6 y 12 dígitos numéricos.";}
-        break;
-      case "correo":
-        if (!value.trim()) {error = "El correo electrónico es obligatorio";}
-        // eslint-disable-next-line security/detect-unsafe-regex
-        else if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(value.trim()))
-          {error = "Correo electrónico inválido.";}
-        break;
       case "celular":
-        if (!value.trim()) {error = "El celular es obligatorio.";}
+        if (!value.trim()) {error = "El teléfono es obligatorio.";}
         else if (!/^3\d{9}$/.test(value.trim()))
-          {error = "El celular debe empezar con 3 y tener 10 dígitos.";}
+          {error = "El teléfono debe empezar con 3 y tener 10 dígitos.";}
+        break;
+      case "contactoAlterno":
+        if (value.trim() && !/^\d{7,10}$/.test(value.trim()))
+          {error = "El número de contacto alterno debe tener entre 7 y 10 dígitos.";}
         break;
       case "direccionEntrega":
         if (!value.trim()) {error = "La dirección de entrega es obligatoria.";}
         else if (value.length < 5 || value.length > 80)
           {error = "La dirección debe tener entre 5 y 80 caracteres.";}
         break;
-      case "detalleDireccion":
-        if (value.length > 40)
-          {error = "El detalle de dirección no debe superar los 40 caracteres.";}
+      case "nota":
+        if (value.length > 200)
+          {error = "La nota no debe superar los 200 caracteres.";}
         break;
       case "noProhibidos":
         if (!value) {error = "Debes declarar que no enviarás artículos prohibidos.";}
@@ -188,18 +172,13 @@ export default function FormularioDestinatario({ id }) {
     return (
       formData.nombre.trim() &&
       /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{2,40}$/.test(formData.nombre) &&
-      formData.tipoDocumento.trim() &&
-      formData.numeroDocumento.trim() &&
-      /^\d{6,12}$/.test(formData.numeroDocumento) &&
-      formData.correo.trim() &&
-      // eslint-disable-next-line security/detect-unsafe-regex
-      /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(formData.correo.trim()) &&
       formData.celular.trim() &&
       /^3\d{9}$/.test(formData.celular) &&
+      (!formData.contactoAlterno || /^\d{7,10}$/.test(formData.contactoAlterno.trim())) &&
       formData.direccionEntrega.trim() &&
       formData.direccionEntrega.length >= 5 &&
       formData.direccionEntrega.length <= 80 &&
-      (!formData.detalleDireccion || formData.detalleDireccion.length <= 40) &&
+      (!formData.nota || formData.nota.length <= 200) &&
       formData.noProhibidos &&
       formData.aceptaTerminos &&
       Object.values(fieldErrors).every((err) => !err)
@@ -313,7 +292,7 @@ export default function FormularioDestinatario({ id }) {
                 <svg className="w-5 h-5 mr-2 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                Información Personal
+                Información del Destinatario
               </h3>
             </div>
 
@@ -343,68 +322,6 @@ export default function FormularioDestinatario({ id }) {
                 </p>
               )}
             </div>
-
-            {/* Documento */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="tipoDocumento" className="block text-sm font-medium text-gray-700">
-                  Tipo de Documento*
-                </label>
-                <select
-                  id="tipoDocumento"
-                  name="tipoDocumento"
-                  value={formData.tipoDocumento}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors ${
-                    fieldErrors.tipoDocumento ? "border-red-300 bg-red-50" : "border-gray-300 bg-gray-50"
-                  }`}
-                  required
-                >
-                  <option value="">Selecciona...</option>
-                  <option value="CC">Cédula de Ciudadanía</option>
-                  <option value="NIT">NIT</option>
-                  <option value="CE">Cédula de Extranjería</option>
-                  <option value="TI">Tarjeta de Identidad</option>
-                  <option value="PA">Pasaporte</option>
-                </select>
-                {fieldErrors.tipoDocumento && (
-                  <p className="text-red-600 text-sm flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    {fieldErrors.tipoDocumento}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="numeroDocumento" className="block text-sm font-medium text-gray-700">
-                  Número de Documento*
-                </label>
-                <input
-                  id="numeroDocumento"
-                  type="text"
-                  name="numeroDocumento"
-                  value={formData.numeroDocumento}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors ${
-                    fieldErrors.numeroDocumento ? "border-red-300 bg-red-50" : "border-gray-300 bg-gray-50"
-                  }`}
-                  placeholder="Número de documento"
-                  inputMode="numeric"
-                  pattern="\d*"
-                  required
-                />
-                {fieldErrors.numeroDocumento && (
-                  <p className="text-red-600 text-sm flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    {fieldErrors.numeroDocumento}
-                  </p>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* Información de Contacto */}
@@ -420,34 +337,8 @@ export default function FormularioDestinatario({ id }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label htmlFor="correo" className="block text-sm font-medium text-gray-700">
-                  Correo Electrónico*
-                </label>
-                <input
-                  id="correo"
-                  type="email"
-                  name="correo"
-                  value={formData.correo}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors ${
-                    fieldErrors.correo ? "border-red-300 bg-red-50" : "border-gray-300 bg-gray-50"
-                  }`}
-                  placeholder="correo@ejemplo.com"
-                  required
-                />
-                {fieldErrors.correo && (
-                  <p className="text-red-600 text-sm flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    {fieldErrors.correo}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
                 <label htmlFor="celular" className="block text-sm font-medium text-gray-700">
-                  Celular*
+                  Teléfono*
                 </label>
                 <input
                   id="celular"
@@ -471,6 +362,32 @@ export default function FormularioDestinatario({ id }) {
                   </p>
                 )}
               </div>
+
+              <div className="space-y-2">
+                <label htmlFor="contactoAlterno" className="block text-sm font-medium text-gray-700">
+                  Número de Contacto Alterno <span className="text-gray-400 text-xs">(Opcional)</span>
+                </label>
+                <input
+                  id="contactoAlterno"
+                  type="tel"
+                  name="contactoAlterno"
+                  value={formData.contactoAlterno}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors ${
+                    fieldErrors.contactoAlterno ? "border-red-300 bg-red-50" : "border-gray-300 bg-gray-50"
+                  }`}
+                  placeholder="Número alterno"
+                  inputMode="numeric"
+                />
+                {fieldErrors.contactoAlterno && (
+                  <p className="text-red-600 text-sm flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {fieldErrors.contactoAlterno}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -489,7 +406,7 @@ export default function FormularioDestinatario({ id }) {
             <div className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="direccionEntrega" className="block text-sm font-medium text-gray-700">
-                  Dirección Principal*
+                  Dirección*
                 </label>
                 <textarea
                   id="direccionEntrega"
@@ -514,26 +431,26 @@ export default function FormularioDestinatario({ id }) {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="detalleDireccion" className="block text-sm font-medium text-gray-700">
-                  Detalle Adicional <span className="text-gray-400 text-xs">(Opcional)</span>
+                <label htmlFor="nota" className="block text-sm font-medium text-gray-700">
+                  Nota <span className="text-gray-400 text-xs">(Opcional)</span>
                 </label>
-                <input
-                  id="detalleDireccion"
-                  type="text"
-                  name="detalleDireccion"
-                  value={formData.detalleDireccion}
+                <textarea
+                  id="nota"
+                  name="nota"
+                  value={formData.nota}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors ${
-                    fieldErrors.detalleDireccion ? "border-red-300 bg-red-50" : "border-gray-300 bg-gray-50"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors resize-none ${
+                    fieldErrors.nota ? "border-red-300 bg-red-50" : "border-gray-300 bg-gray-50"
                   }`}
-                  placeholder="Ej. Torre 5, Apto 301, Oficina 102"
+                  placeholder="Ej. Entregar en portería, apartamento 301, etc."
+                  rows={2}
                 />
-                {fieldErrors.detalleDireccion && (
+                {fieldErrors.nota && (
                   <p className="text-red-600 text-sm flex items-center">
                     <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
-                    {fieldErrors.detalleDireccion}
+                    {fieldErrors.nota}
                   </p>
                 )}
               </div>

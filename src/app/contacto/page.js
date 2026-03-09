@@ -1,8 +1,19 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import BottomNav from "@/components/BottomNav";
+
+// Helper para normalizar respuestas del API de perfil
+const findPerfilByEmail = (response, email) => {
+  let perfiles = [];
+  if (Array.isArray(response)) perfiles = response;
+  else if (Array.isArray(response?.perfiles)) perfiles = response.perfiles;
+  else if (response?.perfil) perfiles = [response.perfil];
+  if (!email) return perfiles[0] || null;
+  const emailLower = email.toLowerCase().trim();
+  return perfiles.find(p => (p.email || p.correo || '').toLowerCase().trim() === emailLower) || null;
+};
 
 export default function Contacto() {
   const { data: session } = useSession();
@@ -17,6 +28,41 @@ export default function Contacto() {
   const [msg, setMsg] = useState("");
   const [errors, setErrors] = useState({});
   const [enviando, setEnviando] = useState(false);
+  const [cargandoPerfil, setCargandoPerfil] = useState(false);
+
+  // Auto-completar datos del usuario logueado desde su perfil
+  useEffect(() => {
+    if (!session?.user?.email) return;
+
+    const fetchUserProfile = async () => {
+      try {
+        setCargandoPerfil(true);
+        const response = await fetch("/api/perfil");
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const perfil = findPerfilByEmail(data, session.user.email);
+
+        if (perfil) {
+          setForm((prev) => ({
+            nombre: prev.nombre || perfil.nombre || "",
+            tipoDocumento: prev.tipoDocumento || perfil.tipoDocumento || perfil.tipo_documento || "",
+            numeroDocumento: prev.numeroDocumento || perfil.numeroDocumento || perfil.numero_documento || "",
+            celular: prev.celular || perfil.celular || "",
+            ciudad: prev.ciudad || perfil.ciudad || "",
+            mensaje: prev.mensaje || "",
+          }));
+          console.log("✅ Formulario de contacto auto-completado con datos del perfil");
+        }
+      } catch (error) {
+        console.error("Error al cargar perfil del usuario:", error);
+      } finally {
+        setCargandoPerfil(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [session?.user?.email]);
 
   // Validaciones
   const validarNombre = (nombre) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.trim());

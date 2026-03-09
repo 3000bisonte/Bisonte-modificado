@@ -1824,16 +1824,17 @@ export default function Resumen() {
                 <div className="space-y-3 text-sm text-white">
                   <div>
                     <p className="font-semibold">{destinatario.nombre}</p>
-                    <p className="text-[#41e0b3]">{destinatario.tipoDocumento} {destinatario.numeroDocumento}</p>
                   </div>
                   <div>
                     <p>{destinatario.celular}</p>
-                    <p>{destinatario.correo}</p>
+                    {destinatario.contactoAlterno && (
+                      <p className="text-xs text-[#41e0b3] mt-1">Contacto alterno: {destinatario.contactoAlterno}</p>
+                    )}
                   </div>
                   <div>
                     <p>{destinatario.direccionEntrega}</p>
-                    {destinatario.detalleDireccion && (
-                      <p className="text-xs text-[#41e0b3] mt-1">{destinatario.detalleDireccion}</p>
+                    {destinatario.nota && (
+                      <p className="text-xs text-[#41e0b3] mt-1">Nota: {destinatario.nota}</p>
                     )}
                   </div>
                 </div>
